@@ -671,22 +671,19 @@ function App() {
     setJobs(p => [{ id:jobId, topic:form.topic, mode:form.mode, status:'generating', progress:5, startedAt:Date.now(), provider:null, isReal:true }, ...p]);
     try {
       // 1단계: 스크립트 생성
-      addToast('🧠 AI 스크립트 생성 중...', 'info');
+      addToast('AI 스크립트 생성 중...', 'info');
       const r1 = await fetch(API.generate, {
         method:'POST', headers:HEADERS_JSON,
-        body: JSON.stringify({ topic: form.topic, language: form.language, duration_seconds: parseInt(form.duration), target_duration: parseInt(form.duration), style: form.style, provider: form.provider, target_audience: 'general' }),
+        body: JSON.stringify({ topic: form.topic, language: form.language, duration_seconds: parseInt(form.duration), style: form.style, provider: form.provider, target_audience: 'general' }),
       });
       const scriptData = await r1.json();
       if (!r1.ok && !scriptData.success) throw new Error(scriptData.error || `AI 오류 ${r1.status}`);
       const usedProvider = scriptData.provider || 'unknown';
       setLastUsedProvider(usedProvider);
       setJobs(p => p.map(j => j.id === jobId ? { ...j, provider:usedProvider, progress:25 } : j));
-      addToast(`✅ 스크립트 완성 (${usedProvider})`, 'success');
+      addToast(`스크립트 완성 (${usedProvider})`, 'success');
 
-      // 2단계: TTS (뮤직비디오는 TTS 스킵)
-      if (form.mode !== 'music_video') {
-      setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'tts', progress:30 } : j));
-      addToast('🎙️ TTS 음성 생성 중...', 'info');
+      // 스크립트 텍스트 조합 (ai-mcp: intro+main_points 구조 대응)
       let scriptText = scriptData.script_text || '';
       if (!scriptText && scriptData.intro) {
         scriptText = scriptData.intro;
@@ -694,18 +691,26 @@ function App() {
         if (scriptData.outro) scriptText += ' ' + scriptData.outro;
       }
       if (!scriptText) scriptText = scriptData.title || form.topic;
-      const r2 = await fetch(${BASE}/api/tts/tts, {
-        method:'POST', headers:HEADERS_JSON,
-        body: JSON.stringify({ text: scriptText, filename: jobId, voice_id: 'SAz9YHcvj6GT2YYXdXww' }),
-      });
-      const ttsData = await r2.json();
-      if (!r2.ok || !ttsData.success) throw new Error(ttsData.message || 'TTS 실패');
-      setJobs(p => p.map(j => j.id === jobId ? { ...j, progress:45 } : j));
-      addToast('🎙️ TTS 완성', 'success');
 
-      // 3단계: Assets 검색 (scenes.json 생성 필수)
+      // 2단계: TTS (뮤직비디오는 스킵)
+      if (form.mode !== 'music_video') {
+        setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'tts', progress:30 } : j));
+        addToast('TTS 음성 생성 중...', 'info');
+        const r2 = await fetch(`${BASE}/api/tts/tts`, {
+          method:'POST', headers:HEADERS_JSON,
+          body: JSON.stringify({ text: scriptText, filename: jobId, voice_id: 'SAz9YHcvj6GT2YYXdXww' }),
+        });
+        const ttsData = await r2.json();
+        if (!r2.ok || !ttsData.success) throw new Error(ttsData.message || 'TTS 실패');
+        setJobs(p => p.map(j => j.id === jobId ? { ...j, progress:45 } : j));
+        addToast('TTS 완성', 'success');
+      } else {
+        addToast('뮤직비디오 모드: TTS 스킵', 'info');
+      }
+
+      // 3단계: Assets 검색 (scenes.json 생성)
       setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'assets', progress:50 } : j));
-      addToast('🔍 영상 소스 검색 중...', 'info');
+      addToast('영상 소스 검색 중...', 'info');
       const rawScenes = scriptData.scenes || scriptData.sections || [];
       const scenes = rawScenes.length > 0 ? rawScenes.map((s, i) => ({
         scene_id: s.scene_id ? `scene_${s.scene_id}` : `scene_${i+1}`,
@@ -723,29 +728,37 @@ function App() {
       });
       if (!r2b.ok) { const ea = await r2b.json(); throw new Error(ea.detail || 'Assets 검색 실패'); }
       setJobs(p => p.map(j => j.id === jobId ? { ...j, progress:55 } : j));
-      addToast('🔍 소스 준비 완료', 'success');
+      addToast('소스 준비 완료', 'success');
 
       // 4단계: FFmpeg 영상 렌더링
       setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'rendering', progress:60 } : j));
-      addToast('🎬 영상 렌더링 시작...', 'info');
-      const r3 = await fetch(${BASE}/api/ffmpeg/video/create, {
+      addToast('영상 렌더링 시작...', 'info');
+      const isMV = form.mode === 'music_video';
+      const r3 = await fetch(`${BASE}/api/ffmpeg/video/create`, {
         method:'POST', headers:HEADERS_JSON,
-        body: JSON.stringify({ job_id: jobId, mode: form.mode === 'music_video' ? 'music_video' : (form.mode === 'shorts' ? 'shorts' : 'longform'), title: scriptData.title || form.topic, generate_thumbnail: true, generate_shorts: form.mode !== 'shorts', add_bgm: true, bgm_volume: form.mode === 'music_video' ? 0.8 : 0.25, subtitle_text: form.mode === 'music_video' ? scriptText : null }),
+        body: JSON.stringify({
+          job_id: jobId,
+          mode: isMV ? 'music_video' : (form.mode === 'shorts' ? 'shorts' : 'longform'),
+          title: scriptData.title || form.topic,
+          generate_thumbnail: true,
+          generate_shorts: !isMV && form.mode !== 'shorts',
+          add_bgm: true,
+          bgm_volume: isMV ? 0.8 : 0.25,
+          subtitle_text: isMV ? scriptText : null
+        }),
       });
       if (!r3.ok) { const e3 = await r3.json(); throw new Error(e3.detail || 'FFmpeg 시작 실패'); }
-      addToast('🎬 렌더링 중 (수 분 소요)...', 'info');
+      addToast('렌더링 중 (잠시 기다려주세요)...', 'info');
 
       // 5단계: 완료까지 폴링
       await pollFfmpegUntilDone(jobId, setJobs, addToast);
-      await pollFfmpegUntilDone(jobId, setJobs, addToast);
     } catch (e) {
       setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'error' } : j));
-      addToast(`❌ ${e.message}`, 'error');
+      addToast(`오류: ${e.message}`, 'error');
     } finally {
       setSubmitting(false);
     }
   };
-
 
   const handleCancel = (id) => {
     setJobs(p => p.map(j => j.id === id ? { ...j, status:'error' } : j));

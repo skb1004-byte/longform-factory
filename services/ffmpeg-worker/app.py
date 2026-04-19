@@ -792,17 +792,23 @@ def create_music_video(
             return False
 
         # 3) 자막 스타일 (뮤직비디오 감성: 큰 폰트, 흰색, 굵은 외곽선)
+        # 연구 기반 최적값:
+        # - FontSize=56: 1920x1080의 5.2% 높이 = 가사 가독성 최적 (YouTube MV 기준)
+        # - BorderStyle=3: 반투명 박스 배경 (텍스트 가독성 극대화)
+        # - Outline=4: 외곽선 두께 - 어두운/밝은 배경 모두 대응
+        # - MarginV=60: 하단 60px - 모바일/TV 안전 영역
         subtitle_style = (
             "FontName=Noto Sans CJK KR,"
-            "FontSize=44,"
-            "PrimaryColour=&H00FFFFFF,"    # 흰색 텍스트
-            "OutlineColour=&H00000000,"    # 검정 외곽선
-            "BackColour=&H40000000,"       # 반투명 배경
-            "Outline=3,"
-            "Shadow=1,"
+            "FontSize=56,"             # 1920x1080 최적 (화면 높이 5.2%)
+            "PrimaryColour=&H00FFFFFF,"  # 흰색 텍스트 (AABBGGRR)
+            "OutlineColour=&H00000000,"  # 검정 외곽선
+            "BackColour=&H80000000,"     # 50% 투명 검정 박스 배경
+            "BorderStyle=3,"             # 불투명 박스 배경
+            "Outline=4,"                 # 외곽선 두께 4px
+            "Shadow=0,"
             "Bold=1,"
-            "Alignment=2,"                 # 하단 중앙
-            "MarginV=80"                   # 하단 여백
+            "Alignment=2,"               # 하단 중앙
+            "MarginV=60"                 # 하단 60px 여백
         )
 
         # 4) 자막 필터 문자열 (srt 경로 이스케이프)
@@ -818,7 +824,8 @@ def create_music_video(
                 "-stream_loop", "-1",   # BGM 반복
                 "-i", str(bgm_path),
                 "-filter_complex",
-                f"[1:a]volume={bgm_volume}[bgm]",
+                # loudnorm: YouTube 기준 -14 LUFS, TP=-1.5, LRA=11
+                f"[1:a]volume={bgm_volume},loudnorm=I=-14:TP=-1.5:LRA=11[bgm]",
                 "-vf", subtitle_filter,
                 "-map", "0:v",
                 "-map", "[bgm]",

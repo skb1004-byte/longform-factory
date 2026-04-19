@@ -1,5 +1,5 @@
 ﻿"""
-LongForm Factory - FFmpeg Worker v15.0.0
+LongForm Factory - FFmpeg Worker v15.12.0 (autopatch stream_loop)
 롱폼/숏폼 자동화 영상 제작 서비스
 
 주요 기능:
@@ -100,6 +100,10 @@ class VideoCreateRequest(BaseModel):
     generate_shorts: bool = Field(default=True, description="숏폼 생성")
     title: Optional[str] = Field(None, description="썸네일에 표시할 제목")
     subtitle_text: Optional[str] = Field(None, description="뮤직비디오 자막 텍스트")
+    audio_url: Optional[str] = Field(None, description="TTS 오디오 경로 (절대경로 또는 /data/tmp/...)")
+    output_filename: Optional[str] = Field(None, description="출력 파일명 (기본: job_id.mp4)")
+    transition: str = Field(default="fade", description="클립 전환 효과")
+    scenes: Optional[list] = Field(None, description="씬 목록 (없으면 scenes.json 로드)")
 
 
 class JobInfo(BaseModel):
@@ -168,6 +172,10 @@ app = FastAPI(
     description="롱폼/숏폼 자동화 영상 제작 서비스",
     version="15.0.0"
 )
+
+
+# 동시 영상 생성 제한 (메모리 과부하 방지)
+_CURRENT_JOB: Optional[str] = None
 
 # 작업 상태 저장소 (인메모리)
 jobs: Dict[str, JobInfo] = {}
@@ -309,26 +317,49 @@ def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict]) -> 
     return None
 
 
-async def download_video(video_url: str, output_path: Path, timeout: float = 30.0) -> bool:
-    """영상 다운로드 (스트리밍)"""
+async def download_video(video_url: str, output_path: Path, timeout: float = 120.0, max_duration: float = 60.0) -> bool:
+    """영상 다운로드 — ffmpeg으로 직접 다운로드 + 60초 자동 트리밍 (908MB 방지)"""
     try:
-        logger.info(f"영상 다운로드 시작: {video_url} -> {output_path}")
+        logger.info(f"영상 다운로드 시작 (최대 {max_duration}초): {video_url} -> {output_path}")
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
+        # 1차: ffmpeg으로 스트림 다운로드 + 트리밍
+        cmd = [
+            "ffmpeg", "-y",
+            "-t", str(max_duration),
+            "-i", video_url,
+            "-t", str(max_duration),
+            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            str(output_path)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        if result.returncode == 0 and output_path.exists() and output_path.stat().st_size > 10000:
+            file_size = output_path.stat().st_size
+            logger.info(f"영상 다운로드 완료 (ffmpeg): {output_path} ({file_size/(1024*1024):.2f}MB)")
+            return True
+
+        # 2차 fallback: httpx 스트리밍 (최대 30MB)
+        logger.warning(f"ffmpeg 다운로드 실패 — httpx fallback")
         async with httpx.AsyncClient(timeout=timeout) as client:
             async with client.stream("GET", video_url) as response:
                 response.raise_for_status()
+                downloaded = 0
+                max_bytes = 30 * 1024 * 1024  # 30MB 제한
                 async with aiofiles.open(output_path, "wb") as f:
-                    async for chunk in response.aiter_bytes(chunk_size=8192):
+                    async for chunk in response.aiter_bytes(chunk_size=65536):
                         await f.write(chunk)
-        
-        file_size = output_path.stat().st_size
-        logger.info(f"영상 다운로드 완료: {output_path} ({file_size / (1024*1024):.2f}MB)")
-        return True
+                        downloaded += len(chunk)
+                        if downloaded >= max_bytes:
+                            logger.info(f"30MB 제한 도달 — 다운로드 중단")
+                            break
+        file_size = output_path.stat().st_size if output_path.exists() else 0
+        logger.info(f"영상 다운로드 완료 (fallback): {output_path} ({file_size/(1024*1024):.2f}MB)")
+        return file_size > 10000
     except Exception as e:
         logger.error(f"영상 다운로드 실패: {e}")
         return False
-
 
 async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[Scene]:
     """각 장면에 대해 자산 검색 및 다운로드"""
@@ -382,7 +413,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
     return updated_scenes
 
 
-def run_ffmpeg_command(command: List[str]) -> bool:
+def run_ffmpeg_command(command: List[str], timeout: float = 300.0) -> bool:
     """FFmpeg 커맨드 실행"""
     try:
         logger.info(f"FFmpeg 커맨드 실행: {' '.join(command[:5])}...")
@@ -390,7 +421,7 @@ def run_ffmpeg_command(command: List[str]) -> bool:
             command,
             capture_output=True,
             text=True,
-            timeout=300.0  # 5분 타임아웃
+            timeout=timeout
         )
         
         if result.returncode != 0:
@@ -407,42 +438,140 @@ def run_ffmpeg_command(command: List[str]) -> bool:
         return False
 
 
+async def run_ffmpeg_async(command, timeout: float = 300.0) -> bool:
+    """FFmpeg 비동기 실행 (event loop 블로킹 방지)"""
+    import asyncio
+    loop = asyncio.get_event_loop()
+    try:
+        return await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: run_ffmpeg_command(command, timeout=timeout)),
+            timeout=timeout + 30
+        )
+    except asyncio.TimeoutError:
+        return False
+
+
 async def prepare_clips_for_longform(
     job_id: str,
     scenes: List[Scene],
     output_dir: Path
 ) -> List[Path]:
-    """장편(1920x1080) 용 클립 준비"""
+    """씬당 3~4 서브클립(각 4~6초) → 총 15~20개 빠른 전환 클립"""
     clips = []
-    job_assets_dir = JOBS_DIR / job_id / "assets"
-    
+
+    # 6가지 Ken Burns 프리셋
+    KB_PRESETS = [
+        "zoompan=z='min(zoom+0.002,1.6)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={fps_d}:s=1920x1080:fps=30",
+        "zoompan=z='if(eq(on,1),1.5,max(zoom-0.002,1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={fps_d}:s=1920x1080:fps=30",
+        "zoompan=z='1.3':x='if(lte(on,1),0,min(x+3,iw*0.25))':y='ih/2-(ih/zoom/2)':d={fps_d}:s=1920x1080:fps=30",
+        "zoompan=z='1.3':x='if(lte(on,1),iw*0.25,max(x-3,0))':y='ih/2-(ih/zoom/2)':d={fps_d}:s=1920x1080:fps=30",
+        "zoompan=z='min(zoom+0.0015,1.4)':x='iw/2-(iw/zoom/2)':y='if(lte(on,1),0,min(y+2,ih*0.2))':d={fps_d}:s=1920x1080:fps=30",
+        "zoompan=z='min(zoom+0.0025,1.7)':x='if(lte(on,1),iw*0.1,max(x-1,0))':y='ih-ih/zoom':d={fps_d}:s=1920x1080:fps=30",
+    ]
+
+    kb_counter = 0  # 전역 Ken Burns 프리셋 순환
+
     for scene in scenes:
         if not scene.asset_url:
             logger.warning(f"장면 '{scene.scene_id}' 자산 없음")
             continue
-        
-        clip_output = output_dir / f"clip_{scene.scene_id}.mp4"
-        
-        # FFmpeg 커맨드: 트림, 스케일, 패드
-        command = [
-            "ffmpeg",
-            "-i", scene.asset_url,
-            "-t", str(scene.duration_seconds),
-            "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1",
-            "-c:v", "libx264",
-            "-preset", "fast",
-            "-an",  # 오디오 제거
-            "-y",  # 덮어쓰기
-            str(clip_output)
+
+        scene_dur = max(scene.duration_seconds or 5.0, 4.0)
+
+        # 원본 영상 길이 파악
+        probe_cmd = [
+            "ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "csv=p=0", scene.asset_url
         ]
-        
-        if run_ffmpeg_command(command):
-            clips.append(clip_output)
-            logger.info(f"클립 준비 완료: {clip_output}")
-        else:
-            logger.error(f"클립 준비 실패: {scene.scene_id}")
-    
+        try:
+            result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=10)
+            src_dur = float(result.stdout.strip()) if result.stdout.strip() else scene_dur * 3
+        except Exception:
+            src_dur = scene_dur * 3
+
+        # v15.12 fix — 실제 소스 길이 보존 (scene_dur로 부풀리기 X)
+        actual_src_dur = src_dur
+        # 소스가 씬보다 짧으면 stream_loop 으로 반복 재생
+        needs_loop = actual_src_dur < scene_dur * 0.95
+
+        # 서브클립 수 계산 (4~5초짜리로 분할)
+        SUB_DUR = 4.5  # 각 서브클립 길이 (초)
+        n_subs  = max(1, round(scene_dur / SUB_DUR))
+        n_subs  = min(n_subs, 5)  # 최대 5개
+
+        logger.info(f"'{scene.scene_id}': {scene_dur:.1f}초 → {n_subs}개 서브클립 (src={actual_src_dur:.1f}s, loop={needs_loop})")
+
+        for sub_i in range(n_subs):
+            sub_dur    = scene_dur / n_subs
+            sub_dur    = max(sub_dur, 3.0)
+            # v15.12 — seek 은 항상 실제 소스 범위 안에서 분포
+            seek_usable = max(actual_src_dur - 0.3, 0.0)
+            if n_subs > 1 and seek_usable > 0:
+                seek_start = seek_usable * sub_i / n_subs
+            else:
+                seek_start = 0
+            seek_start = max(0, min(seek_start, seek_usable))
+
+            fps_d       = max(int(sub_dur * 30), 30)
+            kb_filter   = KB_PRESETS[kb_counter % len(KB_PRESETS)].replace("{fps_d}", str(fps_d))
+            kb_counter += 1
+
+            fade_out_st = max(sub_dur - 0.3, sub_dur * 0.9)
+
+            vf = (
+                f"scale=1920:1080:force_original_aspect_ratio=increase,"
+                f"crop=1920:1080,"
+                f"{kb_filter},"
+                f"fade=t=in:st=0:d=0.25,"
+                f"fade=t=out:st={fade_out_st:.2f}:d=0.25,"
+                f"unsharp=lx=3:ly=3:la=0.5,"
+                f"eq=brightness=0.02:contrast=1.1:saturation=1.25:gamma=0.95,"
+                f"vignette=PI/6,"
+                f"format=yuv420p"
+            )
+
+            clip_output = output_dir / f"clip_{scene.scene_id}_{sub_i}.mp4"
+
+            command = ["ffmpeg"]
+            if needs_loop:
+                command += ["-stream_loop", "-1"]
+            command += [
+                "-ss", str(seek_start),
+                "-i", scene.asset_url,
+                "-t", str(sub_dur),
+                "-vf", vf,
+                "-c:v", "libx264", "-preset", "fast", "-crf", "18",
+                "-movflags", "+faststart",
+                "-an", "-y", str(clip_output)
+            ]
+
+            clip_timeout = max(60.0, sub_dur * 20)
+            if run_ffmpeg_command(command, timeout=clip_timeout) and clip_output.exists() and clip_output.stat().st_size >= 4096:
+                clips.append(clip_output)
+                logger.info(f"  서브클립 OK: {clip_output.name} ({sub_dur:.1f}s, seek={seek_start:.1f}s)")
+            else:
+                sz = clip_output.stat().st_size if clip_output.exists() else 0
+                if sz > 0 and sz < 4096:
+                    clip_output.unlink(missing_ok=True)  # 빈 파일 삭제
+                logger.warning(f"  서브클립 실패 (size={sz}B): {scene.scene_id}_{sub_i} — fallback")
+                fallback = ["ffmpeg"]
+                if needs_loop:
+                    fallback += ["-stream_loop", "-1"]
+                fallback += [
+                    "-ss", str(seek_start),
+                    "-i", scene.asset_url,
+                    "-t", str(sub_dur),
+                    "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+                    "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                    "-movflags", "+faststart",
+                    "-an", "-y", str(clip_output)
+                ]
+                if run_ffmpeg_command(fallback, timeout=clip_timeout):
+                    clips.append(clip_output)
+
+    logger.info(f"총 클립 수: {len(clips)}개")
     return clips
+
 
 
 def create_concat_file(clips: List[Path], output_file: Path) -> bool:
@@ -459,19 +588,222 @@ def create_concat_file(clips: List[Path], output_file: Path) -> bool:
         return False
 
 
-def concatenate_videos(concat_file: Path, output_video: Path) -> bool:
-    """영상 파일 연결"""
+def _is_valid_clip(clip_path) -> bool:
+    """ffprobe로 클립 유효성 검사 (moov atom · 비디오 스트림 존재 확인)"""
+    try:
+        p = Path(clip_path)
+        if not p.exists() or p.stat().st_size < 4096:
+            return False
+        r = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=codec_name",
+             "-of", "default=nw=1:nk=1", str(p)],
+            capture_output=True, text=True, timeout=20
+        )
+        return r.returncode == 0 and bool(r.stdout.strip())
+    except Exception:
+        return False
+
+
+
+def normalize_clip(clip_path: Path, timeout: float = 45.0) -> Path:
+    """Duration:N/A 클립을 정규화 — filter_complex 호환을 위해 re-encode"""
+    dur = get_video_duration(clip_path)
+    if dur is not None and dur > 0:
+        return clip_path  # already OK
+    norm_path = clip_path.with_name(clip_path.stem + "_norm.mp4")
+    if norm_path.exists():
+        return norm_path  # cached
+    cmd = [
+        "ffmpeg", "-i", str(clip_path),
+        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
+        "-movflags", "+faststart", "-an", "-y", str(norm_path)
+    ]
+    if run_ffmpeg_command(cmd, timeout=timeout):
+        logger.debug(f"normalize_clip OK: {clip_path.name}")
+        return norm_path
+    logger.warning(f"normalize_clip failed, using original: {clip_path.name}")
+    return clip_path
+
+def xfade_batch(clip_paths: list, output: Path, transition: str = "fade") -> bool:
+    """클립 배치를 concat filter로 합치기 — xfade보다 안정적 (Duration:N/A 클립 허용)"""
+    # 1) 손상된 클립 사전 필터링 (moov atom 없는 파일 제거)
+    original_n = len(clip_paths)
+    clip_paths = [cp for cp in clip_paths if _is_valid_clip(cp)]
+    dropped = original_n - len(clip_paths)
+    if dropped:
+        logger.warning(f"xfade_batch: 손상된 클립 {dropped}개 제외 (잔여 {len(clip_paths)}개)")
+
+    if len(clip_paths) == 0:
+        logger.error("xfade_batch: 유효 클립 0개 — 합치기 불가")
+        return False
+    if len(clip_paths) == 1:
+        shutil.copy(str(clip_paths[0]), str(output))
+        return True
+
+    # 방법 1: concat filter — Duration:N/A 클립은 먼저 정규화
+    clip_paths = [normalize_clip(cp) for cp in clip_paths]
+    inputs = []
+    for cp in clip_paths:
+        inputs += ["-i", str(cp)]
+
+    n = len(clip_paths)
+    # [i:v:0] — 정규화 후 duration이 확정된 단일 비디오 스트림
+    vparts = "".join(f"[{i}:v:0]setpts=PTS-STARTPTS[v{i}];" for i in range(n))
+    vconcat = "".join(f"[v{i}]" for i in range(n))
+    fg = f"{vparts}{vconcat}concat=n={n}:v=1:a=0[vout]"
+
+    cmd = ["ffmpeg", *inputs,
+           "-filter_complex", fg,
+           "-map", "[vout]",
+           "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+           "-movflags", "+faststart",
+           "-y", str(output)]
+    timeout = max(300.0, n * 30)
+    if run_ffmpeg_command(cmd, timeout=timeout):
+        logger.info(f"xfade_batch concat OK: {n}개 → {output.name}")
+        return True
+
+    # 방법 2: concat demuxer fallback (copy, 무손실)
+    logger.warning(f"concat filter 실패 → demuxer fallback")
+    # fallback 단계에서도 손상 클립 한 번 더 걸러냄
+    clip_paths = [cp for cp in clip_paths if _is_valid_clip(cp)]
+    if not clip_paths:
+        logger.error("demuxer fallback: 유효 클립 0개")
+        return False
+    concat_txt = output.parent / f"_concat_{output.stem}.txt"
+    with open(concat_txt, "w") as f:
+        for cp in clip_paths:
+            f.write(f"file '{cp}'\n")
+    cmd2 = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(concat_txt),
+            "-c", "copy", "-y", str(output)]
+    return run_ffmpeg_command(cmd2, timeout=timeout)
+
+
+def concatenate_videos(concat_file: Path, output_video: Path, transition: str = "fade") -> bool:
+    """영상 파일 연결 (배치 xfade 크로스페이드 트랜지션)"""
+    # concat.txt에서 클립 경로 파싱
+    with open(concat_file, "r") as f:
+        lines = f.readlines()
+
+    clip_paths = [l.split("'")[1] for l in lines if l.startswith("file ")]
+
+    # 유효하지 않은 클립 사전 제거 (크기 < 4KB = 깨진 파일)
+    clip_paths = [cp for cp in clip_paths if _is_valid_clip(cp)]
+    if not clip_paths:
+        logger.error("concatenate_videos: 유효한 클립 없음")
+        return False
+
+    if len(clip_paths) < 2:
+        # 단일 클립: 그냥 copy
+        command = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(concat_file),
+                   "-c", "copy", "-y", str(output_video)]
+        return run_ffmpeg_command(command)
+    
+    # 2개 이상: 배치 xfade (8개씩 나눠서 처리, 이후 최종 합치기)
+    BATCH_SIZE = 8
+    temp_dir = output_video.parent
+    
+    if len(clip_paths) <= BATCH_SIZE:
+        # 소수 클립: 직접 xfade
+        if xfade_batch(clip_paths, output_video, transition):
+            return True
+        logger.warning("xfade 실패, 단순 concat fallback")
+        fallback = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(concat_file),
+                    "-c", "copy", "-y", str(output_video)]
+        return run_ffmpeg_command(fallback)
+    
+    # 다수 클립: 배치 분할 처리 — 마지막 고아 배치(≤1 클립)는 직전 배치에 합친다
+    batches = [clip_paths[i:i+BATCH_SIZE] for i in range(0, len(clip_paths), BATCH_SIZE)]
+    if len(batches) >= 2 and len(batches[-1]) <= 1:
+        batches[-2].extend(batches[-1])
+        batches.pop()
+        logger.info(f"xfade_batch: 마지막 고아 배치 머지 → {len(batches)}개 배치")
+    batch_outputs = []
+    for bi, batch in enumerate(batches):
+        bout = temp_dir / f"batch_{bi}.mp4"
+        if not xfade_batch(batch, bout, transition):
+            # 배치 실패 시 단순 concat (무효 클립 제외)
+            valid_batch = [cp for cp in batch if _is_valid_clip(cp)]
+            if not valid_batch:
+                logger.warning(f"batch_{bi}: 유효 클립 없음 — 건너뜀")
+                continue
+            if len(valid_batch) == 1:
+                import shutil as _sh
+                _sh.copy(str(valid_batch[0]), str(bout))
+                batch_outputs.append(bout)
+                continue
+            bc_txt = temp_dir / f"batch_{bi}_concat.txt"
+            with open(bc_txt, "w") as f:
+                for cp in valid_batch:
+                    f.write(f"file '{cp}'\n")
+            run_ffmpeg_command(["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(bc_txt),
+                               "-c", "copy", "-y", str(bout)])
+        if bout.exists():
+            batch_outputs.append(str(bout))
+    
+    if not batch_outputs:
+        return False
+    
+    if len(batch_outputs) == 1:
+        shutil.copy(batch_outputs[0], str(output_video))
+        return True
+    
+    # 배치 결과들을 최종 합치기
+    if xfade_batch(batch_outputs, output_video, transition):
+        return True
+    
+    # 최종 fallback: 배치 단순 concat
+    final_concat = temp_dir / "final_concat.txt"
+    with open(final_concat, "w") as f:
+        for bp in batch_outputs:
+            f.write(f"file '{bp}'\n")
+    return run_ffmpeg_command(["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(final_concat),
+                               "-c", "copy", "-y", str(output_video)])
+
+
+def _UNUSED_old_xfade():
+    # 구 코드 보관용 (사용 안 함)
+    FADE_DUR = 0.5
+    offset = 0  # placeholder
+    
+    if len(clip_paths) == 2:
+        fg = f"[0:v][1:v]xfade=transition={transition}:duration={FADE_DUR}:offset={offset:.3f}[vout]"
+    else:
+        # 첫 번째 트랜지션
+        fg = f"[0:v][1:v]xfade=transition={transition}:duration={FADE_DUR}:offset={offset:.3f}[t1];"
+        running_dur = durations[0] + durations[1] - FADE_DUR
+        
+        for i in range(2, len(clip_paths)):
+            tag_in = f"t{i-1}"
+            tag_out = f"t{i}" if i < len(clip_paths)-1 else "vout"
+            offset_i = running_dur - FADE_DUR
+            fg += f"[{tag_in}][{i}:v]xfade=transition={transition}:duration={FADE_DUR}:offset={offset_i:.3f}[{tag_out}];"
+            running_dur += durations[i] - FADE_DUR
+        
+        fg = fg.rstrip(";")
+    
     command = [
         "ffmpeg",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", str(concat_file),
-        "-c", "copy",
+        *inputs,
+        "-filter_complex", fg,
+        "-map", "[vout]",
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-crf", "20",
         "-y",
         str(output_video)
     ]
     
-    return run_ffmpeg_command(command)
+    success = run_ffmpeg_command(command)
+    if not success:
+        # xfade 실패 시 단순 concat fallback
+        logger.warning("xfade 실패, 단순 concat으로 fallback")
+        fallback = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(concat_file),
+                    "-c", "copy", "-y", str(output_video)]
+        return run_ffmpeg_command(fallback)
+    
+    return True
 
 
 def mix_audio(
@@ -481,69 +813,124 @@ def mix_audio(
     bgm_volume: float,
     output_video: Path
 ) -> bool:
-    """오디오 믹싱 (TTS 나레이션 + 배경음악)"""
-    
+    """오디오 믹싱 - loudnorm 정규화 + 나레이션 우선 BGM 더킹"""
+
     if not tts_audio_path.exists():
         logger.warning(f"TTS 오디오 없음: {tts_audio_path}")
-        # TTS가 없으면 배경음악만 추가
         if bgm_path and bgm_path.exists():
             command = [
-                "ffmpeg",
-                "-i", str(video_path),
-                "-i", str(bgm_path),
+                "ffmpeg", "-i", str(video_path), "-i", str(bgm_path),
                 "-filter_complex", f"[1:a]volume={bgm_volume}[audio]",
-                "-map", "0:v",
-                "-map", "[audio]",
-                "-c:v", "copy",
-                "-c:a", "aac",
-                "-b:a", "192k",
-                "-y",
-                str(output_video)
+                "-map", "0:v", "-map", "[audio]",
+                "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-y", str(output_video)
             ]
         else:
-            # 오디오 없이 비디오만 복사
-            command = [
-                "ffmpeg",
-                "-i", str(video_path),
-                "-c", "copy",
-                "-y",
-                str(output_video)
-            ]
-    else:
-        if bgm_path and bgm_path.exists():
-            # TTS + BGM 믹싱
-            command = [
-                "ffmpeg",
-                "-i", str(video_path),
-                "-i", str(tts_audio_path),
-                "-i", str(bgm_path),
-                "-filter_complex",
-                f"[1:a]volume=1.0[narration];[2:a]volume={bgm_volume}[bgm];[narration][bgm]amix=inputs=2:duration=first[audio]",
-                "-map", "0:v",
-                "-map", "[audio]",
-                "-c:v", "copy",
-                "-c:a", "aac",
-                "-b:a", "192k",
-                "-y",
-                str(output_video)
-            ]
-        else:
-            # TTS만 추가
-            command = [
-                "ffmpeg",
-                "-i", str(video_path),
-                "-i", str(tts_audio_path),
-                "-c:v", "copy",
-                "-c:a", "aac",
-                "-b:a", "192k",
-                "-map", "0:v:0",
-                "-map", "1:a:0",
-                "-y",
-                str(output_video)
-            ]
-    
-    return run_ffmpeg_command(command)
+            command = ["ffmpeg", "-i", str(video_path), "-c", "copy", "-y", str(output_video)]
+        return run_ffmpeg_command(command)
 
+    # TTS 있음: loudnorm으로 나레이션 볼륨 정규화
+    if bgm_path and bgm_path.exists() and bgm_volume > 0:
+        # TTS 나레이션 + BGM 더킹 믹스
+        # BGM은 나레이션 대비 -18dB (약 0.12x) - 배경음악은 조용하게
+        actual_bgm_vol = min(bgm_volume * 0.15, 0.12)
+        filter_complex = (
+            f"[1:a]loudnorm=I=-16:TP=-1.5:LRA=11[tts_norm];"
+            f"[2:a]volume={actual_bgm_vol}[bgm_quiet];"
+            f"[tts_norm][bgm_quiet]amix=inputs=2:duration=longest:dropout_transition=3[aout]"
+        )
+        command = [
+            "ffmpeg",
+            "-i", str(video_path),
+            "-i", str(tts_audio_path),
+            "-i", str(bgm_path),
+            "-filter_complex", filter_complex,
+            "-map", "0:v",
+            "-map", "[aout]",
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "192k",
+            "-shortest",
+            "-y", str(output_video)
+        ]
+    else:
+        # TTS 나레이션만 (loudnorm 정규화)
+        filter_complex = "[1:a]loudnorm=I=-16:TP=-1.5:LRA=11[aout]"
+        command = [
+            "ffmpeg",
+            "-i", str(video_path),
+            "-i", str(tts_audio_path),
+            "-filter_complex", filter_complex,
+            "-map", "0:v",
+            "-map", "[aout]",
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "192k",
+            "-shortest",
+            "-y", str(output_video)
+        ]
+
+    success = run_ffmpeg_command(command)
+    if not success:
+        # loudnorm 실패 시 단순 믹스 fallback
+        logger.warning("loudnorm 실패, 단순 믹스 fallback")
+        simple_cmd = [
+            "ffmpeg", "-i", str(video_path), "-i", str(tts_audio_path),
+            "-map", "0:v", "-map", "1:a",
+            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+            "-shortest", "-y", str(output_video)
+        ]
+        return run_ffmpeg_command(simple_cmd)
+    return True
+
+def add_subtitles_to_video(
+    input_video: Path,
+    srt_path: Path,
+    output_video: Path,
+    font_size: int = 52,
+    font_color: str = "white",
+    outline: bool = True
+) -> bool:
+    """SRT 자막을 영상에 오버레이 (하단 자막바 스타일)"""
+    if not srt_path.exists():
+        logger.warning(f"SRT 파일 없음: {srt_path}")
+        return False
+
+    # ASS 스타일: 반투명 배경 박스 + 흰 자막
+    style = (
+        f"FontSize=72,"
+        f"Bold=1,"
+        f"PrimaryColour=&H00FFFF00&,"
+        f"OutlineColour=&H00000000&,"
+        f"BackColour=&HA0000000&,"
+        f"BorderStyle=3,"
+        f"Outline=3,"
+        f"Shadow=1,"
+        f"MarginV=80,"
+        f"Alignment=2"
+    )
+
+    command = [
+        "ffmpeg",
+        "-i", str(input_video),
+        "-vf", f"subtitles={str(srt_path)}:force_style='{style}'",
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-crf", "20",
+        "-c:a", "copy",
+        "-y",
+        str(output_video)
+    ]
+
+    success = run_ffmpeg_command(command)
+    if not success:
+        # SRT 경로 이스케이프 문제로 실패 시 copy fallback
+        logger.warning("SRT 오버레이 실패, subtitles 필터 재시도")
+        simple_cmd = [
+            "ffmpeg", "-i", str(input_video),
+            "-vf", f"subtitles='{str(srt_path)}'",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+            "-c:a", "copy", "-y", str(output_video)
+        ]
+        return run_ffmpeg_command(simple_cmd)
+    return True
 
 def extract_thumbnail(video_path: Path, output_image: Path, timestamp: str = "3") -> bool:
     """영상에서 썸네일 추출"""
@@ -652,8 +1039,22 @@ def get_video_duration(video_path: Path) -> Optional[float]:
         )
         
         if result.returncode == 0:
-            duration = float(result.stdout.strip())
-            return duration
+            raw = result.stdout.strip()
+            if raw and raw not in ("N/A", ""):
+                try:
+                    return float(raw)
+                except ValueError:
+                    pass
+            # Fallback: csv=p=0 format
+            alt_cmd = ["ffprobe","-v","error","-show_entries","format=duration","-of","csv=p=0",str(video_path)]
+            alt = subprocess.run(alt_cmd, capture_output=True, text=True, timeout=10.0)
+            raw2 = alt.stdout.strip()
+            if raw2 and raw2 not in ("N/A", ""):
+                try:
+                    return float(raw2)
+                except ValueError:
+                    pass
+            return None
     except Exception as e:
         logger.error(f"영상 길이 조회 오류: {e}")
     
@@ -821,7 +1222,7 @@ def create_music_video(
             cmd = [
                 "ffmpeg",
                 "-i", str(combined),
-                "-stream_loop", "-1",   # BGM 반복
+                # BGM 반복
                 "-i", str(bgm_path),
                 "-filter_complex",
                 # loudnorm: YouTube 기준 -14 LUFS, TP=-1.5, LRA=11
@@ -899,7 +1300,7 @@ def sync_scene_durations_from_timestamps(
         total_audio_sec = float(end_times[-1])
         logger.info(f"TTS 전체 길이: {total_audio_sec:.2f}초")
 
-        total_scene_sec = sum(s.duration_seconds for s in scenes)
+        total_scene_sec = sum((s.duration_seconds or 5.0) for s in scenes)
         if total_scene_sec <= 0:
             logger.warning("씬 총 길이 0 — 동기화 스킵")
             return scenes
@@ -907,8 +1308,8 @@ def sync_scene_durations_from_timestamps(
         ratio = total_audio_sec / total_scene_sec
         synced = []
         for s in scenes:
-            new_dur = max(1.0, round(s.duration_seconds * ratio, 2))
-            if abs(new_dur - s.duration_seconds) > 0.1:
+            new_dur = max(1.0, round((s.duration_seconds or 5.0) * ratio, 2))
+            if abs(new_dur - (s.duration_seconds or 5.0)) > 0.1:
                 logger.info(f"씬 '{s.scene_id}' 길이 조정: {s.duration_seconds:.1f}s -> {new_dur:.1f}s")
             synced.append(s.model_copy(update={"duration_seconds": new_dur}))
 
@@ -925,6 +1326,12 @@ async def process_video_creation(
     request: VideoCreateRequest
 ) -> None:
     """영상 생성 처리 (백그라운드 작업)"""
+    global _CURRENT_JOB
+    if _CURRENT_JOB is not None:
+        logger.warning(f"동시 실행 거부: {job_id}")
+        await update_job_status(job_id, JobStatus.FAILED, error="다른 잡 처리 중")
+        return
+    _CURRENT_JOB = job_id
     try:
         await update_job_status(job_id, JobStatus.PROCESSING, progress=10.0)
         
@@ -957,7 +1364,7 @@ async def process_video_creation(
             subtitle_text = request.subtitle_text or " ".join(
                 s.description or s.keyword for s in scenes
             )
-            total_dur = sum(s.duration_seconds for s in scenes)
+            total_dur = sum((s.duration_seconds or 5.0) for s in scenes)
             srt_path = job_temp_dir / f"{job_id}.srt"
             create_srt_from_text(subtitle_text, total_dur, srt_path)
             await update_job_status(job_id, JobStatus.PROCESSING, progress=60.0)
@@ -1001,7 +1408,11 @@ async def process_video_creation(
             await update_job_status(job_id, JobStatus.PROCESSING, progress=50.0)
             
             # 오디오 믹싱
-            tts_audio = TMP_DIR / f"{job_id}.mp3"
+            # audio_url이 있으면 우선 사용 (외부 TTS 오디오 지원)
+            if getattr(request, "audio_url", None):
+                tts_audio = Path(request.audio_url)
+            else:
+                tts_audio = TMP_DIR / f"{job_id}.mp3"
             bgm = None
             
             if request.add_bgm:
@@ -1012,7 +1423,6 @@ async def process_video_creation(
             if not mix_audio(combined_video, tts_audio, bgm, request.bgm_volume, output_video):
                 logger.warning("오디오 믹싱 실패, 오디오 없이 진행")
                 # 오디오 없이 비디오만 복사
-                import shutil
                 shutil.copy(combined_video, output_video)
             
             await update_job_status(job_id, JobStatus.PROCESSING, progress=70.0)
@@ -1043,7 +1453,21 @@ async def process_video_creation(
                 output_files=output_files,
                 duration_seconds=duration
             )
-            
+
+            # 자막 오버레이 (subtitle=True)
+            if request.add_subtitles and request.subtitle_text:
+                try:
+                    srt_path = job_temp_dir / f"{job_id}_narration.srt"
+                    total_dur = duration or sum((s.duration_seconds or 5.0) for s in scenes)
+                    create_srt_from_text(request.subtitle_text, total_dur, srt_path)
+                    out_sub = LONGFORM_DIR / f"{job_id}_sub.mp4"
+                    if add_subtitles_to_video(output_video, srt_path, out_sub):
+                        shutil.move(str(out_sub), str(output_video))
+                        output_files["longform"] = str(output_video)
+                        logger.info("자막 오버레이 완료")
+                except Exception as e:
+                    logger.error(f"자막 오류: {e}")
+
             # 숏폼 생성
             if request.generate_shorts:
                 shorts_output = SHORTS_DIR / f"{job_id}_short.mp4"
@@ -1077,6 +1501,8 @@ async def process_video_creation(
     except Exception as e:
         logger.error(f"영상 생성 오류 ({job_id}): {e}")
         await update_job_status(job_id, JobStatus.FAILED, error=str(e))
+    finally:
+        _CURRENT_JOB = None
 
 
 # ============================================================================
@@ -1208,3 +1634,5 @@ if __name__ == "__main__":
         workers=2,
         log_level="info"
     )
+
+

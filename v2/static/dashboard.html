@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
@@ -47,7 +47,6 @@ tailwind.config = {
   .tab-inactive { border-bottom: 2px solid transparent; color: #6B7280; }
   @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
   @keyframes slideUp { from { transform:translateY(8px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-  .provider-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
   .shimmer { background: linear-gradient(90deg,#1A2540 25%,#243054 50%,#1A2540 75%); background-size:200px 100%; animation: shimmer 1.5s infinite; }
   @keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px+100%) 0} }
   input, select, textarea { color-scheme: dark; }
@@ -58,16 +57,11 @@ tailwind.config = {
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useCallback } = React;
 
-const BASE    = 'http://localhost:8080';
-const LF_KEY  = 'longform-2026-secret';
-const YT_BASE = `${BASE}/api/upload`;
-
-const HEADERS_JSON = {
-  'Content-Type': 'application/json',
-  'X-LF-API-Key': LF_KEY,
-};
+const BASE   = 'http://localhost:8080';
+const LF_KEY = 'longform-2026-secret';
+const HEADERS_JSON = { 'Content-Type': 'application/json', 'X-LF-API-Key': LF_KEY };
 
 const API = {
   health: {
@@ -80,7 +74,6 @@ const API = {
   },
   providers:   `${BASE}/api/mcp/providers`,
   generate:    `${BASE}/api/mcp/generate/script`,
-  videoCreate: `${BASE}/api/ffmpeg/video/create`,
   ytUpload:    `${BASE}/api/upload/upload/youtube`,
 };
 
@@ -113,38 +106,24 @@ const TODAY_TOPICS = [
   '2026 부동산 시장 서울 집값 전망',
 ];
 
-// ─────────────────────────────────────────────
-//  Utils
-// ─────────────────────────────────────────────
-function cls(...args) { return args.filter(Boolean).join(' '); }
+const MODE_LABELS = { longform:'🎬 롱폼', shorts:'📱 숏폼', music_video:'🎵 뮤직비디오' };
 
-// ─────────────────────────────────────────────
-//  Components
-// ─────────────────────────────────────────────
-function StatusDot({ status, animated = true }) {
-  const colors = { healthy:'bg-green-400', degraded:'bg-yellow-400', offline:'bg-red-500', loading:'bg-gray-600' };
-  return <span className={cls('inline-block w-1.5 h-1.5 rounded-full', colors[status]||colors.loading, animated && status==='healthy' && 'animate-pulse')} />;
+function cls(...a) { return a.filter(Boolean).join(' '); }
+
+function StatusDot({ status, animated=true }) {
+  const c = { healthy:'bg-green-400', degraded:'bg-yellow-400', offline:'bg-red-500', loading:'bg-gray-600' };
+  return <span className={cls('inline-block w-1.5 h-1.5 rounded-full', c[status]||c.loading, animated&&status==='healthy'&&'animate-pulse')} />;
 }
 
 function StatusBadge({ status }) {
-  const map = {
-    healthy:  { color:'text-green-400',  bg:'bg-green-400/10',  label:'Online' },
-    degraded: { color:'text-yellow-400', bg:'bg-yellow-400/10', label:'Degraded' },
-    offline:  { color:'text-red-400',    bg:'bg-red-400/10',    label:'Offline' },
-    loading:  { color:'text-gray-500',   bg:'bg-gray-700/30',   label:'...' },
-  };
-  const s = map[status] || map.loading;
-  return (
-    <span className={cls('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium', s.color, s.bg)}>
-      <StatusDot status={status} />
-      {s.label}
-    </span>
-  );
+  const m = { healthy:{color:'text-green-400',bg:'bg-green-400/10',label:'Online'}, degraded:{color:'text-yellow-400',bg:'bg-yellow-400/10',label:'Degraded'}, offline:{color:'text-red-400',bg:'bg-red-400/10',label:'Offline'}, loading:{color:'text-gray-500',bg:'bg-gray-700/30',label:'...'} };
+  const s = m[status]||m.loading;
+  return <span className={cls('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium',s.color,s.bg)}><StatusDot status={status}/>{s.label}</span>;
 }
 
 function ServiceCard({ service, status, latency }) {
   return (
-    <div className={cls('border rounded-xl p-3.5 card-hover', 'bg-lf-card border-lf-border', status==='healthy' && 'border-green-900/40')}>
+    <div className={cls('border rounded-xl p-3.5 card-hover bg-lf-card border-lf-border', status==='healthy'&&'border-green-900/40')}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-sm">{service.icon}</div>
@@ -154,8 +133,8 @@ function ServiceCard({ service, status, latency }) {
           </div>
         </div>
         <div className="text-right">
-          <StatusBadge status={status} />
-          {latency && <div className="text-xs text-gray-700 mt-0.5">{latency}ms</div>}
+          <StatusBadge status={status}/>
+          {latency&&<div className="text-xs text-gray-700 mt-0.5">{latency}ms</div>}
         </div>
       </div>
     </div>
@@ -167,49 +146,27 @@ function ProviderGrid({ providers, lastUsed }) {
     <div className="bg-lf-card border border-lf-border rounded-xl p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">AI 프로바이더</h3>
-        <div className="flex items-center gap-1.5">
-          <StatusDot status="healthy" />
-          <span className="text-xs text-gray-500">병렬 AUTO 모드</span>
-        </div>
+        <span className="text-xs text-gray-500 flex items-center gap-1"><StatusDot status="healthy"/>병렬 AUTO</span>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {Object.entries(PROVIDERS_META).map(([key, meta]) => {
-          const pData = providers[key];
-          const avail  = pData?.available;
-          const model  = pData?.model;
-          const isUsed = lastUsed === key;
+          const pData=providers[key]; const avail=pData?.available; const model=pData?.model; const isUsed=lastUsed===key; const isOff=meta.type==='offline';
           return (
-            <div key={key}
-              className={cls('flex items-center justify-between px-3 py-2 rounded-lg border transition-all',
-                isUsed  ? 'border-cyan-500/50 bg-cyan-500/5' :
-                avail   ? 'border-lf-border bg-white/2 hover:border-gray-600' :
-                          'border-lf-border/50 bg-white/1 opacity-50'
-              )}>
+            <div key={key} className={cls('flex items-center justify-between px-3 py-2 rounded-lg border transition-all',
+              isUsed?'border-cyan-500/50 bg-cyan-500/5':avail?'border-lf-border bg-white/2 hover:border-gray-600':isOff?'border-purple-900/40 bg-purple-900/5 opacity-70':'border-lf-border/50 opacity-50')}>
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-sm">{meta.icon}</span>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium text-white">{meta.label}</span>
-                    {isUsed && <span className="text-xs text-cyan-400 font-bold">★ 사용중</span>}
-                  </div>
-                  {model && <div className="text-xs text-gray-600 truncate" style={{maxWidth:90}}>{model}</div>}
+                  <div className="flex items-center gap-1"><span className="text-xs font-medium text-white">{meta.label}</span>{isUsed&&<span className="text-xs text-cyan-400">★</span>}{isOff&&!avail&&<span className="text-xs text-purple-500">오프</span>}</div>
+                  {model&&<div className="text-xs text-gray-600 truncate" style={{maxWidth:90}}>{model}</div>}
                 </div>
               </div>
-              <div className="ml-2 shrink-0">
-                {avail === undefined
-                  ? <span className="text-gray-700 text-xs">…</span>
-                  : avail
-                    ? <span className="text-green-400 text-xs">✓</span>
-                    : <span className="text-gray-700 text-xs">✗</span>
-                }
-              </div>
+              <div className="ml-2 shrink-0">{avail===undefined?<span className="text-gray-700 text-xs">…</span>:avail?<span className="text-green-400 text-xs">✓</span>:<span className="text-gray-700 text-xs">✗</span>}</div>
             </div>
           );
         })}
       </div>
-      <div className="mt-3 pt-3 border-t border-lf-border/50 text-xs text-gray-600">
-        🔄 클라우드 6개 병렬 → 오프라인 2개 순차 폴백
-      </div>
+      <div className="mt-3 pt-3 border-t border-lf-border/50 text-xs text-gray-600">🔄 클라우드 6개 병렬 → GPT4All·Ollama 폴백</div>
     </div>
   );
 }
@@ -218,11 +175,7 @@ function StatCard({ icon, label, value, sub, color }) {
   return (
     <div className="bg-lf-card border border-lf-border rounded-xl p-4 card-hover">
       <div className="flex items-center justify-between">
-        <div>
-          <div className="text-gray-600 text-xs mb-1">{label}</div>
-          <div className={cls('text-2xl font-bold', color)}>{value}</div>
-          {sub && <div className="text-gray-700 text-xs mt-0.5">{sub}</div>}
-        </div>
+        <div><div className="text-gray-600 text-xs mb-1">{label}</div><div className={cls('text-2xl font-bold',color)}>{value}</div>{sub&&<div className="text-gray-700 text-xs mt-0.5">{sub}</div>}</div>
         <div className="text-2xl opacity-40">{icon}</div>
       </div>
     </div>
@@ -231,116 +184,78 @@ function StatCard({ icon, label, value, sub, color }) {
 
 function JobCard({ job, onCancel, onYTUpload }) {
   const [elapsed, setElapsed] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setElapsed(Math.floor((Date.now() - job.startedAt) / 1000)), 1000);
-    return () => clearInterval(t);
-  }, [job.startedAt]);
-
-  const statusMap = {
-    pending:    { color:'text-yellow-400', bar:'bg-yellow-400', label:'⏳ 대기 중' },
-    generating: { color:'text-cyan-400',   bar:'bg-cyan-400',   label:'🧠 AI 스크립트' },
-    tts:        { color:'text-purple-400', bar:'bg-purple-400', label:'🎙️ TTS 생성' },
-    rendering:  { color:'text-blue-400',   bar:'bg-blue-400',   label:'🎬 영상 렌더링' },
-    uploading:  { color:'text-green-400',  bar:'bg-green-400',  label:'📺 업로드 중' },
-    done:       { color:'text-green-400',  bar:'bg-green-400',  label:'✅ 완료' },
-    error:      { color:'text-red-400',    bar:'bg-red-500',    label:'❌ 오류' },
-  };
-  const s = statusMap[job.status] || statusMap.pending;
-  const mins = Math.floor(elapsed / 60);
-  const secs = elapsed % 60;
-
+  useEffect(() => { const t=setInterval(()=>setElapsed(Math.floor((Date.now()-job.startedAt)/1000)),1000); return ()=>clearInterval(t); }, [job.startedAt]);
+  const sm = { pending:{color:'text-yellow-400',bar:'bg-yellow-400',label:'⏳ 대기'}, generating:{color:'text-cyan-400',bar:'bg-cyan-400',label:'🧠 스크립트'}, tts:{color:'text-purple-400',bar:'bg-purple-400',label:'🎙️ TTS'}, assets:{color:'text-indigo-400',bar:'bg-indigo-400',label:'🔍 소스'}, rendering:{color:'text-blue-400',bar:'bg-blue-400',label:'🎬 렌더링'}, uploading:{color:'text-green-400',bar:'bg-green-400',label:'📺 업로드'}, done:{color:'text-green-400',bar:'bg-green-400',label:'✅ 완료'}, error:{color:'text-red-400',bar:'bg-red-500',label:'❌ 오류'} };
+  const s=sm[job.status]||sm.pending; const mins=Math.floor(elapsed/60); const secs=elapsed%60;
   return (
     <div className="bg-lf-card border border-lf-border rounded-xl p-4 card-hover">
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
           <div className="text-white font-medium text-sm truncate">{job.topic}</div>
-          <div className="text-gray-600 text-xs mt-0.5">{job.id} · {job.mode === 'longform' ? '🎬 롱폼' : '📱 숏폼'}</div>
-          {job.provider && <div className="text-xs text-cyan-600 mt-0.5">🤖 {job.provider}</div>}
+          <div className="text-gray-600 text-xs mt-0.5">{job.id} · {MODE_LABELS[job.mode]||'🎬 롱폼'}</div>
+          {job.provider&&<div className="text-xs text-cyan-600 mt-0.5">🤖 {job.provider}</div>}
         </div>
-        <span className={cls('ml-2 text-xs font-semibold shrink-0', s.color)}>{s.label}</span>
+        <span className={cls('ml-2 text-xs font-semibold shrink-0',s.color)}>{s.label}</span>
       </div>
-      <div className="mb-2">
-        <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
-          <div className={cls('h-full rounded-full transition-all duration-500', s.bar)} style={{ width:`${job.progress||0}%`, opacity:0.85 }} />
-        </div>
-      </div>
+      <div className="mb-2"><div className="h-1 bg-gray-800 rounded-full overflow-hidden"><div className={cls('h-full rounded-full transition-all duration-500',s.bar)} style={{width:`${job.progress||0}%`,opacity:0.85}}/></div></div>
       <div className="flex items-center justify-between text-xs text-gray-600">
         <span>⏱ {mins}:{String(secs).padStart(2,'0')} · {job.progress||0}%</span>
-        {!['done','error'].includes(job.status) && (
-          <button onClick={() => onCancel(job.id)} className="text-red-500 hover:text-red-400 transition-colors">취소</button>
-        )}
-        {job.status === 'done' && (
-          <div className="flex gap-2 flex-wrap mt-1">
-            {job.videoUrl && (
-              <a href={job.videoUrl} download className="px-2 py-0.5 rounded text-xs bg-cyan-900/40 text-cyan-400 hover:bg-cyan-900/70 border border-cyan-800/40 transition-colors">⬇ 영상</a>
-            )}
-            {job.thumbUrl && (
-              <a href={job.thumbUrl} download className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700/40 transition-colors">🖼 썸네일</a>
-            )}
-            {job.ytUrl
-              ? <a href={job.ytUrl} target="_blank" className="px-2 py-0.5 rounded text-xs bg-red-900/40 text-red-400 hover:bg-red-900/70 border border-red-800/40 transition-colors">▶ YT</a>
-              : <button onClick={() => onYTUpload(job.id)} className="px-2 py-0.5 rounded text-xs bg-red-700/20 text-red-400 hover:bg-red-700/40 border border-red-700/30 transition-colors">📺 업로드</button>
-            }
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {!['done','error'].includes(job.status)&&<button onClick={()=>onCancel(job.id)} className="text-red-500 hover:text-red-400">취소</button>}
+          {job.status==='done'&&(
+            <div className="flex gap-1.5">
+              {job.videoUrl&&<a href={job.videoUrl} download className="px-2 py-0.5 rounded text-xs bg-cyan-900/40 text-cyan-400 border border-cyan-800/40">⬇ 영상</a>}
+              {job.thumbUrl&&<a href={job.thumbUrl} download className="px-2 py-0.5 rounded text-xs bg-gray-800 text-gray-400 border border-gray-700/40">🖼</a>}
+              {job.ytUrl?<a href={job.ytUrl} target="_blank" className="px-2 py-0.5 rounded text-xs bg-red-900/40 text-red-400 border border-red-800/40">▶ YT</a>:<button onClick={()=>onYTUpload(job.id)} className="px-2 py-0.5 rounded text-xs bg-red-700/20 text-red-400 border border-red-700/30 hover:bg-red-700/40">📺 업로드</button>}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────
-//  GenerateForm
-// ─────────────────────────────────────────────
 function GenerateForm({ onSubmit, loading }) {
-  const [form, setForm] = useState({
-    topic: '', duration: '600', style: 'educational',
-    mode: 'longform', language: 'ko', provider: 'gemini',
-  });
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
-  const setTopic = (t) => setForm(f => ({ ...f, topic: t }));
-  const inputCls = "w-full bg-lf-bg border border-lf-border rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-cyan-500/60 transition-colors";
+  const [form, setForm] = useState({ topic:'', duration:'600', style:'professional', mode:'longform', language:'ko', provider:'gemini', autoUpload:false });
+  const set = (k) => (e) => setForm(f=>({...f,[k]:e.target.value}));
+  const toggle = (k) => () => setForm(f=>({...f,[k]:!f[k]}));
+  const setTopic = (t) => setForm(f=>({...f,topic:t}));
+  const isMV = form.mode==='music_video';
+  const ic = "w-full bg-lf-bg border border-lf-border rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-cyan-500/60 transition-colors";
 
   return (
     <div className="bg-lf-card border border-lf-border rounded-xl p-5 glow-purple">
       <h3 className="text-white font-semibold mb-4 flex items-center gap-2 text-sm">
         <span style={{color:'#7B2FBE'}}>✦</span> 새 영상 생성
+        {isMV&&<span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-purple-900/40 text-purple-400 border border-purple-700/40">🎵 BGM+자막 모드</span>}
       </h3>
-
-      {/* 오늘 뉴스 주제 */}
       <div className="mb-4">
-        <div className="text-xs text-gray-600 mb-2">📰 오늘 뉴스 주제 바로가기</div>
+        <div className="text-xs text-gray-600 mb-2">📰 오늘 뉴스 주제</div>
         <div className="flex flex-wrap gap-1.5">
-          {TODAY_TOPICS.map(t => (
-            <button key={t} onClick={() => setTopic(t)}
-              className={cls('news-chip px-2.5 py-1 rounded-full text-xs text-gray-400 bg-lf-bg',
-                form.topic === t && 'border-cyan-500/60 text-cyan-400 bg-cyan-500/5'
-              )}>
-              {t.substring(0, 18)}…
-            </button>
+          {TODAY_TOPICS.map(t=>(
+            <button key={t} onClick={()=>setTopic(t)} className={cls('news-chip px-2.5 py-1 rounded-full text-xs text-gray-400 bg-lf-bg',form.topic===t&&'border-cyan-500/60 text-cyan-400 bg-cyan-500/5')}>{t.substring(0,18)}…</button>
           ))}
         </div>
       </div>
-
       <div className="space-y-3">
         <div>
           <label className="text-xs text-gray-500 mb-1.5 block">주제 / 키워드</label>
-          <input value={form.topic} onChange={set('topic')}
-            placeholder="예: 2026년 AI 트렌드 완전 분석" className={inputCls} />
+          <input value={form.topic} onChange={set('topic')} placeholder="예: 2026년 AI 트렌드 완전 분석" className={ic}/>
         </div>
-
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block">모드</label>
-            <select value={form.mode} onChange={set('mode')} className={inputCls}>
+            <select value={form.mode} onChange={set('mode')} className={ic}>
               <option value="longform">🎬 롱폼 (YouTube)</option>
               <option value="shorts">📱 숏폼 (Shorts)</option>
-<option value="music_video">🎵 뮤직비디오 (BGM+자막)</option>
+              <option value="music_video">🎵 뮤직비디오 (BGM+자막)</option>
             </select>
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block">길이</label>
-            <select value={form.duration} onChange={set('duration')} className={inputCls}>
-              <option value="60">60초 (숏폼)</option>
+            <select value={form.duration} onChange={set('duration')} className={ic}>
+              <option value="60">60초</option>
+              <option value="180">3분</option>
               <option value="300">5분</option>
               <option value="600">10분</option>
               <option value="900">15분</option>
@@ -348,553 +263,307 @@ function GenerateForm({ onSubmit, loading }) {
             </select>
           </div>
         </div>
-
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-gray-500 mb-1.5 block">스타일</label>
-            <select value={form.style} onChange={set('style')} className={inputCls}>
-              <option value="educational">📚 교육형</option>
-              <option value="entertaining">🎭 엔터테인먼트</option>
-              <option value="professional">💼 프로페셔널</option>
-              <option value="casual">😊 캐주얼</option>
-              <option value="cinematic">🎥 시네마틱</option>
-            </select>
+            <label className={cls("text-xs mb-1.5 block",isMV?"text-gray-600":"text-gray-500")}>스타일 {isMV&&<span className="text-purple-600">(BGM모드 미적용)</span>}</label>
+            {isMV
+              ? <div className="w-full bg-lf-bg border border-lf-border/40 rounded-lg px-3.5 py-2.5 text-sm text-gray-600">🎵 자동 (BGM 모드)</div>
+              : <select value={form.style} onChange={set('style')} className={ic}>
+                  <option value="educational">📚 교육형</option>
+                  <option value="entertaining">🎭 엔터테인먼트</option>
+                  <option value="professional">💼 프로페셔널</option>
+                  <option value="casual">😊 캐주얼</option>
+                  <option value="cinematic">🎥 시네마틱</option>
+                </select>
+            }
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block">AI 프로바이더</label>
-            <select value={form.provider} onChange={set('provider')} className={inputCls}>
+            <select value={form.provider} onChange={set('provider')} className={ic}>
               <option value="auto">⚡ AUTO (병렬)</option>
-              <option value="cerebras">⚡ Cerebras (빠름)</option>
+              <option value="gemini">🔵 Gemini</option>
+              <option value="cerebras">⚡ Cerebras</option>
               <option value="arliai">🤖 ArliAI</option>
               <option value="openrouter">🌐 OpenRouter</option>
               <option value="openai">🟢 OpenAI</option>
               <option value="claude">🟣 Claude</option>
-              <option value="gemini">🔵 Gemini</option>
               <option value="ollama">🦙 Ollama (오프라인)</option>
               <option value="gpt4all">💻 GPT4All (오프라인)</option>
             </select>
           </div>
         </div>
 
-        <button onClick={() => onSubmit(form)} disabled={loading || !form.topic.trim()}
-          className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed gradient-btn text-white">
-          {loading ? '⏳ 생성 중...' : '▶ 생성 시작'}
+        {/* YouTube 자동/수동 업로드 선택 */}
+        <div className="rounded-lg px-3 py-2.5 bg-lf-bg border border-lf-border flex items-center justify-between">
+          <div>
+            <div className="text-xs text-gray-400 font-medium">YouTube 업로드</div>
+            <div className="text-xs text-gray-600 mt-0.5">{form.autoUpload?'✅ 완성 즉시 자동 업로드':'⏸ 수동 업로드 (나중에 직접)'}</div>
+          </div>
+          <button onClick={toggle('autoUpload')} className={cls('px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all',
+            form.autoUpload?'bg-red-500/20 border-red-500/50 text-red-400':'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500')}>
+            {form.autoUpload?'🔴 자동 ON':'⚪ 수동'}
+          </button>
+        </div>
+
+        {isMV&&<div className="rounded-lg px-3 py-2 bg-purple-900/20 border border-purple-700/30 text-xs text-purple-400">🎵 BGM 80% + 자막 오버레이 · TTS 없음 · FontSize=56 · -14 LUFS</div>}
+
+        <button onClick={()=>onSubmit(form)} disabled={loading||!form.topic.trim()} className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed gradient-btn text-white">
+          {loading?'⏳ 생성 중...':isMV?'🎵 뮤직비디오 생성':'▶ 생성 시작'}
         </button>
       </div>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────
-//  YouTubeUploadForm
-// ─────────────────────────────────────────────
 function YouTubeUploadForm({ onToast, prefillJobId }) {
-  const [form, setForm] = useState({
-    job_id: '', type: 'longform',
-    title: '', description: '', privacy: 'public',
-    tags: '', notify: true,
-  });
-  // prefill from parent
-  useEffect(() => { if (prefillJobId) setForm(f => ({ ...f, job_id: prefillJobId })); }, [prefillJobId]);
+  const [form, setForm] = useState({ job_id:'', type:'longform', title:'', description:'', privacy:'public', tags:'', notify:true });
+  useEffect(()=>{ if(prefillJobId) setForm(f=>({...f,job_id:prefillJobId})); },[prefillJobId]);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
-  const inputCls = "w-full bg-lf-bg border border-lf-border rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-red-500/60 transition-colors";
+  const [result,  setResult]  = useState(null);
+  const set = (k)=>(e)=>setForm(f=>({...f,[k]:e.target.type==='checkbox'?e.target.checked:e.target.value}));
+  const ic = "w-full bg-lf-bg border border-lf-border rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-red-500/60 transition-colors";
 
   const handleUpload = async () => {
-    if (!form.job_id.trim()) { onToast('Job ID를 입력하세요', 'error'); return; }
+    if(!form.job_id.trim()){onToast('Job ID를 입력하세요','error');return;}
     setLoading(true); setResult(null);
     try {
-      const body = {
-        job_id:      form.job_id.trim(),
-        type:        form.type,
-        title:       form.title.trim() || undefined,
-        description: form.description.trim() || undefined,
-        tags:        form.tags ? form.tags.split(',').map(t=>t.trim()).filter(Boolean) : undefined,
-        privacy:     form.privacy,
-        notify_subscribers: form.notify,
-      };
-      const r = await fetch(API.ytUpload, {
-        method: 'POST',
-        headers: HEADERS_JSON,
-        body: JSON.stringify(body),
-      });
+      const r = await fetch(API.ytUpload,{method:'POST',headers:HEADERS_JSON,body:JSON.stringify({job_id:form.job_id.trim(),type:form.type,title:form.title.trim()||undefined,description:form.description.trim()||undefined,tags:form.tags?form.tags.split(',').map(t=>t.trim()).filter(Boolean):undefined,privacy:form.privacy,notify_subscribers:form.notify})});
       const data = await r.json();
-      if (data.success || data.video_id || data.url) {
-        setResult({ success: true, url: data.url || data.video_url, id: data.video_id });
-        onToast('YouTube 업로드 성공!', 'success');
-      } else {
-        throw new Error(data.error || data.detail || 'Upload failed');
-      }
-    } catch (e) {
-      setResult({ success: false, error: e.message });
-      onToast(`업로드 오류: ${e.message}`, 'error');
-    } finally {
-      setLoading(false);
-    }
+      if(data.success||data.video_id||data.url){setResult({success:true,url:data.url||data.video_url,id:data.video_id});onToast('YouTube 업로드 성공!','success');}
+      else throw new Error(data.error||data.detail||'Upload failed');
+    } catch(e){setResult({success:false,error:e.message});onToast(`업로드 오류: ${e.message}`,'error');}
+    finally{setLoading(false);}
   };
 
   return (
     <div className="bg-lf-card border border-lf-border rounded-xl p-5 glow-green">
-      <h3 className="text-white font-semibold mb-4 flex items-center gap-2 text-sm">
-        <span className="text-red-500">▶</span> YouTube 업로드
-        <span className="text-xs text-gray-600 font-normal ml-auto">완성된 job_id 직접 업로드</span>
-      </h3>
-
+      <h3 className="text-white font-semibold mb-1 flex items-center gap-2 text-sm"><span className="text-red-500">▶</span> YouTube 업로드</h3>
+      <p className="text-xs text-gray-600 mb-4">작업 큐의 📺 버튼 클릭 시 Job ID 자동 입력됩니다.</p>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-gray-500 mb-1.5 block">Job ID</label>
-            <input value={form.job_id} onChange={set('job_id')}
-              placeholder="lf_20260419_..." className={inputCls} />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1.5 block">타입</label>
-            <select value={form.type} onChange={set('type')} className={inputCls}>
-              <option value="longform">🎬 롱폼</option>
-              <option value="shorts">📱 Shorts</option>
-            </select>
-          </div>
+          <div><label className="text-xs text-gray-500 mb-1.5 block">Job ID</label><input value={form.job_id} onChange={set('job_id')} placeholder="lf_20260419_..." className={ic}/></div>
+          <div><label className="text-xs text-gray-500 mb-1.5 block">타입</label><select value={form.type} onChange={set('type')} className={ic}><option value="longform">🎬 롱폼</option><option value="shorts">📱 Shorts</option></select></div>
         </div>
-
-        <div>
-          <label className="text-xs text-gray-500 mb-1.5 block">제목 (선택 — 비워두면 AI 생성 제목 사용)</label>
-          <input value={form.title} onChange={set('title')}
-            placeholder="영상 제목..." className={inputCls} />
-        </div>
-
-        <div>
-          <label className="text-xs text-gray-500 mb-1.5 block">설명</label>
-          <textarea value={form.description} onChange={set('description')} rows={3}
-            placeholder="YouTube 설명글... (비우면 자동 생성)" className={inputCls + ' resize-none'} />
-        </div>
-
+        <div><label className="text-xs text-gray-500 mb-1.5 block">제목 <span className="text-gray-700">(비우면 AI 생성)</span></label><input value={form.title} onChange={set('title')} placeholder="영상 제목..." className={ic}/></div>
+        <div><label className="text-xs text-gray-500 mb-1.5 block">설명</label><textarea value={form.description} onChange={set('description')} rows={3} placeholder="YouTube 설명글..." className={ic+' resize-none'}/></div>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-gray-500 mb-1.5 block">태그 (쉼표 구분)</label>
-            <input value={form.tags} onChange={set('tags')}
-              placeholder="AI, 트렌드, 2026" className={inputCls} />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1.5 block">공개 설정</label>
-            <select value={form.privacy} onChange={set('privacy')} className={inputCls}>
-              <option value="public">🌍 공개</option>
-              <option value="unlisted">🔗 일부공개</option>
-              <option value="private">🔒 비공개</option>
-            </select>
-          </div>
+          <div><label className="text-xs text-gray-500 mb-1.5 block">태그 (쉼표)</label><input value={form.tags} onChange={set('tags')} placeholder="AI, 트렌드, 2026" className={ic}/></div>
+          <div><label className="text-xs text-gray-500 mb-1.5 block">공개</label><select value={form.privacy} onChange={set('privacy')} className={ic}><option value="public">🌍 공개</option><option value="unlisted">🔗 일부공개</option><option value="private">🔒 비공개</option></select></div>
         </div>
-
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={form.notify} onChange={set('notify')}
-            className="w-4 h-4 accent-red-500" />
-          <span className="text-xs text-gray-500">구독자 알림 발송</span>
-        </label>
-
-        <button onClick={handleUpload} disabled={loading || !form.job_id.trim()}
-          className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed gradient-yt text-white">
-          {loading ? '⏳ 업로드 중...' : '📺 YouTube에 업로드'}
-        </button>
-
-        {result && (
-          <div className={cls('rounded-lg px-4 py-3 text-sm', result.success ? 'bg-green-950 border border-green-800/40 text-green-300' : 'bg-red-950 border border-red-800/40 text-red-300')}>
-            {result.success ? (
-              <div>
-                ✅ 업로드 완료!{' '}
-                {result.url && <a href={result.url} target="_blank" className="underline hover:text-green-200">영상 보기 →</a>}
-                {result.id && <span className="text-green-600 text-xs ml-2">{result.id}</span>}
-              </div>
-            ) : (
-              <div>❌ {result.error}</div>
-            )}
-          </div>
-        )}
+        <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.notify} onChange={set('notify')} className="w-4 h-4 accent-red-500"/><span className="text-xs text-gray-500">구독자 알림 발송</span></label>
+        <button onClick={handleUpload} disabled={loading||!form.job_id.trim()} className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed gradient-yt text-white">{loading?'⏳ 업로드 중...':'📺 YouTube에 업로드'}</button>
+        {result&&<div className={cls('rounded-lg px-4 py-3 text-sm',result.success?'bg-green-950 border border-green-800/40 text-green-300':'bg-red-950 border border-red-800/40 text-red-300')}>{result.success?<div>✅ 완료!{result.url&&<> · <a href={result.url} target="_blank" className="underline">영상 보기 →</a></>}</div>:<div>❌ {result.error}</div>}</div>}
       </div>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────
-//  Pipeline Diagram
-// ─────────────────────────────────────────────
 function PipelineDiagram({ health }) {
-  const steps = [
-    { icon:'🧠', label:'AI-MCP',  key:'mcp',      sub:'7 providers' },
-    null,
-    { icon:'🎙️', label:'TTS',    key:'tts',      sub:'ElevenLabs' },
-    null,
-    { icon:'🎬', label:'FFmpeg',  key:'ffmpeg',   sub:'1080p' },
-    null,
-    { icon:'📺', label:'YouTube', key:'uploader', sub:'auto-upload' },
-  ];
+  const steps = [{icon:'🧠',label:'AI-MCP',key:'mcp',sub:'8 providers'},null,{icon:'🎙️',label:'TTS',key:'tts',sub:'ElevenLabs'},null,{icon:'🎬',label:'FFmpeg',key:'ffmpeg',sub:'1080p'},null,{icon:'📺',label:'YouTube',key:'uploader',sub:'auto'}];
   return (
     <div className="bg-lf-card border border-lf-border rounded-xl p-5">
       <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-5">파이프라인</h3>
       <div className="flex items-center justify-center gap-1.5 flex-wrap">
-        {steps.map((step, i) =>
-          step === null
-            ? <div key={i} className="text-gray-700 text-lg px-1">→</div>
-            : (
-              <div key={i} className="flex flex-col items-center gap-1">
-                <div className={cls(
-                  'w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center text-2xl border transition-all',
-                  health[step.key]?.status === 'healthy' ? 'border-green-500/40 shadow-[0_0_12px_rgba(16,185,129,0.15)]' : 'border-lf-border'
-                )}>{step.icon}</div>
-                <div className="text-xs text-gray-400 font-medium">{step.label}</div>
-                <div className="text-xs text-gray-700">{step.sub}</div>
-                <StatusDot status={health[step.key]?.status || 'loading'} />
-              </div>
-            )
-        )}
+        {steps.map((step,i)=>step===null?<div key={i} className="text-gray-700 text-lg px-1">→</div>:(
+          <div key={i} className="flex flex-col items-center gap-1">
+            <div className={cls('w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center text-2xl border',health[step.key]?.status==='healthy'?'border-green-500/40 shadow-[0_0_12px_rgba(16,185,129,0.15)]':'border-lf-border')}>{step.icon}</div>
+            <div className="text-xs text-gray-400 font-medium">{step.label}</div>
+            <div className="text-xs text-gray-700">{step.sub}</div>
+            <StatusDot status={health[step.key]?.status||'loading'}/>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────
-//  Main App
-// ─────────────────────────────────────────────
 function App() {
-  const [health, setHealth] = useState(() =>
-    Object.fromEntries(SERVICES.map(s => [s.key, { status:'loading', latency:null }]))
-  );
-  const [providers, setProviders] = useState({});
+  const [health,           setHealth]           = useState(()=>Object.fromEntries(SERVICES.map(s=>[s.key,{status:'loading',latency:null}])));
+  const [providers,        setProviders]        = useState({});
   const [lastUsedProvider, setLastUsedProvider] = useState(null);
-  const [jobs, setJobs] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [toasts, setToasts] = useState([]);
-  const [lastCheck, setLastCheck] = useState(null);
-  const [activeTab, setActiveTab] = useState('generate'); // 'generate' | 'upload'
+  const [jobs,             setJobs]             = useState([]);
+  const [submitting,       setSubmitting]       = useState(false);
+  const [toasts,           setToasts]           = useState([]);
+  const [lastCheck,        setLastCheck]        = useState(null);
+  const [activeTab,        setActiveTab]        = useState('generate');
+  const [ytPrefill,        setYtPrefill]        = useState('');
 
-  const addToast = useCallback((msg, type='info') => {
-    const id = Date.now();
-    setToasts(p => [...p, { id, msg, type }]);
-    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
-  }, []);
+  const addToast = useCallback((msg,type='info')=>{
+    const id=Date.now(); setToasts(p=>[...p,{id,msg,type}]); setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),4500);
+  },[]);
 
-  const checkHealth = useCallback(async () => {
-    const results = await Promise.allSettled(
-      SERVICES.map(async (svc) => {
-        const start = performance.now();
-        try {
-          const r = await fetch(API.health[svc.key], { signal: AbortSignal.timeout(4000) });
-          return { key:svc.key, status:r.ok?'healthy':'degraded', latency:Math.round(performance.now()-start) };
-        } catch {
-          return { key:svc.key, status:'offline', latency:null };
-        }
-      })
-    );
-    setHealth(prev => {
-      const next = { ...prev };
-      for (const r of results) if (r.status==='fulfilled') next[r.value.key] = { status:r.value.status, latency:r.value.latency };
-      return next;
-    });
-    setLastCheck(new Date());
-
-    // 프로바이더 상태 조회
-    try {
-      const pr = await fetch(API.providers, { headers: { 'X-LF-API-Key': LF_KEY }, signal: AbortSignal.timeout(4000) });
-      if (pr.ok) {
-        const data = await pr.json();
-        setProviders(data.providers || {});
-      }
-    } catch {}
-  }, []);
-
-  const pollJobs = useCallback(() => {
-    setJobs(prev => prev.map(j => {
-      if (['done','error'].includes(j.status)) return j;
-      if (j.isReal) return j; // 실제 파이프라인이 관리하는 잡은 건드리지 않음
-      const steps = ['pending','generating','tts','rendering','uploading','done'];
-      const elapsed = (Date.now() - j.startedAt) / 1000;
-      const stepIdx = Math.min(Math.floor(elapsed / 20), steps.length - 1);
-      const progress = Math.min(Math.round((elapsed / (20 * (steps.length - 1))) * 100), 99);
-      const status   = stepIdx >= steps.length - 1 ? 'done' : steps[stepIdx];
-      if (status === 'done' && j.status !== 'done') {
-        fetch(`/api/ffmpeg/job/` + j.id + `/status`, { headers: { 'X-LF-API-Key': LF_KEY } })
-          .then(r => r.ok ? r.json() : null)
-          .then(data => {
-            if (!data) return;
-            const files = data.output_files || {};
-            const toUrl = (p) => p ? '/output/' + p.replace('/data/output/','').replace(/\\\\/g,'/') : null;
-            const videoUrl = toUrl(files.longform || files.shorts);
-            const thumbUrl  = toUrl(files.thumbnail);
-            setJobs(prev => prev.map(jj => jj.id === j.id ? { ...jj, videoUrl, thumbUrl } : jj));
-          }).catch(() => {});
-      }
-      return { ...j, status, progress: status === 'done' ? 100 : progress };
+  const checkHealth = useCallback(async()=>{
+    const results = await Promise.allSettled(SERVICES.map(async(svc)=>{
+      const start=performance.now();
+      try{const r=await fetch(API.health[svc.key],{signal:AbortSignal.timeout(4000)});return{key:svc.key,status:r.ok?'healthy':'degraded',latency:Math.round(performance.now()-start)};}
+      catch{return{key:svc.key,status:'offline',latency:null};}
     }));
-  }, []);
+    setHealth(prev=>{const next={...prev};for(const r of results)if(r.status==='fulfilled')next[r.value.key]={status:r.value.status,latency:r.value.latency};return next;});
+    setLastCheck(new Date());
+    try{const pr=await fetch(API.providers,{headers:{'X-LF-API-Key':LF_KEY},signal:AbortSignal.timeout(4000)});if(pr.ok){const data=await pr.json();setProviders(data.providers||{});}}catch{}
+  },[]);
 
-  useEffect(() => {
-    checkHealth();
-    const h = setInterval(checkHealth, 30000);
-    const j = setInterval(pollJobs, 1500);
-    return () => { clearInterval(h); clearInterval(j); };
-  }, [checkHealth, pollJobs]);
+  useEffect(()=>{checkHealth();const h=setInterval(checkHealth,30000);return()=>clearInterval(h);},[checkHealth]);
 
-  // 실제 파이프라인: 스크립트 → TTS → FFmpeg → 폴링
-  const pollFfmpegUntilDone = (jobId, setJobs, addToast) => {
-    return new Promise((resolve) => {
-      const timer = setInterval(async () => {
-        try {
-          const r = await fetch(`/api/ffmpeg/job/${jobId}/status`, { headers: { 'X-LF-API-Key': LF_KEY }, signal: AbortSignal.timeout(5000) });
-          if (!r.ok) return;
-          const d = await r.json();
-          const st = (d.status || '').toLowerCase();
-          const prog = d.progress || 0;
-          if (st === 'completed') {
-            clearInterval(timer);
-            const files = d.output_files || {};
-            const toUrl = (p) => p ? '/output/' + p.replace('/data/output/', '').replace(/\\/g, '/') : null;
-            const videoUrl = toUrl(files.longform || files.shorts);
-            const thumbUrl  = toUrl(files.thumbnail);
-            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status:'done', progress:100, videoUrl, thumbUrl } : j));
-            addToast('✅ 영상 완성! 다운로드 가능', 'success');
-            resolve();
-          } else if (st === 'failed') {
-            clearInterval(timer);
-            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status:'error' } : j));
-            resolve();
-          } else {
-            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, progress: 55 + Math.round(prog * 0.44) } : j));
-          }
-        } catch {}
-      }, 2500);
-    });
-  };
+  const pollFfmpegUntilDone = useCallback((jobId)=>new Promise(resolve=>{
+    const timer=setInterval(async()=>{
+      try{
+        const r=await fetch(`/api/ffmpeg/job/${jobId}/status`,{headers:{'X-LF-API-Key':LF_KEY},signal:AbortSignal.timeout(5000)});
+        if(!r.ok)return;
+        const d=await r.json(); const st=(d.status||'').toLowerCase(); const prog=d.progress||0;
+        if(st==='completed'){
+          clearInterval(timer);
+          const files=d.output_files||{}; const toUrl=(p)=>p?'/output/'+p.replace('/data/output/','').replace(/\\/g,'/'):null;
+          const videoUrl=toUrl(files.longform||files.shorts||files.music_video); const thumbUrl=toUrl(files.thumbnail);
+          setJobs(prev=>prev.map(j=>j.id===jobId?{...j,status:'done',progress:100,videoUrl,thumbUrl}:j));
+          addToast('✅ 영상 완성! 다운로드 가능','success'); resolve('done');
+        }else if(st==='failed'){
+          clearInterval(timer); setJobs(prev=>prev.map(j=>j.id===jobId?{...j,status:'error'}:j)); addToast('❌ 렌더링 실패','error'); resolve('failed');
+        }else{setJobs(prev=>prev.map(j=>j.id===jobId?{...j,progress:55+Math.round(prog*0.44)}:j));}
+      }catch{}
+    },2500);
+  }),[addToast]);
 
-  const handleSubmit = async (form) => {
-    if (!form.topic.trim()) return;
+  const autoUploadToYT = useCallback(async(jobId)=>{
+    try{
+      addToast('📺 YouTube 자동 업로드 중...','info');
+      setJobs(prev=>prev.map(j=>j.id===jobId?{...j,status:'uploading'}:j));
+      const r=await fetch(API.ytUpload,{method:'POST',headers:HEADERS_JSON,body:JSON.stringify({job_id:jobId,type:'longform',privacy:'public',notify_subscribers:true})});
+      const data=await r.json();
+      if(data.success||data.video_id||data.url){setJobs(prev=>prev.map(j=>j.id===jobId?{...j,ytUrl:data.url||data.video_url||null}:j));addToast('✅ YouTube 자동 업로드 완료!','success');}
+      else throw new Error(data.error||data.detail||'업로드 실패');
+    }catch(e){addToast(`YouTube 오류: ${e.message}`,'error');}
+  },[addToast]);
+
+  const handleSubmit = useCallback(async(form)=>{
+    if(!form.topic.trim())return;
     setSubmitting(true);
-    const jobId = `lf_${Date.now()}`;
-    setJobs(p => [{ id:jobId, topic:form.topic, mode:form.mode, status:'generating', progress:5, startedAt:Date.now(), provider:null, isReal:true }, ...p]);
-    try {
-      // 1단계: 스크립트 생성
-      addToast('AI 스크립트 생성 중...', 'info');
-      const r1 = await fetch(API.generate, {
-        method:'POST', headers:HEADERS_JSON,
-        body: JSON.stringify({ topic: form.topic, language: form.language, duration_seconds: parseInt(form.duration), style: form.style, provider: form.provider, target_audience: 'general' }),
-      });
-      const scriptData = await r1.json();
-      if (!r1.ok && !scriptData.success) throw new Error(scriptData.error || `AI 오류 ${r1.status}`);
-      const usedProvider = scriptData.provider || 'unknown';
+    const jobId=`lf_${Date.now()}`;
+    setJobs(p=>[{id:jobId,topic:form.topic,mode:form.mode,status:'generating',progress:5,startedAt:Date.now(),provider:null,isReal:true,autoUpload:form.autoUpload},...p]);
+    try{
+      // 1단계: 스크립트
+      addToast('🧠 AI 스크립트 생성 중...','info');
+      const r1=await fetch(API.generate,{method:'POST',headers:HEADERS_JSON,body:JSON.stringify({topic:form.topic,language:form.language,duration_seconds:parseInt(form.duration),style:form.style,provider:form.provider,target_audience:'general'})});
+      const scriptData=await r1.json();
+      if(!r1.ok&&!scriptData.success)throw new Error(scriptData.error||`AI 오류 ${r1.status}`);
+      const usedProvider=scriptData.provider||'unknown';
       setLastUsedProvider(usedProvider);
-      setJobs(p => p.map(j => j.id === jobId ? { ...j, provider:usedProvider, progress:25 } : j));
-      addToast(`스크립트 완성 (${usedProvider})`, 'success');
+      setJobs(p=>p.map(j=>j.id===jobId?{...j,provider:usedProvider,progress:25}:j));
+      addToast(`✅ 스크립트 완성 (${usedProvider})`,'success');
 
-      // 스크립트 텍스트 조합 (ai-mcp: intro+main_points 구조 대응)
-      let scriptText = scriptData.script_text || '';
-      if (!scriptText && scriptData.intro) {
-        scriptText = scriptData.intro;
-        if (scriptData.main_points) scriptText += ' ' + scriptData.main_points.join(' ');
-        if (scriptData.outro) scriptText += ' ' + scriptData.outro;
-      }
-      if (!scriptText) scriptText = scriptData.title || form.topic;
+      let scriptText=scriptData.script_text||'';
+      if(!scriptText&&scriptData.intro){scriptText=scriptData.intro;if(scriptData.main_points)scriptText+=' '+scriptData.main_points.join(' ');if(scriptData.outro)scriptText+=' '+scriptData.outro;}
+      if(!scriptText)scriptText=scriptData.title||form.topic;
 
-      // 2단계: TTS (뮤직비디오는 스킵)
-      if (form.mode !== 'music_video') {
-        setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'tts', progress:30 } : j));
-        addToast('TTS 음성 생성 중...', 'info');
-        const r2 = await fetch(`${BASE}/api/tts/tts`, {
-          method:'POST', headers:HEADERS_JSON,
-          body: JSON.stringify({ text: scriptText, filename: jobId, voice_id: 'SAz9YHcvj6GT2YYXdXww' }),
-        });
-        const ttsData = await r2.json();
-        if (!r2.ok || !ttsData.success) throw new Error(ttsData.message || 'TTS 실패');
-        setJobs(p => p.map(j => j.id === jobId ? { ...j, progress:45 } : j));
-        addToast('TTS 완성', 'success');
-      } else {
-        addToast('뮤직비디오 모드: TTS 스킵', 'info');
-      }
+      // 2단계: TTS
+      if(form.mode!=='music_video'){
+        setJobs(p=>p.map(j=>j.id===jobId?{...j,status:'tts',progress:30}:j));
+        addToast('🎙️ TTS 생성 중...','info');
+        const r2=await fetch(`${BASE}/api/tts/tts`,{method:'POST',headers:HEADERS_JSON,body:JSON.stringify({text:scriptText,filename:jobId,voice_id:'SAz9YHcvj6GT2YYXdXww'})});
+        const ttsData=await r2.json();
+        if(!r2.ok||!ttsData.success)throw new Error(ttsData.message||'TTS 실패');
+        setJobs(p=>p.map(j=>j.id===jobId?{...j,progress:45}:j));
+        addToast('✅ TTS 완성','success');
+      }else{addToast('🎵 뮤직비디오: TTS 스킵','info');setJobs(p=>p.map(j=>j.id===jobId?{...j,progress:45}:j));}
 
-      // 3단계: Assets 검색 (scenes.json 생성)
-      setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'assets', progress:50 } : j));
-      addToast('영상 소스 검색 중...', 'info');
-      const rawScenes = scriptData.scenes || scriptData.sections || [];
-      const scenes = rawScenes.length > 0 ? rawScenes.map((s, i) => ({
-        scene_id: s.scene_id ? `scene_${s.scene_id}` : `scene_${i+1}`,
-        keyword: s.keyword || s.description || s.visual || 'technology',
-        duration_seconds: s.duration_seconds || s.duration || 10,
-        description: s.description || s.visual || ''
-      })) : [
-        { scene_id: 'scene_1', keyword: 'technology innovation', duration_seconds: 10, description: '' },
-        { scene_id: 'scene_2', keyword: 'global business', duration_seconds: 10, description: '' },
-        { scene_id: 'scene_3', keyword: 'future digital', duration_seconds: 10, description: '' }
-      ];
-      const r2b = await fetch(`${BASE}/api/ffmpeg/assets/search`, {
-        method:'POST', headers:HEADERS_JSON,
-        body: JSON.stringify({ job_id: jobId, scenes, sources: 'pexels,pixabay' }),
-      });
-      if (!r2b.ok) { const ea = await r2b.json(); throw new Error(ea.detail || 'Assets 검색 실패'); }
-      setJobs(p => p.map(j => j.id === jobId ? { ...j, progress:55 } : j));
-      addToast('소스 준비 완료', 'success');
+      // 3단계: Assets
+      setJobs(p=>p.map(j=>j.id===jobId?{...j,status:'assets',progress:50}:j));
+      addToast('🔍 영상 소스 검색 중...','info');
+      const rawScenes=scriptData.scenes||scriptData.sections||[];
+      const scenes=rawScenes.length>0?rawScenes.map((s,i)=>({scene_id:s.scene_id?`scene_${s.scene_id}`:`scene_${i+1}`,keyword:s.keyword||s.description||s.visual||'technology',duration_seconds:s.duration_seconds||s.duration||10,description:s.description||s.visual||''})):[{scene_id:'scene_1',keyword:'technology innovation',duration_seconds:10,description:''},{scene_id:'scene_2',keyword:'global business news',duration_seconds:10,description:''},{scene_id:'scene_3',keyword:'future digital world',duration_seconds:10,description:''}];
+      const r2b=await fetch(`${BASE}/api/ffmpeg/assets/search`,{method:'POST',headers:HEADERS_JSON,body:JSON.stringify({job_id:jobId,scenes,sources:'pexels,pixabay'})});
+      if(!r2b.ok){const ea=await r2b.json();throw new Error(ea.detail||'Assets 검색 실패');}
+      setJobs(p=>p.map(j=>j.id===jobId?{...j,progress:55}:j));
+      addToast('✅ 소스 준비 완료','success');
 
-      // 4단계: FFmpeg 영상 렌더링
-      setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'rendering', progress:60 } : j));
-      addToast('영상 렌더링 시작...', 'info');
-      const isMV = form.mode === 'music_video';
-      const r3 = await fetch(`${BASE}/api/ffmpeg/video/create`, {
-        method:'POST', headers:HEADERS_JSON,
-        body: JSON.stringify({
-          job_id: jobId,
-          mode: isMV ? 'music_video' : (form.mode === 'shorts' ? 'shorts' : 'longform'),
-          title: scriptData.title || form.topic,
-          generate_thumbnail: true,
-          generate_shorts: !isMV && form.mode !== 'shorts',
-          add_bgm: true,
-          bgm_volume: isMV ? 0.8 : 0.25,
-          subtitle_text: isMV ? scriptText : null
-        }),
-      });
-      if (!r3.ok) { const e3 = await r3.json(); throw new Error(e3.detail || 'FFmpeg 시작 실패'); }
-      addToast('렌더링 중 (잠시 기다려주세요)...', 'info');
+      // 4단계: FFmpeg
+      setJobs(p=>p.map(j=>j.id===jobId?{...j,status:'rendering',progress:60}:j));
+      addToast('🎬 영상 렌더링 시작...','info');
+      const isMV=form.mode==='music_video';
+      const r3=await fetch(`${BASE}/api/ffmpeg/video/create`,{method:'POST',headers:HEADERS_JSON,body:JSON.stringify({job_id:jobId,mode:isMV?'music_video':(form.mode==='shorts'?'shorts':'longform'),title:scriptData.title||form.topic,generate_thumbnail:true,generate_shorts:!isMV&&form.mode!=='shorts',add_bgm:true,bgm_volume:isMV?0.8:0.25,subtitle_text:isMV?scriptText:null})});
+      if(!r3.ok){const e3=await r3.json();throw new Error(e3.detail||'FFmpeg 시작 실패');}
+      addToast('⏳ 렌더링 중...','info');
 
-      // 5단계: 완료까지 폴링
-      await pollFfmpegUntilDone(jobId, setJobs, addToast);
-    } catch (e) {
-      setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'error' } : j));
-      addToast(`오류: ${e.message}`, 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+      // 5단계: 폴링
+      const result=await pollFfmpegUntilDone(jobId);
 
-  const handleCancel = (id) => {
-    setJobs(p => p.map(j => j.id === id ? { ...j, status:'error' } : j));
-    addToast('작업 취소됨', 'info');
+      // 6단계: 자동업로드
+      if(result==='done'&&form.autoUpload)await autoUploadToYT(jobId);
 
-  const [ytPrefill, setYtPrefill] = useState('');
-  const handleYTUpload = (jobId) => {
-    setYtPrefill(jobId);
-    setActiveTab('upload');
-  };
-  };
+    }catch(e){setJobs(p=>p.map(j=>j.id===jobId?{...j,status:'error'}:j));addToast(`❌ 오류: ${e.message}`,'error');}
+    finally{setSubmitting(false);}
+  },[addToast,pollFfmpegUntilDone,autoUploadToYT]);
 
-  const healthyCount = SERVICES.filter(s => health[s.key]?.status === 'healthy').length;
-  const availProviders = Object.values(providers).filter(p => p?.available).length;
-  const doneJobs   = jobs.filter(j => j.status === 'done').length;
-  const activeJobs = jobs.filter(j => !['done','error'].includes(j.status)).length;
+  const handleCancel = useCallback((id)=>{setJobs(p=>p.map(j=>j.id===id?{...j,status:'error'}:j));addToast('취소됨','info');},[addToast]);
+  const handleYTUpload = useCallback((jobId)=>{setYtPrefill(jobId);setActiveTab('upload');addToast('📺 Job ID 자동입력 — 업로드 탭 이동','info');},[addToast]);
+
+  const healthyCount=SERVICES.filter(s=>health[s.key]?.status==='healthy').length;
+  const availProviders=Object.values(providers).filter(p=>p?.available).length;
+  const doneJobs=jobs.filter(j=>j.status==='done').length;
+  const activeJobs=jobs.filter(j=>!['done','error'].includes(j.status)).length;
 
   return (
     <div className="min-h-screen text-white" style={{background:'#060B17'}}>
-      {/* 헤더 */}
-      <header className="border-b border-lf-border sticky top-0 z-40" style={{background:'rgba(6,11,23,0.85)',backdropFilter:'blur(16px)'}}>
+      <header className="border-b border-lf-border sticky top-0 z-40" style={{background:'rgba(6,11,23,0.88)',backdropFilter:'blur(16px)'}}>
         <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base gradient-btn">🎬</div>
-            <div>
-              <div className="font-bold text-sm gradient-text">LongForm Factory</div>
-              <div className="text-gray-700 text-xs">v3.0 · 병렬 멀티 AI</div>
-            </div>
+            <div><div className="font-bold text-sm gradient-text">LongForm Factory</div><div className="text-gray-700 text-xs">v3.1 · AI 8개 + GPT4All · 자동업로드</div></div>
           </div>
           <div className="flex items-center gap-4">
-            {availProviders > 0 && (
-              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20">
-                <StatusDot status="healthy" />
-                <span className="text-xs text-cyan-400">{availProviders}개 AI 활성</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${healthyCount === SERVICES.length ? 'bg-green-400 animate-pulse' : healthyCount > 0 ? 'bg-yellow-400' : 'bg-red-500'}`}/>
-              <span className="text-xs text-gray-500">{healthyCount}/{SERVICES.length} 서비스</span>
-            </div>
-            <a href="http://localhost:8080/n8n/home/workflows" target="_blank"
-              className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
-              style={{color:'#00D4FF', borderColor:'rgba(0,212,255,0.25)'}}>
-              n8n →
-            </a>
-            {lastCheck && <span className="text-xs text-gray-700 hidden lg:block">{lastCheck.toLocaleTimeString('ko-KR')}</span>}
+            {availProviders>0&&<div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20"><StatusDot status="healthy"/><span className="text-xs text-cyan-400">{availProviders}개 AI 활성</span></div>}
+            <div className="flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${healthyCount===SERVICES.length?'bg-green-400 animate-pulse':healthyCount>0?'bg-yellow-400':'bg-red-500'}`}/><span className="text-xs text-gray-500">{healthyCount}/{SERVICES.length} 서비스</span></div>
+            <a href="http://localhost:8080/n8n/home/workflows" target="_blank" className="text-xs px-3 py-1.5 rounded-lg border" style={{color:'#00D4FF',borderColor:'rgba(0,212,255,0.25)'}}>n8n →</a>
+            {lastCheck&&<span className="text-xs text-gray-700 hidden lg:block">{lastCheck.toLocaleTimeString('ko-KR')}</span>}
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-7 space-y-7">
-        {/* 통계 카드 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard icon="✅" label="오늘 완료"    value={doneJobs}   sub="영상"        color="text-cyan-400" />
-          <StatCard icon="⚡" label="진행 중"      value={activeJobs} sub="작업"        color="text-yellow-400" />
-          <StatCard icon="🧠" label="AI 프로바이더" value={`${availProviders}/8`} sub="활성"  color="text-purple-400" />
-          <StatCard icon="🔧" label="서비스"       value={`${healthyCount}/${SERVICES.length}`} sub="정상" color="text-green-400" />
+          <StatCard icon="✅" label="오늘 완료"    value={doneJobs}   sub="영상"                        color="text-cyan-400"/>
+          <StatCard icon="⚡" label="진행 중"      value={activeJobs} sub="작업"                        color="text-yellow-400"/>
+          <StatCard icon="🧠" label="AI 프로바이더" value={`${availProviders}/8`} sub="활성"             color="text-purple-400"/>
+          <StatCard icon="🔧" label="서비스"       value={`${healthyCount}/${SERVICES.length}`} sub="정상" color="text-green-400"/>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
-          {/* 왼쪽: 서비스 상태 + 프로바이더 */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">서비스 상태</h2>
-              <button onClick={checkHealth} className="text-xs text-gray-600 hover:text-cyan-400 transition-colors">↻ 갱신</button>
+              <button onClick={checkHealth} className="text-xs text-gray-600 hover:text-cyan-400">↻ 갱신</button>
             </div>
-            {SERVICES.map(svc => (
-              <ServiceCard key={svc.key} service={svc}
-                status={health[svc.key]?.status} latency={health[svc.key]?.latency} />
-            ))}
-            <ProviderGrid providers={providers} lastUsed={lastUsedProvider} />
+            {SERVICES.map(svc=><ServiceCard key={svc.key} service={svc} status={health[svc.key]?.status} latency={health[svc.key]?.latency}/>)}
+            <ProviderGrid providers={providers} lastUsed={lastUsedProvider}/>
           </div>
 
-          {/* 오른쪽: 탭 (생성 | 업로드) + 작업 큐 + 파이프라인 */}
           <div className="lg:col-span-2 space-y-6">
-            {/* 탭 헤더 */}
             <div className="flex border-b border-lf-border">
-              {[
-                { key:'generate', label:'🧠 영상 생성' },
-                { key:'upload',   label:'📺 YouTube 업로드' },
-              ].map(tab => (
-                <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                  className={cls('px-5 py-3 text-sm font-semibold transition-colors', activeTab === tab.key ? 'tab-active' : 'tab-inactive hover:text-gray-300')}>
-                  {tab.label}
-                </button>
+              {[{key:'generate',label:'🧠 영상 생성'},{key:'upload',label:'📺 YouTube 업로드'}].map(tab=>(
+                <button key={tab.key} onClick={()=>setActiveTab(tab.key)} className={cls('px-5 py-3 text-sm font-semibold transition-colors',activeTab===tab.key?'tab-active':'tab-inactive hover:text-gray-300')}>{tab.label}</button>
               ))}
             </div>
+            <div>{activeTab==='generate'?<GenerateForm onSubmit={handleSubmit} loading={submitting}/>:<YouTubeUploadForm onToast={addToast} prefillJobId={ytPrefill}/>}</div>
 
-            {/* 탭 콘텐츠 */}
-            <div className="animation-fade-in">
-              {activeTab === 'generate'
-                ? <GenerateForm onSubmit={handleSubmit} loading={submitting} />
-                : <YouTubeUploadForm onToast={addToast} prefillJobId={ytPrefill} />
-              }
-            </div>
-
-            {/* 작업 큐 */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                  작업 큐 {jobs.length > 0 && `(${jobs.length})`}
-                </h2>
-                {jobs.some(j => ['done','error'].includes(j.status)) && (
-                  <button onClick={() => setJobs(p => p.filter(j => !['done','error'].includes(j.status)))}
-                    className="text-xs text-gray-600 hover:text-red-400 transition-colors">완료 지우기</button>
-                )}
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">작업 큐 {jobs.length>0&&`(${jobs.length})`}</h2>
+                {jobs.some(j=>['done','error'].includes(j.status))&&<button onClick={()=>setJobs(p=>p.filter(j=>!['done','error'].includes(j.status)))} className="text-xs text-gray-600 hover:text-red-400">완료 지우기</button>}
               </div>
-              {jobs.length === 0 ? (
-                <div className="bg-lf-card border border-lf-border rounded-xl p-10 text-center">
-                  <div className="text-4xl mb-3 opacity-20">🎬</div>
-                  <div className="text-gray-600 text-sm">작업 없음</div>
-                  <div className="text-gray-700 text-xs mt-1">영상 생성 탭에서 시작하세요</div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {jobs.map(job => <JobCard key={job.id} job={job} onCancel={handleCancel} />)}
-                </div>
+              {jobs.length===0?(
+                <div className="bg-lf-card border border-lf-border rounded-xl p-10 text-center"><div className="text-4xl mb-3 opacity-20">🎬</div><div className="text-gray-600 text-sm">작업 없음</div><div className="text-gray-700 text-xs mt-1">영상 생성 탭에서 시작하세요</div></div>
+              ):(
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{jobs.map(job=><JobCard key={job.id} job={job} onCancel={handleCancel} onYTUpload={handleYTUpload}/>)}</div>
               )}
             </div>
 
-            {/* 파이프라인 */}
-            <PipelineDiagram health={health} />
+            <PipelineDiagram health={health}/>
 
-            {/* n8n 워크플로우 바로가기 */}
             <div className="grid grid-cols-2 gap-3">
-              {[
-                { href:'http://localhost:8080/n8n/home/workflows', icon:'🎬', label:'롱폼 파이프라인', sub:'n8n 워크플로우' },
-                { href:'http://localhost:8080/n8n/home/workflows', icon:'📱', label:'숏폼 파이프라인', sub:'n8n 워크플로우' },
-              ].map(item => (
-                <a key={item.label} href={item.href} target="_blank"
-                  className="bg-lf-card border border-lf-border rounded-xl p-4 card-hover flex items-center gap-3 hover:border-gray-600 transition-all">
+              {[{href:'http://localhost:8080/n8n/home/workflows',icon:'🎬',label:'롱폼 파이프라인',sub:'n8n 워크플로우'},{href:'http://localhost:8080/n8n/home/workflows',icon:'📱',label:'숏폼 파이프라인',sub:'n8n 워크플로우'}].map(item=>(
+                <a key={item.label} href={item.href} target="_blank" className="bg-lf-card border border-lf-border rounded-xl p-4 card-hover flex items-center gap-3 hover:border-gray-600 transition-all">
                   <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-xl">{item.icon}</div>
-                  <div>
-                    <div className="text-white text-sm font-medium">{item.label}</div>
-                    <div className="text-gray-600 text-xs">{item.sub}</div>
-                  </div>
+                  <div><div className="text-white text-sm font-medium">{item.label}</div><div className="text-gray-600 text-xs">{item.sub}</div></div>
                   <div className="ml-auto text-gray-700">→</div>
                 </a>
               ))}
@@ -903,15 +572,9 @@ function App() {
         </div>
       </main>
 
-      {/* 토스트 */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2" style={{maxWidth:340}}>
-        {toasts.map(t => (
-          <div key={t.id} onClick={() => setToasts(p => p.filter(x => x.id !== t.id))}
-            className={cls('flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer shadow-xl border text-sm text-white slide-up',
-              t.type === 'error'   ? 'bg-red-950 border-red-800/50' :
-              t.type === 'success' ? 'bg-green-950 border-green-800/50' :
-              'bg-lf-card border-lf-border'
-            )}>
+        {toasts.map(t=>(
+          <div key={t.id} onClick={()=>setToasts(p=>p.filter(x=>x.id!==t.id))} className={cls('flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer shadow-xl border text-sm text-white',t.type==='error'?'bg-red-950 border-red-800/50':t.type==='success'?'bg-green-950 border-green-800/50':'bg-lf-card border-lf-border')}>
             <span className="shrink-0">{t.type==='error'?'❌':t.type==='success'?'✅':'ℹ️'}</span>
             <span className="text-xs leading-snug">{t.msg}</span>
           </div>

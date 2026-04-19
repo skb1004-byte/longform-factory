@@ -1,0 +1,21 @@
+﻿# Docker
+**/__pycache__/
+**/*.pyc
+**/.env
+*.vhdx
+
+# 대용량 출력 파일 (E 드라이브에 직접 저장)
+v2/output/
+v2/tmp/
+v2/jobs/
+v2/logs/
+v2/input/
+
+# 빌드 로그
+build_log.txt
+*.log
+
+# 문서 (선택)
+services/**/README.md
+services/**/BUILD_AND_RUN.md
+services/**/*.md

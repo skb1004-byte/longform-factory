@@ -1,0 +1,296 @@
+﻿##############################################################################
+# Longform Factory v2.0 — 롱폼/숏폼 자동화 파이프라인
+# 모든 대용량 파일: E:\longform_factory\v2\ 에서 직접 마운트
+##############################################################################
+
+services:
+
+  nginx:
+    image: nginx:alpine
+    container_name: lf2_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - E:/longform_factory/v2/config/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - lf2_net
+    depends_on:
+      - n8n
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: lf2_n8n
+    restart: unless-stopped
+    expose:
+      - "5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_EDITOR_BASE_URL=http://localhost:8080
+      - WEBHOOK_URL=http://localhost:8080/n8n/
+      - N8N_PATH=/n8n/
+      - N8N_PUSH_BACKEND=websocket
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-factory123}
+      - EXECUTIONS_TIMEOUT=7200
+      - EXECUTIONS_TIMEOUT_MAX=14400
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=none
+      - EXECUTIONS_DATA_MANUAL_EXECUTIONS=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_PRUNE_MAX_COUNT=500
+      - N8N_CONCURRENCY_PRODUCTION_LIMIT=5
+      - GENERIC_TIMEZONE=Asia/Seoul
+      - TZ=Asia/Seoul
+      - N8N_LOG_LEVEL=warn
+      - N8N_LOG_OUTPUT=console,file
+      - N8N_LOG_FILE_LOCATION=/logs/n8n.log
+      - N8N_API_KEY=${N8N_API_KEY:-longform-factory-api-key-2026}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ARLIAI_API_KEY=${ARLIAI_API_KEY}
+      - PEXELS_API_KEY=${PEXELS_API_KEY}
+      - PIXABAY_API_KEY=${PIXABAY_API_KEY}
+      - AI_VIDEO_ENABLED=${AI_VIDEO_ENABLED:-true}
+      - AI_VIDEO_PROVIDER=${AI_VIDEO_PROVIDER:-kling}
+      - KLING_ACCESS_KEY=${KLING_ACCESS_KEY}
+      - KLING_SECRET_KEY=${KLING_SECRET_KEY}
+      - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY}
+      - POLLO_API_KEY=${POLLO_API_KEY}
+      - POLLO_MODEL=${POLLO_MODEL:-wan-v2-6-flash}
+      - APIFRAME_API_KEY=${APIFRAME_API_KEY}
+      - MAGICHOUR_API_KEY=${MAGICHOUR_API_KEY}
+      - YOUTUBE_CLIENT_ID=${YOUTUBE_CLIENT_ID}
+      - YOUTUBE_CLIENT_SECRET=${YOUTUBE_CLIENT_SECRET}
+      - YOUTUBE_REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN}
+      - YOUTUBE_CHANNEL_ID=${YOUTUBE_CHANNEL_ID}
+      - FACEBOOK_PAGE_ID=${FACEBOOK_PAGE_ID}
+      - FACEBOOK_PAGE_TOKEN=${FACEBOOK_PAGE_TOKEN}
+      - TTS_URL=http://tts:8001
+      - FFMPEG_URL=http://ffmpeg-worker:8002
+      - UPLOADER_URL=http://uploader:8003
+      - MCP_URL=http://ai-mcp:8010
+      - LF_API_KEY=${LF_API_KEY:-longform-2026-secret}
+      - NODE_OPTIONS=--max-old-space-size=1024
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - E:/longform_factory/v2/input:/data/input
+      - E:/longform_factory/v2/output:/data/output
+      - E:/longform_factory/v2/tmp:/data/tmp
+      - E:/longform_factory/v2/bgm:/data/bgm
+      - E:/longform_factory/v2/jobs:/data/jobs
+      - E:/longform_factory/v2/logs:/logs
+      - E:/longform_factory/v2/workflows:/data/workflows:ro
+    networks:
+      - lf2_net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  tts:
+    image: lf_tts:2.0.0
+    build:
+      context: E:/longform_factory/services/tts
+      dockerfile: Dockerfile
+    container_name: lf2_tts
+    restart: unless-stopped
+    expose:
+      - "8001"
+    environment:
+      - TZ=Asia/Seoul
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - LF_API_KEY=${LF_API_KEY:-longform-2026-secret}
+    volumes:
+      - E:/longform_factory/v2/tmp:/data/tmp
+      - E:/longform_factory/v2/output:/data/output
+      - E:/longform_factory/v2/logs:/logs
+    tmpfs:
+      - /tmp:size=256M
+    networks:
+      - lf2_net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  ffmpeg-worker:
+    image: lf_ffmpeg_worker:15.0.0
+    build:
+      context: E:/longform_factory/services/ffmpeg-worker
+      dockerfile: Dockerfile
+    container_name: lf2_ffmpeg
+    restart: unless-stopped
+    expose:
+      - "8002"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      - TZ=Asia/Seoul
+      - PEXELS_API_KEY=${PEXELS_API_KEY}
+      - PIXABAY_API_KEY=${PIXABAY_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - KLING_ACCESS_KEY=${KLING_ACCESS_KEY}
+      - KLING_SECRET_KEY=${KLING_SECRET_KEY}
+      - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY}
+      - POLLO_API_KEY=${POLLO_API_KEY}
+      - POLLO_MODEL=${POLLO_MODEL:-wan-v2-6-flash}
+      - APIFRAME_API_KEY=${APIFRAME_API_KEY}
+      - MAGICHOUR_API_KEY=${MAGICHOUR_API_KEY}
+      - LF_API_KEY=${LF_API_KEY:-longform-2026-secret}
+      - GENERATE_SHORTS=true
+      - GENERATE_THUMBNAIL=true
+    volumes:
+      - E:/longform_factory/v2/jobs:/data/jobs
+      - E:/longform_factory/v2/input:/data/input
+      - E:/longform_factory/v2/output:/data/output
+      - E:/longform_factory/v2/bgm:/data/bgm
+      - E:/longform_factory/v2/tmp:/data/tmp
+      - E:/longform_factory/v2/logs:/logs
+    tmpfs:
+      - /tmp:size=4g,mode=1777,exec
+      - /var/cache/ffmpeg:size=2g,mode=1777
+    shm_size: "2g"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - lf2_net
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          cpus: "8"
+          memory: 10G
+        reservations:
+          cpus: "4"
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 15s
+
+  uploader:
+    image: lf_uploader:3.2.0
+    build:
+      context: E:/longform_factory/services/uploader
+      dockerfile: Dockerfile
+    container_name: lf2_uploader
+    restart: unless-stopped
+    expose:
+      - "8003"
+    environment:
+      - TZ=Asia/Seoul
+      - YOUTUBE_CLIENT_ID=${YOUTUBE_CLIENT_ID}
+      - YOUTUBE_CLIENT_SECRET=${YOUTUBE_CLIENT_SECRET}
+      - YOUTUBE_REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN}
+      - YOUTUBE_CHANNEL_ID=${YOUTUBE_CHANNEL_ID}
+      - FACEBOOK_PAGE_ID=${FACEBOOK_PAGE_ID}
+      - FACEBOOK_PAGE_TOKEN=${FACEBOOK_PAGE_TOKEN}
+      - LF_API_KEY=${LF_API_KEY:-longform-2026-secret}
+    volumes:
+      - E:/longform_factory/v2/output:/data/output
+      - E:/longform_factory/v2/jobs:/data/jobs
+      - E:/longform_factory/v2/logs:/logs
+    networks:
+      - lf2_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  ai-mcp:
+    image: lf_ai_mcp:2.0.0
+    build:
+      context: E:/longform_factory/services/ai-mcp
+      dockerfile: Dockerfile
+    container_name: lf2_ai_mcp
+    restart: unless-stopped
+    expose:
+      - "8010"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      - TZ=Asia/Seoul
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ARLIAI_API_KEY=${ARLIAI_API_KEY}
+      - LF_API_KEY=${LF_API_KEY:-longform-2026-secret}
+      - RALF_MAX_RETRIES=3
+    volumes:
+      - E:/longform_factory/v2/tmp:/tmp/mcp
+      - E:/longform_factory/v2/logs:/logs
+    networks:
+      - lf2_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  n8n_data:
+    name: lf2_n8n_data
+
+networks:
+  lf2_net:
+    driver: bridge
+    name: lf2_net

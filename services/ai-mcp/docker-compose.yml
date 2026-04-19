@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # LongForm Factory AI-MCP Service
+  lf_ai_mcp:
+    image: lf_ai_mcp:2.0.0
+    container_name: lf_ai_mcp
+    ports:
+      - "8010:8010"
+    environment:
+      # Anthropic Claude
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+      
+      # Google Gemini
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=gemini-1.5-pro
+      
+      # OpenAI (OpenAI, Cerebras, OpenRouter, ArliAI 호환)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=gpt-4
+      
+      # LongForm Factory
+      - LF_API_KEY=${LF_API_KEY}
+      
+      # RALF 재시도 설정
+      - RALF_MAX_RETRIES=3
+      - RALF_BASE_DELAY=1.0
+    
+    # 재시작 정책
+    restart: unless-stopped
+    
+    # 헬스 체크 (이미 Dockerfile에 정의됨)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    
+    # 로깅 설정
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # 네트워크
+    networks:
+      - lf_network
+    
+    # CPU/메모리 제한
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+networks:
+  lf_network:
+    driver: bridge

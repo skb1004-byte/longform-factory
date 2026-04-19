@@ -1,0 +1,71 @@
+version: '3.8'
+
+# FastAPI TTS 서비스 Docker Compose 설정
+# Service: lf_tts:2.0.0
+# Port: 8001
+
+services:
+  tts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: lf_tts:2.0.0
+    container_name: lf_tts
+
+    # 포트 매핑
+    ports:
+      - "8001:8001"
+
+    # 환경 변수
+    environment:
+      PYTHONUNBUFFERED: 1
+      PYTHONDONTWRITEBYTECODE: 1
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+
+    # 볼륨 마운트
+    volumes:
+      - tts_data:/data/tmp
+      - ./logs:/app/logs
+
+    # 재시작 정책
+    restart: unless-stopped
+
+    # 헬스 체크
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # 리소스 제한
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+    # 로깅 설정
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+    # 네트워크
+    networks:
+      - tts_network
+
+# 스토리지
+volumes:
+  tts_data:
+    driver: local
+
+# 네트워크
+networks:
+  tts_network:
+    driver: bridge

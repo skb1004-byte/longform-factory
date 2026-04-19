@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     cerebras_api_key: str = Field(default="", alias="CEREBRAS_API_KEY")
     openrouter_api_key: str = Field(default="", alias="OPENROUTER_API_KEY")
     arliai_api_key: str = Field(default="", alias="ARLIAI_API_KEY")
+    deepseek_api_key: str = Field(default="", alias="DEEPSEEK_API_KEY")
     lf_api_key: str = Field(default="", alias="LF_API_KEY")
 
     # 모델 지정
@@ -56,6 +57,7 @@ class Settings(BaseSettings):
     cerebras_model: str = Field(default="llama-3.3-70b", alias="CEREBRAS_MODEL")
     openrouter_model: str = Field(default="meta-llama/llama-3.1-8b-instruct:free", alias="OPENROUTER_MODEL")
     arliai_model: str = Field(default="Meta-Llama-3.1-70B-Instruct", alias="ARLIAI_MODEL")
+    deepseek_model: str = Field(default="deepseek-chat", alias="DEEPSEEK_MODEL")
 
     # Ollama (오프라인 AI)
     ollama_url: str = Field(default="http://host.docker.internal:11434", alias="OLLAMA_URL")
@@ -99,6 +101,7 @@ class ProviderEnum(str, Enum):
     ARLIAI = "arliai"
     OLLAMA = "ollama"      # 오프라인 AI (Ollama)
     GPT4ALL = "gpt4all"  # 오프라인 AI (GPT4All)
+    DEEPSEEK = "deepseek"  # DeepSeek V3 cheap
     AUTO = "auto"           # 자동 병렬 선택
 
 
@@ -489,6 +492,14 @@ def get_provider_instance(provider: ProviderEnum, model: Optional[str] = None) -
                 settings.arliai_api_key, "https://api.arliai.com/v1"
             )
 
+
+        elif provider == ProviderEnum.DEEPSEEK:
+            if not settings.deepseek_api_key:
+                return None
+            return OpenAICompatibleProvider(
+                provider, model or settings.deepseek_model,
+                settings.deepseek_api_key, "https://api.deepseek.com/v1"
+            )
         elif provider == ProviderEnum.OLLAMA:
             return OllamaProvider(model or settings.ollama_model, settings.ollama_url)
 

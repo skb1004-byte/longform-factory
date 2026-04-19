@@ -1,6 +1,6 @@
-##############################################################################
-# Longform Factory v2.0 ? ����/���� �ڵ�ȭ ����������
-# ��� ��뷮 ����: E:\longform_factory\v2\ ���� ���� ����Ʈ
+﻿##############################################################################
+# Longform Factory v2.0 ? ?醫롫짗??용쐻??덉굲/?醫롫짗??용쐻??덉굲 ?醫롫솓?紐꾩굲???醫롫짗??용쐻??덉굲?醫롫짗??용쐻??덉굲?醫롫짗??
+# ?醫롫짗??용쐻??醫롫짗??낅??醫롫짗??용쐻??덉굲: E:\longform_factory\v2\ ?醫롫짗??용쐻??덉굲 ?醫롫짗??용쐻??덉굲 ?醫롫짗??용쐻??덉굲??
 ##############################################################################
 
 services:
@@ -15,7 +15,7 @@ services:
       - E:/longform_factory/v2/config/nginx.conf:/etc/nginx/nginx.conf:ro
       - E:/longform_factory/v2/static:/usr/share/nginx/html:ro
       - E:/longform_factory/v2/output:/data/output:ro
-      - E:/LF_완성:/data/complete:ro
+      - E:/LF_?熬곣뫕??/data/complete:ro
     networks:
       - lf2_net
     depends_on:
@@ -71,6 +71,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - ARLIAI_API_KEY=${ARLIAI_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - PEXELS_API_KEY=${PEXELS_API_KEY}
       - PIXABAY_API_KEY=${PIXABAY_API_KEY}
       - AI_VIDEO_ENABLED=${AI_VIDEO_ENABLED:-true}
@@ -98,7 +99,7 @@ services:
       - n8n_data:/home/node/.n8n
       - E:/longform_factory/v2/input:/data/input
       - E:/longform_factory/v2/output:/data/output
-      - E:/LF_완성:/data/complete
+      - E:/LF_?熬곣뫕??/data/complete
       - E:/longform_factory/v2/tmp:/data/tmp
       - E:/longform_factory/v2/bgm:/data/bgm
       - E:/longform_factory/v2/jobs:/data/jobs
@@ -272,6 +273,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - ARLIAI_API_KEY=${ARLIAI_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - LF_API_KEY=${LF_API_KEY:-longform-2026-secret}
       - RALF_MAX_RETRIES=2
       - PARALLEL_TIMEOUT=45

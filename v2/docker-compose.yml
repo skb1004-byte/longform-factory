@@ -1,6 +1,6 @@
 ﻿##############################################################################
-# Longform Factory v2.0 — 롱폼/숏폼 자동화 파이프라인
-# 모든 대용량 파일: E:\longform_factory\v2\ 에서 직접 마운트
+# Longform Factory v2.0 ? ����/���� �ڵ�ȭ ����������
+# ��� ��뷮 ����: E:\longform_factory\v2\ ���� ���� ����Ʈ
 ##############################################################################
 
 services:
@@ -247,7 +247,7 @@ services:
       start_period: 15s
 
   ai-mcp:
-    image: lf_ai_mcp:2.0.0
+    image: lf_ai_mcp:3.0.0
     build:
       context: E:/longform_factory/services/ai-mcp
       dockerfile: Dockerfile
@@ -269,7 +269,15 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - ARLIAI_API_KEY=${ARLIAI_API_KEY}
       - LF_API_KEY=${LF_API_KEY:-longform-2026-secret}
-      - RALF_MAX_RETRIES=3
+      - RALF_MAX_RETRIES=2
+      - PARALLEL_TIMEOUT=45
+      - CEREBRAS_MODEL=llama3.1-8b
+      - ARLIAI_MODEL=Llama-3.3-70B-Instruct
+      - OPENROUTER_MODEL=meta-llama/llama-3.1-8b-instruct:free
+      - OLLAMA_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=qwen2.5:7b
+      - OLLAMA_MODEL_FAST=qwen2.5:3b
+      - OLLAMA_MODEL_QUALITY=qwen2.5:14b
     volumes:
       - E:/longform_factory/v2/tmp:/tmp/mcp
       - E:/longform_factory/v2/logs:/logs

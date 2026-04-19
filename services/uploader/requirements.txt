@@ -1,7 +1,7 @@
-google-auth-oauthlib==1.2.0
+﻿google-auth-oauthlib==1.2.0
 google-auth==2.27.0
 google-auth-httplib2==0.2.0
-google-api-python-client==1.31.5
+google-api-python-client==2.111.0
 fastapi==0.104.1
 uvicorn==0.24.0
 python-dotenv==1.0.0

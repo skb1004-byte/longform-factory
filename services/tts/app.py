@@ -39,12 +39,21 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # 기본 음성 ID (ElevenLabs 한국어 음성)
 DEFAULT_VOICES = {
-    "korean_male": "nPczCjzI2devNBz1zQrb",  # Brian - Deep, Resonant (premade)
-    "korean_female": "SAz9YHcvj6GT2YYXdXww"  # River - Neutral, Informative (premade)
+    "korean_male": "nPczCjzI2devNBz1zQrb",   # Brian - Deep, Resonant (ElevenLabs)
+    "korean_female": "SAz9YHcvj6GT2YYXdXww"   # River - Neutral, Informative (ElevenLabs)
 }
 
+# Edge TTS Korean voices (무료, 네이티브 한국어 발음)
+EDGE_VOICES = {
+    "korean_female": "ko-KR-SunHiNeural",        # 자연스러운 여성
+    "korean_male": "ko-KR-InJoonNeural",          # 뉴스 톤 남성
+    "korean_male2": "ko-KR-HyunsuMultilingualNeural",  # 다국어 남성
+    "korean_female_slow": "ko-KR-SunHiNeural",    # 느린 강조 여성
+}
+DEFAULT_ENGINE = "edge"  # "edge" or "elevenlabs"
+
 # 기본 모델
-DEFAULT_MODEL = "eleven_multilingual_v2"
+DEFAULT_MODEL = "eleven_v3"
 
 # 로깅 설정
 logging.basicConfig(
@@ -64,8 +73,13 @@ class TTSRequest(BaseModel):
         description="음성 프리셋: korean_male, korean_female"
     )
     model_id: str = Field(default=DEFAULT_MODEL, description="사용할 모델 ID")
-    stability: float = Field(default=0.5, ge=0.0, le=1.0, description="안정성 (0-1)")
-    similarity_boost: float = Field(default=0.75, ge=0.0, le=1.0, description="유사성 부스트 (0-1)")
+    stability: float = Field(default=0.38, ge=0.0, le=1.0, description="안정성 (0-1)")
+    similarity_boost: float = Field(default=0.88, ge=0.0, le=1.0, description="유사성 부스트 (0-1)")
+    style: float = Field(default=0.60, ge=0.0, le=1.0, description="스타일 강도 (0-1)")
+    use_speaker_boost: bool = Field(default=True, description="스피커 부스트 사용")
+    engine: str = Field(default="edge", description="TTS 엔진: edge(무료) 또는 elevenlabs")
+    edge_voice: str = Field(default="ko-KR-SunHiNeural", description="Edge TTS 음성")
+    edge_rate: str = Field(default="-5%", description="Edge TTS 속도")
     output_format: str = Field(default="mp3_44100_128", description="출력 포맷")
     filename: Optional[str] = Field(default=None, description="저장 파일명 (확장자 제외)")
 
@@ -134,6 +148,31 @@ def get_audio_duration(file_path: Path) -> float:
         return 0.0
 
 
+
+async def call_edge_tts(
+    text: str,
+    voice: str = "ko-KR-SunHiNeural",
+    rate: str = "-5%",
+    pitch: str = "+0Hz",
+    output_path: str = None
+) -> bytes:
+    """Microsoft Edge TTS (무료, 네이티브 한국어 발음)"""
+    import edge_tts as edge
+    import tempfile, os
+
+    tmp_path = output_path or tempfile.mktemp(suffix=".mp3")
+    comm = edge.Communicate(text=text, voice=voice, rate=rate, pitch=pitch)
+    await comm.save(tmp_path)
+    
+    with open(tmp_path, "rb") as f:
+        audio_bytes = f.read()
+    
+    if not output_path:
+        os.unlink(tmp_path)
+    
+    logger.info(f"Edge TTS 완료: {len(audio_bytes)} bytes, voice={voice}")
+    return audio_bytes
+
 async def call_elevenlabs_tts(
     text: str,
     voice_id: str,
@@ -141,6 +180,8 @@ async def call_elevenlabs_tts(
     stability: float,
     similarity_boost: float,
     output_format: str,
+    style: float = 0.60,
+    use_speaker_boost: bool = True,
     max_retries: int = 3
 ) -> Tuple[bytes, Optional[Dict[str, Any]]]:
     """
@@ -173,7 +214,9 @@ async def call_elevenlabs_tts(
         "model_id": model_id,
         "voice_settings": {
             "stability": stability,
-            "similarity_boost": similarity_boost
+            "similarity_boost": similarity_boost,
+            "style": style,
+            "use_speaker_boost": use_speaker_boost
         },
         "output_format": output_format
     }
@@ -334,14 +377,24 @@ async def tts_convert(request: TTSRequest, background_tasks: BackgroundTasks):
         )
 
         # ElevenLabs API 호출 (audio_bytes + alignment 반환)
-        audio_data, alignment = await call_elevenlabs_tts(
-            text=request.text,
-            voice_id=voice_id,
-            model_id=request.model_id,
-            stability=request.stability,
-            similarity_boost=request.similarity_boost,
-            output_format=request.output_format
-        )
+        audio_data, alignment = _engine = getattr(request, "engine", "edge")
+        if _engine == "edge":
+            audio_data, alignment = await call_edge_tts(
+                text=request.text,
+                voice=getattr(request, "edge_voice", "ko-KR-SunHiNeural"),
+                rate=getattr(request, "edge_rate", "-5%"),
+            ), None
+        else:
+            audio_data, alignment = await call_elevenlabs_tts(
+                text=request.text,
+                voice_id=voice_id,
+                model_id=request.model_id,
+                stability=request.stability,
+                similarity_boost=request.similarity_boost,
+                style=getattr(request, "style", 0.60),
+                use_speaker_boost=getattr(request, "use_speaker_boost", True),
+                output_format=request.output_format
+            )
 
         # 오디오 파일 저장
         file_path.write_bytes(audio_data)
@@ -423,6 +476,8 @@ async def batch_tts(request: BatchTTSRequest, background_tasks: BackgroundTasks)
                     model_id=tts_request.model_id,
                     stability=tts_request.stability,
                     similarity_boost=tts_request.similarity_boost,
+                    style=getattr(tts_request, 'style', 0.60),
+                    use_speaker_boost=getattr(tts_request, 'use_speaker_boost', True),
                     output_format=tts_request.output_format
                 )
 

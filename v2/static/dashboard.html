@@ -95,6 +95,7 @@ const PROVIDERS_META = {
   openai:     { label:'OpenAI',      icon:'🟢', type:'online'  },
   ollama:     { label:'Ollama',      icon:'🦙', type:'offline' },
   gpt4all:    { label:'GPT4All',     icon:'💻', type:'offline' },
+  deepseek:   { label:'DeepSeek',    icon:'🐳', type:'online'  },
 };
 
 const TODAY_TOPICS = [
@@ -216,7 +217,7 @@ function JobCard({ job, onCancel, onYTUpload }) {
 }
 
 function GenerateForm({ onSubmit, loading }) {
-  const [form, setForm] = useState({ topic:'', duration:'600', style:'professional', mode:'longform', language:'ko', provider:'gemini', autoUpload:false });
+  const [form, setForm] = useState({ topic:'', duration:'600', style:'professional', mode:'longform', language:'ko', provider:'gemini', autoUpload:false, tts_engine:'edge', tts_voice:'ko-KR-SunHiNeural' });
   const set = (k) => (e) => setForm(f=>({...f,[k]:e.target.value}));
   const toggle = (k) => () => setForm(f=>({...f,[k]:!f[k]}));
   const setTopic = (t) => setForm(f=>({...f,topic:t}));
@@ -307,7 +308,23 @@ function GenerateForm({ onSubmit, loading }) {
 
         {isMV&&<div className="rounded-lg px-3 py-2 bg-purple-900/20 border border-purple-700/30 text-xs text-purple-400">🎵 BGM 80% + 자막 오버레이 · TTS 없음 · FontSize=56 · -14 LUFS</div>}
 
-        <button onClick={()=>onSubmit(form)} disabled={loading||!form.topic.trim()} className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed gradient-btn text-white">
+        <button onClick={()=>onSubmit(form)} disabled={loading||!form.topic.tr<div className="mb-3 p-3 rounded-xl bg-white/5 border border-white/10">
+          <div className="text-xs text-gray-400 mb-2">🎙️ TTS 목소리</div>
+          <div className="grid grid-cols-2 gap-2">
+            <select value={form.tts_voice} onChange={set('tts_voice')}
+              className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white">
+              <option value="ko-KR-SunHiNeural">SunHi (여성, 자연스러운)</option>
+              <option value="ko-KR-InJoonNeural">InJoon (남성, 뉴스톤)</option>
+              <option value="ko-KR-HyunsuMultilingualNeural">Hyunsu (남성, 다국어)</option>
+            </select>
+            <select value={form.tts_engine} onChange={set('tts_engine')}
+              className="bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white">
+              <option value="edge">Edge TTS (무료)</option>
+              <option value="elevenlabs">ElevenLabs</option>
+            </select>
+          </div>
+        </div>
+        im()} className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed gradient-btn text-white">
           {loading?'⏳ 생성 중...':isMV?'🎵 뮤직비디오 생성':'▶ 생성 시작'}
         </button>
       </div>
@@ -508,7 +525,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base gradient-btn">🎬</div>
-            <div><div className="font-bold text-sm gradient-text">LongForm Factory</div><div className="text-gray-700 text-xs">v3.1 · AI 8개 + GPT4All · 자동업로드</div></div>
+            <div><div className="font-bold text-sm gradient-text">LongForm Factory</div><div className="text-gray-700 text-xs">v3.2 · AI 9개 + GPT4All · 자동업로드</div></div>
           </div>
           <div className="flex items-center gap-4">
             {availProviders>0&&<div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20"><StatusDot status="healthy"/><span className="text-xs text-cyan-400">{availProviders}개 AI 활성</span></div>}

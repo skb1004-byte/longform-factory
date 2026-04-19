@@ -1,4 +1,4 @@
-"""
+﻿"""
 FastAPI TTS 서비스 - ElevenLabs 기반 음성 합성 API
 Service: lf_tts:2.0.0
 Port: 8001
@@ -8,15 +8,18 @@ Port: 8001
 - 한국어 기본 음성 지원 (남성/여성)
 - 자동 재시도 (최대 3회)
 - 오디오 길이 자동 계산
+- ElevenLabs with-timestamps API → 타임스탬프 JSON 저장
 - 통합 로깅 및 에러 핸들링
 """
 
 import os
+import json
+import base64
 import logging
 import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Tuple, Dict, Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -36,8 +39,8 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # 기본 음성 ID (ElevenLabs 한국어 음성)
 DEFAULT_VOICES = {
-    "korean_male": "EXAVITQu4vr4xnSDxMaL",  # 한국어 남성 음성
-    "korean_female": "TxGEqnHWrfWFTfGW9XjX"  # 한국어 여성 음성
+    "korean_male": "nPczCjzI2devNBz1zQrb",  # Brian - Deep, Resonant (premade)
+    "korean_female": "SAz9YHcvj6GT2YYXdXww"  # River - Neutral, Informative (premade)
 }
 
 # 기본 모델
@@ -80,6 +83,7 @@ class TTSResponse(BaseModel):
     voice_id: str
     characters: int
     message: Optional[str] = None
+    timestamps_path: Optional[str] = None  # 씬 타임스탬프 JSON 경로
 
 
 class HealthResponse(BaseModel):
@@ -138,9 +142,9 @@ async def call_elevenlabs_tts(
     similarity_boost: float,
     output_format: str,
     max_retries: int = 3
-) -> bytes:
+) -> Tuple[bytes, Optional[Dict[str, Any]]]:
     """
-    ElevenLabs TTS API 호출 (재시도 로직 포함)
+    ElevenLabs TTS with-timestamps API 호출 (재시도 로직 포함)
 
     Args:
         text: 변환할 텍스트
@@ -152,12 +156,12 @@ async def call_elevenlabs_tts(
         max_retries: 최대 재시도 횟수
 
     Returns:
-        오디오 바이너리 데이터
+        (오디오 바이너리 데이터, alignment 딕셔너리 또는 None)
 
     Raises:
         HTTPException: API 호출 실패 시
     """
-    url = f"{ELEVENLABS_API_BASE}/text-to-speech/{voice_id}"
+    url = f"{ELEVENLABS_API_BASE}/text-to-speech/{voice_id}/with-timestamps"
 
     headers = {
         "xi-api-key": ELEVENLABS_API_KEY,
@@ -182,8 +186,21 @@ async def call_elevenlabs_tts(
                 response = await client.post(url, json=payload, headers=headers)
 
                 if response.status_code == 200:
-                    logger.info(f"TTS API 호출 성공: {len(response.content)} bytes")
-                    return response.content
+                    # with-timestamps 응답: JSON { audio_base64, alignment }
+                    try:
+                        data = response.json()
+                        audio_b64 = data.get("audio_base64", "")
+                        audio_bytes = base64.b64decode(audio_b64)
+                        alignment = data.get("alignment", None)
+                        logger.info(
+                            f"TTS API 성공: {len(audio_bytes)} bytes, "
+                            f"정렬 데이터={'있음' if alignment else '없음'}"
+                        )
+                        return audio_bytes, alignment
+                    except (ValueError, KeyError) as parse_err:
+                        # JSON 파싱 실패 시 raw bytes로 fallback (구버전 API 호환)
+                        logger.warning(f"JSON 파싱 실패, raw bytes 사용: {parse_err}")
+                        return response.content, None
 
                 error_msg = response.text
                 logger.warning(
@@ -207,6 +224,9 @@ async def call_elevenlabs_tts(
                 await asyncio.sleep(2 ** attempt)
                 continue
             raise HTTPException(status_code=504, detail="TTS API 타임아웃")
+
+        except HTTPException:
+            raise
 
         except Exception as e:
             logger.error(f"TTS API 호출 예외 (시도 {attempt + 1}): {e}")
@@ -293,7 +313,7 @@ async def tts_convert(request: TTSRequest, background_tasks: BackgroundTasks):
         background_tasks: 백그라운드 작업
 
     Returns:
-        변환 결과 (파일 경로, 길이, 음성 ID 등)
+        변환 결과 (파일 경로, 길이, 음성 ID 등, 타임스탬프 경로)
     """
     try:
         # 음성 ID 결정
@@ -313,8 +333,8 @@ async def tts_convert(request: TTSRequest, background_tasks: BackgroundTasks):
             f"음성={voice_id}, 모델={request.model_id}"
         )
 
-        # ElevenLabs API 호출
-        audio_data = await call_elevenlabs_tts(
+        # ElevenLabs API 호출 (audio_bytes + alignment 반환)
+        audio_data, alignment = await call_elevenlabs_tts(
             text=request.text,
             voice_id=voice_id,
             model_id=request.model_id,
@@ -323,9 +343,23 @@ async def tts_convert(request: TTSRequest, background_tasks: BackgroundTasks):
             output_format=request.output_format
         )
 
-        # 파일 저장
+        # 오디오 파일 저장
         file_path.write_bytes(audio_data)
         logger.info(f"오디오 파일 저장: {file_path}")
+
+        # 타임스탬프 JSON 저장
+        timestamps_path: Optional[str] = None
+        if alignment:
+            ts_file = OUTPUT_DIR / f"{filename}_timestamps.json"
+            ts_data = {
+                "filename": filename,
+                "audio_path": str(file_path),
+                "text": request.text,
+                "alignment": alignment
+            }
+            ts_file.write_text(json.dumps(ts_data, ensure_ascii=False, indent=2), encoding="utf-8")
+            timestamps_path = str(ts_file)
+            logger.info(f"타임스탬프 저장: {ts_file}")
 
         # 오디오 길이 계산
         duration = get_audio_duration(file_path)
@@ -339,7 +373,8 @@ async def tts_convert(request: TTSRequest, background_tasks: BackgroundTasks):
             file_path=str(file_path),
             duration_seconds=duration,
             voice_id=voice_id,
-            characters=len(request.text)
+            characters=len(request.text),
+            timestamps_path=timestamps_path
         )
 
     except HTTPException:
@@ -382,7 +417,7 @@ async def batch_tts(request: BatchTTSRequest, background_tasks: BackgroundTasks)
                 file_path = OUTPUT_DIR / f"{filename}.mp3"
 
                 # ElevenLabs API 호출
-                audio_data = await call_elevenlabs_tts(
+                audio_data, alignment = await call_elevenlabs_tts(
                     text=tts_request.text,
                     voice_id=voice_id,
                     model_id=tts_request.model_id,
@@ -394,6 +429,22 @@ async def batch_tts(request: BatchTTSRequest, background_tasks: BackgroundTasks)
                 # 파일 저장
                 file_path.write_bytes(audio_data)
 
+                # 타임스탬프 JSON 저장
+                timestamps_path: Optional[str] = None
+                if alignment:
+                    ts_file = OUTPUT_DIR / f"{filename}_timestamps.json"
+                    ts_data = {
+                        "filename": filename,
+                        "audio_path": str(file_path),
+                        "text": tts_request.text,
+                        "alignment": alignment
+                    }
+                    ts_file.write_text(
+                        json.dumps(ts_data, ensure_ascii=False, indent=2),
+                        encoding="utf-8"
+                    )
+                    timestamps_path = str(ts_file)
+
                 # 오디오 길이 계산
                 duration = get_audio_duration(file_path)
 
@@ -402,7 +453,8 @@ async def batch_tts(request: BatchTTSRequest, background_tasks: BackgroundTasks)
                     file_path=str(file_path),
                     duration_seconds=duration,
                     voice_id=voice_id,
-                    characters=len(tts_request.text)
+                    characters=len(tts_request.text),
+                    timestamps_path=timestamps_path
                 ))
 
             except Exception as e:

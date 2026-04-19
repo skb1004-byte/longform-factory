@@ -603,6 +603,7 @@ function App() {
   const pollJobs = useCallback(() => {
     setJobs(prev => prev.map(j => {
       if (['done','error'].includes(j.status)) return j;
+      if (j.isReal) return j; // 실제 파이프라인이 관리하는 잡은 건드리지 않음
       const steps = ['pending','generating','tts','rendering','uploading','done'];
       const elapsed = (Date.now() - j.startedAt) / 1000;
       const stepIdx = Math.min(Math.floor(elapsed / 20), steps.length - 1);
@@ -631,33 +632,81 @@ function App() {
     return () => { clearInterval(h); clearInterval(j); };
   }, [checkHealth, pollJobs]);
 
+  // 실제 파이프라인: 스크립트 → TTS → FFmpeg → 폴링
+  const pollFfmpegUntilDone = (jobId, setJobs, addToast) => {
+    return new Promise((resolve) => {
+      const timer = setInterval(async () => {
+        try {
+          const r = await fetch(`/api/ffmpeg/job/${jobId}/status`, { headers: { 'X-LF-API-Key': LF_KEY }, signal: AbortSignal.timeout(5000) });
+          if (!r.ok) return;
+          const d = await r.json();
+          const st = (d.status || '').toLowerCase();
+          const prog = d.progress || 0;
+          if (st === 'completed') {
+            clearInterval(timer);
+            const files = d.output_files || {};
+            const toUrl = (p) => p ? '/output/' + p.replace('/data/output/', '').replace(/\\/g, '/') : null;
+            const videoUrl = toUrl(files.longform || files.shorts);
+            const thumbUrl  = toUrl(files.thumbnail);
+            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status:'done', progress:100, videoUrl, thumbUrl } : j));
+            addToast('✅ 영상 완성! 다운로드 가능', 'success');
+            resolve();
+          } else if (st === 'failed') {
+            clearInterval(timer);
+            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status:'error' } : j));
+            resolve();
+          } else {
+            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, progress: 55 + Math.round(prog * 0.44) } : j));
+          }
+        } catch {}
+      }, 2500);
+    });
+  };
+
   const handleSubmit = async (form) => {
     if (!form.topic.trim()) return;
     setSubmitting(true);
     const jobId = `lf_${Date.now()}`;
-    setJobs(p => [{ id:jobId, topic:form.topic, mode:form.mode, status:'pending', progress:0, startedAt:Date.now(), provider:null }, ...p]);
-    addToast(`🚀 시작: ${form.topic}`, 'info');
+    setJobs(p => [{ id:jobId, topic:form.topic, mode:form.mode, status:'generating', progress:5, startedAt:Date.now(), provider:null, isReal:true }, ...p]);
     try {
-      const r = await fetch(API.generate, {
-        method: 'POST',
-        headers: HEADERS_JSON,
-        body: JSON.stringify({
-          topic:            form.topic,
-          language:         form.language,
-          duration_seconds: parseInt(form.duration),
-          target_duration:  parseInt(form.duration),
-          style:            form.style,
-          provider:         form.provider,
-          target_audience:  'general',
-        }),
+      // 1단계: 스크립트 생성
+      addToast('🧠 AI 스크립트 생성 중...', 'info');
+      const r1 = await fetch(API.generate, {
+        method:'POST', headers:HEADERS_JSON,
+        body: JSON.stringify({ topic: form.topic, language: form.language, duration_seconds: parseInt(form.duration), target_duration: parseInt(form.duration), style: form.style, provider: form.provider, target_audience: 'general' }),
       });
-      const data = await r.json();
-      if (!r.ok && !data.success) throw new Error(data.error || `HTTP ${r.status}`);
-
-      const usedProvider = data.provider || 'unknown';
+      const scriptData = await r1.json();
+      if (!r1.ok && !scriptData.success) throw new Error(scriptData.error || `AI 오류 ${r1.status}`);
+      const usedProvider = scriptData.provider || 'unknown';
       setLastUsedProvider(usedProvider);
-      setJobs(p => p.map(j => j.id === jobId ? { ...j, provider: usedProvider } : j));
-      addToast(`✅ 스크립트 완료 (${usedProvider})`, 'success');
+      setJobs(p => p.map(j => j.id === jobId ? { ...j, provider:usedProvider, progress:25 } : j));
+      addToast(`✅ 스크립트 완성 (${usedProvider})`, 'success');
+
+      // 2단계: TTS
+      setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'tts', progress:30 } : j));
+      addToast('🎙️ TTS 음성 생성 중...', 'info');
+      const scriptText = scriptData.script_text || scriptData.title || form.topic;
+      const r2 = await fetch(`${BASE}/api/tts/tts`, {
+        method:'POST', headers:HEADERS_JSON,
+        body: JSON.stringify({ text: scriptText, filename: jobId, voice_preset: 'korean_male' }),
+      });
+      const ttsData = await r2.json();
+      if (!r2.ok || !ttsData.success) throw new Error(ttsData.message || 'TTS 실패');
+      setJobs(p => p.map(j => j.id === jobId ? { ...j, progress:50 } : j));
+      addToast('🎙️ TTS 완성', 'success');
+
+      // 3단계: FFmpeg 영상 렌더링
+      setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'rendering', progress:55 } : j));
+      addToast('🎬 영상 렌더링 시작...', 'info');
+      const r3 = await fetch(`${BASE}/api/ffmpeg/video/create`, {
+        method:'POST', headers:HEADERS_JSON,
+        body: JSON.stringify({ job_id: jobId, mode: form.mode === 'shorts' ? 'shorts' : 'longform', title: scriptData.title || form.topic, generate_thumbnail: true, generate_shorts: form.mode !== 'shorts', add_bgm: true }),
+      });
+      if (!r3.ok) { const e3 = await r3.json(); throw new Error(e3.detail || 'FFmpeg 시작 실패'); }
+      addToast('🎬 렌더링 중 (수 분 소요)...', 'info');
+
+      // 4단계: 완료까지 폴링
+      await pollFfmpegUntilDone(jobId, setJobs, addToast);
     } catch (e) {
       setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'error' } : j));
       addToast(`❌ ${e.message}`, 'error');
@@ -665,6 +714,7 @@ function App() {
       setSubmitting(false);
     }
   };
+
 
   const handleCancel = (id) => {
     setJobs(p => p.map(j => j.id === id ? { ...j, status:'error' } : j));

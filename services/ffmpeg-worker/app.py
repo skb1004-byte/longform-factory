@@ -1,4 +1,4 @@
-"""
+﻿"""
 LongForm Factory - FFmpeg Worker v15.0.0
 롱폼/숏폼 자동화 영상 제작 서비스
 
@@ -673,6 +673,70 @@ def get_random_bgm() -> Optional[Path]:
     return None
 
 
+
+def sync_scene_durations_from_timestamps(
+    scenes,
+    timestamps_path
+):
+    """
+    ElevenLabs with-timestamps JSON 기반으로 씬별 비디오 클립 길이 동기화.
+
+    전략:
+    1. timestamps JSON에서 전체 TTS 오디오 길이 추출
+       (character_end_times_seconds 마지막 값)
+    2. scenes duration_seconds 합계 대비 비율로 각 씬에 오디오 시간 배분
+    3. 조정된 duration_seconds 반환 → 비디오 클립이 TTS와 정확히 일치
+
+    Returns: duration_seconds 조정된 씬 목록
+    """
+    import json as _json
+    from pathlib import Path as _Path
+
+    if not timestamps_path:
+        logger.warning("타임스탬프 경로 없음 — 씬 길이 동기화 스킵")
+        return scenes
+
+    ts_path = _Path(timestamps_path)
+    if not ts_path.exists():
+        logger.warning(f"타임스탬프 파일 없음: {ts_path} — 씬 길이 동기화 스킵")
+        return scenes
+
+    try:
+        with open(ts_path, encoding="utf-8") as f:
+            ts_data = _json.load(f)
+
+        alignment = ts_data.get("alignment", {})
+        end_times = alignment.get("character_end_times_seconds", [])
+
+        if not end_times:
+            logger.warning("alignment 데이터 없음 — 씬 길이 동기화 스킵")
+            return scenes
+
+        # 전체 TTS 오디오 길이
+        total_audio_sec = float(end_times[-1])
+        logger.info(f"TTS 전체 길이: {total_audio_sec:.2f}초")
+
+        total_scene_sec = sum(s.duration_seconds for s in scenes)
+        if total_scene_sec <= 0:
+            logger.warning("씬 총 길이 0 — 동기화 스킵")
+            return scenes
+
+        ratio = total_audio_sec / total_scene_sec
+        synced = []
+        for s in scenes:
+            new_dur = max(1.0, round(s.duration_seconds * ratio, 2))
+            if abs(new_dur - s.duration_seconds) > 0.1:
+                logger.info(f"씬 '{s.scene_id}' 길이 조정: {s.duration_seconds:.1f}s -> {new_dur:.1f}s")
+            synced.append(s.model_copy(update={"duration_seconds": new_dur}))
+
+        actual_total = sum(s.duration_seconds for s in synced)
+        logger.info(f"씬 동기화 완료: 씬합계 {total_scene_sec:.1f}s -> TTS {total_audio_sec:.1f}s (실제합계 {actual_total:.1f}s)")
+        return synced
+
+    except Exception as e:
+        logger.error(f"씬 동기화 오류 (원본 사용): {e}")
+        return scenes
+
 async def process_video_creation(
     job_id: str,
     request: VideoCreateRequest
@@ -695,6 +759,10 @@ async def process_video_creation(
         scenes = [Scene(**s) for s in scenes_data]
         
         logger.info(f"로드된 장면: {len(scenes)}개")
+
+        # TTS 타임스탬프로 씬 길이 동기화 (나레이션-영상 일치)
+        tts_timestamps = TMP_DIR / f"{job_id}_timestamps.json"
+        scenes = sync_scene_durations_from_timestamps(scenes, tts_timestamps)
         
         # 장편 영상 생성
         if request.mode == VideoMode.LONGFORM or request.generate_shorts:
@@ -831,14 +899,14 @@ async def search_assets(request: AssetsSearchRequest, background_tasks: Backgrou
         scenes_file.parent.mkdir(parents=True, exist_ok=True)
         
         with open(scenes_file, "w") as f:
-            json.dump([asdict(s) for s in request.scenes], f, indent=2)
+            json.dump([s.dict() for s in request.scenes], f, indent=2)
         
         # 백그라운드에서 자산 검색 및 다운로드
         updated_scenes = await search_and_download_assets(job_id, request.scenes)
         
         # 업데이트된 장면 저장
         with open(scenes_file, "w") as f:
-            json.dump([asdict(s) for s in updated_scenes], f, indent=2, default=str)
+            json.dump([s.dict() for s in updated_scenes], f, indent=2, default=str)
         
         # 다운로드 성공 개수
         downloaded = sum(1 for s in updated_scenes if s.asset_url)

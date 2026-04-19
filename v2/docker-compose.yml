@@ -1,4 +1,4 @@
-﻿##############################################################################
+##############################################################################
 # Longform Factory v2.0 ? ����/���� �ڵ�ȭ ����������
 # ��� ��뷮 ����: E:\longform_factory\v2\ ���� ���� ����Ʈ
 ##############################################################################
@@ -13,6 +13,9 @@ services:
       - "8080:80"
     volumes:
       - E:/longform_factory/v2/config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - E:/longform_factory/v2/static:/usr/share/nginx/html:ro
+      - E:/longform_factory/v2/output:/data/output:ro
+      - E:/LF_완성:/data/complete:ro
     networks:
       - lf2_net
     depends_on:
@@ -95,6 +98,7 @@ services:
       - n8n_data:/home/node/.n8n
       - E:/longform_factory/v2/input:/data/input
       - E:/longform_factory/v2/output:/data/output
+      - E:/LF_완성:/data/complete
       - E:/longform_factory/v2/tmp:/data/tmp
       - E:/longform_factory/v2/bgm:/data/bgm
       - E:/longform_factory/v2/jobs:/data/jobs

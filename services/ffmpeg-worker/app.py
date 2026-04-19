@@ -10,6 +10,7 @@ LongForm Factory - FFmpeg Worker v15.0.0
 """
 
 import os
+import shutil
 import json
 import asyncio
 import subprocess
@@ -148,9 +149,10 @@ BGM_DIR = BASE_DATA_DIR / "bgm"
 LONGFORM_DIR = OUTPUT_DIR / "longform"
 SHORTS_DIR = OUTPUT_DIR / "shorts"
 THUMBNAILS_DIR = OUTPUT_DIR / "thumbnails"
+COMPLETE_DIR = BASE_DATA_DIR / "complete"
 
 # 디렉토리 생성
-for directory in [JOBS_DIR, TMP_DIR, OUTPUT_DIR, LONGFORM_DIR, SHORTS_DIR, THUMBNAILS_DIR, BGM_DIR]:
+for directory in [JOBS_DIR, TMP_DIR, OUTPUT_DIR, LONGFORM_DIR, SHORTS_DIR, THUMBNAILS_DIR, BGM_DIR, COMPLETE_DIR, COMPLETE_DIR / 'longform', COMPLETE_DIR / 'shorts', COMPLETE_DIR / 'thumbnails']:
     directory.mkdir(parents=True, exist_ok=True)
 
 logger.info(f"데이터 디렉토리 초기화 완료: {BASE_DATA_DIR}")
@@ -778,6 +780,19 @@ async def process_video_creation(
         )
         
         logger.info(f"작업 완료: {job_id}")
+        # E드라이브 완성 폴더에 복사
+        try:
+            for key, src_path in list(output_files.items()):
+                src = Path(src_path)
+                if src.exists():
+                    dest_dir = COMPLETE_DIR / key
+                    dest_dir.mkdir(parents=True, exist_ok=True)
+                    dest = dest_dir / src.name
+                    shutil.copy2(src, dest)
+                    output_files[f'complete_{key}'] = str(dest)
+                    logger.info(f'완성 폴더 복사: {src.name} -> {dest}')
+        except Exception as copy_err:
+            logger.warning(f'완성 폴더 복사 실패 (무시): {copy_err}')
     
     except Exception as e:
         logger.error(f"영상 생성 오류 ({job_id}): {e}")

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
@@ -294,7 +294,7 @@ function JobCard({ job, onCancel, onYTUpload }) {
 function GenerateForm({ onSubmit, loading }) {
   const [form, setForm] = useState({
     topic: '', duration: '600', style: 'educational',
-    mode: 'longform', language: 'ko', provider: 'auto',
+    mode: 'longform', language: 'ko', provider: 'gemini',
   });
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const setTopic = (t) => setForm(f => ({ ...f, topic: t }));
@@ -334,6 +334,7 @@ function GenerateForm({ onSubmit, loading }) {
             <select value={form.mode} onChange={set('mode')} className={inputCls}>
               <option value="longform">🎬 롱폼 (YouTube)</option>
               <option value="shorts">📱 숏폼 (Shorts)</option>
+<option value="music_video">🎵 뮤직비디오 (BGM+자막)</option>
             </select>
           </div>
           <div>
@@ -682,7 +683,8 @@ function App() {
       setJobs(p => p.map(j => j.id === jobId ? { ...j, provider:usedProvider, progress:25 } : j));
       addToast(`✅ 스크립트 완성 (${usedProvider})`, 'success');
 
-      // 2단계: TTS (ai-mcp 응답 구조 대응 - intro/main_points 조합)
+      // 2단계: TTS (뮤직비디오는 TTS 스킵)
+      if (form.mode !== 'music_video') {
       setJobs(p => p.map(j => j.id === jobId ? { ...j, status:'tts', progress:30 } : j));
       addToast('🎙️ TTS 음성 생성 중...', 'info');
       let scriptText = scriptData.script_text || '';
@@ -706,7 +708,7 @@ function App() {
       addToast('🔍 영상 소스 검색 중...', 'info');
       const rawScenes = scriptData.scenes || scriptData.sections || [];
       const scenes = rawScenes.length > 0 ? rawScenes.map((s, i) => ({
-        scene_id: s.scene_id ? scene_\ : scene_\,
+        scene_id: s.scene_id ? `scene_${s.scene_id}` : `scene_${i+1}`,
         keyword: s.keyword || s.description || s.visual || 'technology',
         duration_seconds: s.duration_seconds || s.duration || 10,
         description: s.description || s.visual || ''
@@ -715,7 +717,7 @@ function App() {
         { scene_id: 'scene_2', keyword: 'global business', duration_seconds: 10, description: '' },
         { scene_id: 'scene_3', keyword: 'future digital', duration_seconds: 10, description: '' }
       ];
-      const r2b = await fetch(${BASE}/api/ffmpeg/assets/search, {
+      const r2b = await fetch(`${BASE}/api/ffmpeg/assets/search`, {
         method:'POST', headers:HEADERS_JSON,
         body: JSON.stringify({ job_id: jobId, scenes, sources: 'pexels,pixabay' }),
       });
@@ -728,7 +730,7 @@ function App() {
       addToast('🎬 영상 렌더링 시작...', 'info');
       const r3 = await fetch(${BASE}/api/ffmpeg/video/create, {
         method:'POST', headers:HEADERS_JSON,
-        body: JSON.stringify({ job_id: jobId, mode: form.mode === 'shorts' ? 'shorts' : 'longform', title: scriptData.title || form.topic, generate_thumbnail: true, generate_shorts: form.mode !== 'shorts', add_bgm: true }),
+        body: JSON.stringify({ job_id: jobId, mode: form.mode === 'music_video' ? 'music_video' : (form.mode === 'shorts' ? 'shorts' : 'longform'), title: scriptData.title || form.topic, generate_thumbnail: true, generate_shorts: form.mode !== 'shorts', add_bgm: true, bgm_volume: form.mode === 'music_video' ? 0.8 : 0.25, subtitle_text: form.mode === 'music_video' ? scriptText : null }),
       });
       if (!r3.ok) { const e3 = await r3.json(); throw new Error(e3.detail || 'FFmpeg 시작 실패'); }
       addToast('🎬 렌더링 중 (수 분 소요)...', 'info');

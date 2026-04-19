@@ -47,6 +47,7 @@ class VideoMode(str, Enum):
     """영상 제작 모드"""
     LONGFORM = "longform"  # 1920x1080 가로형
     SHORTFORM = "shortform"  # 1080x1920 세로형
+    MUSIC_VIDEO = "music_video"  # BGM + 자막 뮤직비디오
 
 
 class JobStatus(str, Enum):
@@ -98,6 +99,7 @@ class VideoCreateRequest(BaseModel):
     generate_thumbnail: bool = Field(default=True, description="썸네일 생성")
     generate_shorts: bool = Field(default=True, description="숏폼 생성")
     title: Optional[str] = Field(None, description="썸네일에 표시할 제목")
+    subtitle_text: Optional[str] = Field(None, description="뮤직비디오 자막 텍스트")
 
 
 class JobInfo(BaseModel):
@@ -674,6 +676,180 @@ def get_random_bgm() -> Optional[Path]:
 
 
 
+def create_srt_from_text(text: str, total_duration: float, output_path: Path) -> bool:
+    """
+    스크립트 텍스트를 SRT 자막 파일로 변환.
+    전체 영상 시간에 맞게 텍스트를 균등 분배.
+
+    Args:
+        text: 자막으로 표시할 전체 텍스트
+        total_duration: 영상 총 길이 (초)
+        output_path: SRT 파일 저장 경로
+
+    Returns:
+        성공 여부
+    """
+    try:
+        import re
+
+        # 문장 단위로 분리 (마침표, 느낌표, 물음표, 줄바꿈)
+        sentences = [s.strip() for s in re.split(r'[.!?\n]+', text) if s.strip()]
+
+        if not sentences:
+            sentences = [text[:50]]  # fallback
+
+        # 한 자막당 최대 글자 수 (2줄 x 25자)
+        MAX_CHARS = 40
+        chunks = []
+        for sentence in sentences:
+            # 긴 문장은 MAX_CHARS 단위로 분할
+            while len(sentence) > MAX_CHARS:
+                chunks.append(sentence[:MAX_CHARS])
+                sentence = sentence[MAX_CHARS:]
+            if sentence:
+                chunks.append(sentence)
+
+        if not chunks:
+            return False
+
+        # 각 청크에 시간 균등 배분 (마지막 0.5초는 여유)
+        usable_duration = max(total_duration - 0.5, 1.0)
+        chunk_duration = usable_duration / len(chunks)
+
+        def sec_to_srt_time(sec: float) -> str:
+            sec = max(0.0, sec)
+            h = int(sec // 3600)
+            m = int((sec % 3600) // 60)
+            s = int(sec % 60)
+            ms = int((sec - int(sec)) * 1000)
+            return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+        srt_content = ""
+        for i, chunk in enumerate(chunks):
+            start = i * chunk_duration
+            # 겹침 방지: end는 다음 start보다 0.1초 앞
+            end = min((i + 1) * chunk_duration - 0.1, usable_duration)
+            srt_content += f"{i+1}\n"
+            srt_content += f"{sec_to_srt_time(start)} --> {sec_to_srt_time(end)}\n"
+            srt_content += f"{chunk}\n\n"
+
+        output_path.write_text(srt_content, encoding="utf-8")
+        logger.info(f"SRT 생성 완료: {len(chunks)}개 자막 구간, {output_path}")
+        return True
+
+    except Exception as e:
+        logger.error(f"SRT 생성 오류: {e}")
+        return False
+
+
+def create_music_video(
+    clips: List[Path],
+    srt_path: Path,
+    bgm_path: Optional[Path],
+    bgm_volume: float,
+    output_path: Path,
+    resolution: str = "1920x1080"
+) -> bool:
+    """
+    뮤직비디오 생성: 비디오 클립 연결 + BGM + 자막 오버레이.
+    TTS 나레이션 없이 배경음악만 사용.
+
+    Args:
+        clips: 비디오 클립 경로 목록
+        srt_path: SRT 자막 파일 경로
+        bgm_path: BGM 오디오 파일 경로 (None이면 무음)
+        bgm_volume: BGM 볼륨 (0-1)
+        output_path: 출력 영상 경로
+        resolution: 출력 해상도
+
+    Returns:
+        성공 여부
+    """
+    if not clips:
+        logger.error("클립 없음")
+        return False
+
+    try:
+        import tempfile
+
+        # 1) 클립 concat용 임시 txt
+        concat_txt = output_path.parent / "mv_concat.txt"
+        with open(concat_txt, "w") as f:
+            for clip in clips:
+                f.write(f"file '{clip}'\n")
+
+        # 2) concat → 임시 combined
+        combined = output_path.parent / "mv_combined.mp4"
+        concat_cmd = [
+            "ffmpeg",
+            "-f", "concat", "-safe", "0",
+            "-i", str(concat_txt),
+            "-c", "copy",
+            "-y", str(combined)
+        ]
+        if not run_ffmpeg_command(concat_cmd):
+            logger.error("뮤직비디오 concat 실패")
+            return False
+
+        # 3) 자막 스타일 (뮤직비디오 감성: 큰 폰트, 흰색, 굵은 외곽선)
+        subtitle_style = (
+            "FontName=Noto Sans CJK KR,"
+            "FontSize=44,"
+            "PrimaryColour=&H00FFFFFF,"    # 흰색 텍스트
+            "OutlineColour=&H00000000,"    # 검정 외곽선
+            "BackColour=&H40000000,"       # 반투명 배경
+            "Outline=3,"
+            "Shadow=1,"
+            "Bold=1,"
+            "Alignment=2,"                 # 하단 중앙
+            "MarginV=80"                   # 하단 여백
+        )
+
+        # 4) 자막 필터 문자열 (srt 경로 이스케이프)
+        srt_escaped = str(srt_path).replace("\\", "/").replace(":", "\\:")
+        subtitle_filter = f"subtitles={srt_escaped}:force_style='{subtitle_style}'"
+
+        # 5) BGM 포함 여부에 따라 명령 구성
+        if bgm_path and bgm_path.exists():
+            # BGM + 자막
+            cmd = [
+                "ffmpeg",
+                "-i", str(combined),
+                "-stream_loop", "-1",   # BGM 반복
+                "-i", str(bgm_path),
+                "-filter_complex",
+                f"[1:a]volume={bgm_volume}[bgm]",
+                "-vf", subtitle_filter,
+                "-map", "0:v",
+                "-map", "[bgm]",
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-c:a", "aac",
+                "-b:a", "192k",
+                "-shortest",            # 비디오 길이 기준 종료
+                "-y", str(output_path)
+            ]
+        else:
+            # 자막만 (무음)
+            cmd = [
+                "ffmpeg",
+                "-i", str(combined),
+                "-vf", subtitle_filter,
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-an",
+                "-y", str(output_path)
+            ]
+
+        result = run_ffmpeg_command(cmd)
+        if result:
+            logger.info(f"뮤직비디오 생성 완료: {output_path}")
+        return result
+
+    except Exception as e:
+        logger.error(f"뮤직비디오 생성 오류: {e}")
+        return False
+
 def sync_scene_durations_from_timestamps(
     scenes,
     timestamps_path
@@ -764,8 +940,37 @@ async def process_video_creation(
         tts_timestamps = TMP_DIR / f"{job_id}_timestamps.json"
         scenes = sync_scene_durations_from_timestamps(scenes, tts_timestamps)
         
+        # 뮤직비디오 모드
+        if request.mode == VideoMode.MUSIC_VIDEO:
+            await update_job_status(job_id, JobStatus.PROCESSING, progress=20.0)
+            clips = await prepare_clips_for_longform(job_id, scenes, job_temp_dir)
+            if not clips:
+                raise ValueError("뮤직비디오용 클립 없음")
+            await update_job_status(job_id, JobStatus.PROCESSING, progress=40.0)
+            subtitle_text = request.subtitle_text or " ".join(
+                s.description or s.keyword for s in scenes
+            )
+            total_dur = sum(s.duration_seconds for s in scenes)
+            srt_path = job_temp_dir / f"{job_id}.srt"
+            create_srt_from_text(subtitle_text, total_dur, srt_path)
+            await update_job_status(job_id, JobStatus.PROCESSING, progress=60.0)
+            bgm = get_random_bgm() if request.add_bgm else None
+            bgm_vol = getattr(request, 'bgm_volume', 0.8)
+            output_video = LONGFORM_DIR / f"{job_id}.mp4"
+            if not create_music_video(clips, srt_path, bgm, bgm_vol, output_video):
+                raise RuntimeError("뮤직비디오 생성 실패")
+            await update_job_status(job_id, JobStatus.PROCESSING, progress=80.0)
+            duration = get_video_duration(output_video)
+            output_files = {"longform": str(output_video)}
+            if request.generate_thumbnail:
+                tp = job_temp_dir / "thumbnail_raw.jpg"
+                if extract_thumbnail(output_video, tp):
+                    tf = THUMBNAILS_DIR / f"{job_id}_thumb.jpg"
+                    if add_text_overlay_to_thumbnail(tp, tf, title=request.title or f"MV {job_id[:8]}"):
+                        output_files["thumbnail"] = str(tf)
+
         # 장편 영상 생성
-        if request.mode == VideoMode.LONGFORM or request.generate_shorts:
+        elif request.mode == VideoMode.LONGFORM or request.generate_shorts:
             await update_job_status(job_id, JobStatus.PROCESSING, progress=20.0)
             
             # 클립 준비

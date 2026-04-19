@@ -1,5 +1,5 @@
 ﻿"""
-LongForm Factory - FFmpeg Worker v15.12.0 (autopatch stream_loop)
+LongForm Factory - FFmpeg Worker v15.7.0 (autopatch stream_loop)
 롱폼/숏폼 자동화 영상 제작 서비스
 
 주요 기능:
@@ -893,8 +893,9 @@ def add_subtitles_to_video(
         logger.warning(f"SRT 파일 없음: {srt_path}")
         return False
 
-    # ASS 스타일: 반투명 배경 박스 + 흰 자막
+    # ASS 스타일: 반투명 배경 박스 + 노란 자막 (한국어 폰트)
     style = (
+        f"FontName=Noto Sans CJK KR,"
         f"FontSize=72,"
         f"Bold=1,"
         f"PrimaryColour=&H00FFFF00&,"
@@ -907,10 +908,13 @@ def add_subtitles_to_video(
         f"Alignment=2"
     )
 
+    # 경로 내 콜론 이스케이프 (Windows 경로 대비)
+    srt_escaped = str(srt_path).replace("\\", "/").replace(":", "\\:")
+
     command = [
         "ffmpeg",
         "-i", str(input_video),
-        "-vf", f"subtitles={str(srt_path)}:force_style='{style}'",
+        "-vf", f"subtitles={srt_escaped}:charenc=UTF-8:force_style='{style}'",
         "-c:v", "libx264",
         "-preset", "fast",
         "-crf", "20",
@@ -1214,7 +1218,7 @@ def create_music_video(
 
         # 4) 자막 필터 문자열 (srt 경로 이스케이프)
         srt_escaped = str(srt_path).replace("\\", "/").replace(":", "\\:")
-        subtitle_filter = f"subtitles={srt_escaped}:force_style='{subtitle_style}'"
+        subtitle_filter = f"subtitles={srt_escaped}:charenc=UTF-8:force_style='{subtitle_style}'"
 
         # 5) BGM 포함 여부에 따라 명령 구성
         if bgm_path and bgm_path.exists():
@@ -1351,7 +1355,17 @@ async def process_video_creation(
         logger.info(f"로드된 장면: {len(scenes)}개")
 
         # TTS 타임스탬프로 씬 길이 동기화 (나레이션-영상 일치)
+        # 1순위: job_id 기반 / 2순위: audio_url 파일명 기반 (자산 재활용 시)
         tts_timestamps = TMP_DIR / f"{job_id}_timestamps.json"
+        if not tts_timestamps.exists() and getattr(request, "audio_url", None):
+            try:
+                audio_p = Path(request.audio_url)
+                alt_ts = audio_p.with_name(audio_p.stem + "_timestamps.json")
+                if alt_ts.exists():
+                    tts_timestamps = alt_ts
+                    logger.info(f"타임스탬프 fallback 사용: {alt_ts}")
+            except Exception as _e:
+                logger.warning(f"타임스탬프 fallback 탐색 실패: {_e}")
         scenes = sync_scene_durations_from_timestamps(scenes, tts_timestamps)
         
         # 뮤직비디오 모드
@@ -1497,6 +1511,63 @@ async def process_video_creation(
                     logger.info(f'완성 폴더 복사: {src.name} -> {dest}')
         except Exception as copy_err:
             logger.warning(f'완성 폴더 복사 실패 (무시): {copy_err}')
+        # ── YouTube 자동 업로드 ─────────────────────────────────────────────
+        if "longform" in output_files:
+            try:
+                lf_path = output_files["longform"]
+                thumb_path = str(THUMBNAILS_DIR / f"{job_id}_thumb.jpg")
+                if "thumbnail" in output_files:
+                    thumb_path = output_files["thumbnail"]
+                # 제목/설명: scenes.json에서 추출
+                yt_title = request.title or ""
+                yt_description = ""
+                try:
+                    sfile = JOBS_DIR / job_id / "scenes.json"
+                    if sfile.exists():
+                        sdata = json.loads(sfile.read_text(encoding="utf-8"))
+                        sc_list = sdata.get("scenes", []) if isinstance(sdata, dict) else sdata
+                        if not yt_title:
+                            raw_title = sdata.get("title", "") if isinstance(sdata, dict) else ""
+                            if not raw_title:
+                                kws = [s.get("keyword", "") for s in sc_list if s.get("keyword")]
+                                raw_title = " | ".join(kws[:3]) if kws else job_id
+                            yt_title = raw_title
+                        if not yt_description:
+                            desc = sdata.get("description", "") if isinstance(sdata, dict) else ""
+                            if not desc:
+                                desc = " ".join(s.get("narration", "")[:80] for s in sc_list if s.get("narration", ""))
+                            yt_description = desc
+                except Exception as _pe:
+                    logger.warning(f"scenes.json 파싱 오류: {_pe}")
+                if not yt_title:
+                    yt_title = job_id
+                if not yt_description:
+                    yt_description = yt_title
+                upload_payload = {
+                    "video_path": lf_path,
+                    "title": yt_title,
+                    "description": yt_description + "\n\n#AI #자동영상 #롱폼",
+                    "tags": ["AI", "자동영상", "롱폼", "LongForm"],
+                    "privacy_status": "private",
+                    "thumbnail_path": thumb_path if Path(thumb_path).exists() else None
+                }
+                logger.info(f"YouTube 자동 업로드 시작: {yt_title}")
+                async with httpx.AsyncClient(timeout=180.0) as yt_client:
+                    yt_resp = await yt_client.post(
+                        "http://lf2_uploader:8003/upload/youtube",
+                        json=upload_payload,
+                        headers={"X-LF-API-Key": os.getenv("LF_API_KEY", "")}
+                    )
+                    if yt_resp.status_code == 200:
+                        yt_data = yt_resp.json()
+                        yt_url = yt_data.get("video_url", "")
+                        logger.info(f"YouTube 자동 업로드 성공: {yt_url}")
+                        output_files["youtube_url"] = yt_url
+                        await update_job_status(job_id, JobStatus.COMPLETED, progress=100.0, output_files=output_files, duration_seconds=duration)
+                    else:
+                        logger.warning(f"YouTube 업로드 실패 {yt_resp.status_code}: {yt_resp.text[:300]}")
+            except Exception as yt_err:
+                logger.warning(f"YouTube 자동 업로드 오류 (무시): {yt_err}")
     
     except Exception as e:
         logger.error(f"영상 생성 오류 ({job_id}): {e}")
@@ -1515,7 +1586,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.0.0",
+        "version": "15.7.0",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -1577,14 +1648,32 @@ async def create_video(request: VideoCreateRequest, background_tasks: Background
     - generate_shorts: 숏폼 생성 여부
     """
     try:
-        job_id = request.job_id
-        
+        # job_id 정규화 (Windows CR/LF 제거)
+        job_id = (request.job_id or "").strip().replace("\r", "").replace("\n", "")
+        if not job_id:
+            raise HTTPException(status_code=400, detail="job_id empty")
+        request.job_id = job_id
+
+        # 중복 POST 거부: 진행 중인 동일 job_id
+        existing = jobs.get(job_id)
+        if existing and existing.status in (JobStatus.PENDING, JobStatus.PROCESSING):
+            logger.warning(
+                f"중복 /video/create 거부: {job_id} (현재 {existing.status.value} / {existing.progress or 0}%)"
+            )
+            return VideoCreateResponse(
+                success=True,
+                job_id=job_id,
+                status=existing.status.value
+            )
+        if _CURRENT_JOB is not None and _CURRENT_JOB != job_id:
+            logger.warning(f"다른 잡 처리 중 ({_CURRENT_JOB}) - {job_id} 큐 지연")
+
         # 작업 상태 초기화
         await update_job_status(job_id, JobStatus.PROCESSING, progress=5.0)
-        
+
         # 백그라운드에서 영상 생성
         background_tasks.add_task(process_video_creation, job_id, request)
-        
+
         return VideoCreateResponse(
             success=True,
             job_id=job_id,

@@ -1,5 +1,5 @@
 ﻿"""
-LongForm Factory - FFmpeg Worker v15.7.0 (autopatch stream_loop)
+LongForm Factory - FFmpeg Worker v15.8.0 (autopatch stream_loop)
 롱폼/숏폼 자동화 영상 제작 서비스
 
 주요 기능:
@@ -65,6 +65,28 @@ class AssetType(str, Enum):
     VIDEO = "video"
     IMAGE = "image"
     AUDIO = "audio"
+
+
+# ============================================================================
+# 리듬 컷 · 자막 선행 파라미터 (환경변수로 override 가능)
+# ============================================================================
+import os as _rhythm_os
+SUBTITLE_LEAD_SEC   = float(_rhythm_os.getenv("SUBTITLE_LEAD_SEC", "0.15"))   # 자막 선행 시간
+SCENE_MIN_SEC       = float(_rhythm_os.getenv("SCENE_MIN_SEC", "2.0"))        # 씬 최소 길이
+SCENE_MAX_SEC       = float(_rhythm_os.getenv("SCENE_MAX_SEC", "4.0"))        # 씬 최대 길이 (초과 시 분할)
+SUBTITLE_MAX_CHARS  = int(_rhythm_os.getenv("SUBTITLE_MAX_CHARS", "15"))      # 자막 한 줄 최대 글자
+PAUSE_THRESHOLD_SEC = float(_rhythm_os.getenv("PAUSE_THRESHOLD_SEC", "0.3"))  # [Q2] 쉼으로 인정할 단어 간격
+
+# [Q3] 복합어 보호: 자막 줄바꿈 금지 N-그램
+_NO_BREAK_DEFAULT = [
+    "진공 챔버", "열 시험", "진동 시험", "우주 환경", "위성 테스트",
+    "궤도 진입", "발사체 성능", "지상국 관제", "모듈러 프리팹",
+    "딥러닝 모델", "머신러닝 모델", "양자 통신", "양자 광통신",
+    "인공지능", "AI", "API", "IoT",
+]
+_NO_BREAK_ENV = _rhythm_os.getenv("NO_BREAK_TERMS", "")
+NO_BREAK_TERMS = _NO_BREAK_DEFAULT + [t.strip() for t in _NO_BREAK_ENV.split(",") if t.strip()]
+_NBSP = "\u00a0"  # 줄바꿈 금지용 non-breaking space
 
 
 # ============================================================================
@@ -174,6 +196,17 @@ app = FastAPI(
 )
 
 
+
+# ==================== CORS (브라우저 UI 직접 호출 허용) ====================
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 # 동시 영상 생성 제한 (메모리 과부하 방지)
 _CURRENT_JOB: Optional[str] = None
 
@@ -749,17 +782,30 @@ def concatenate_videos(concat_file: Path, output_video: Path, transition: str = 
         shutil.copy(batch_outputs[0], str(output_video))
         return True
     
-    # 배치 결과들을 최종 합치기
-    if xfade_batch(batch_outputs, output_video, transition):
-        return True
-    
-    # 최종 fallback: 배치 단순 concat
+    # 배치 결과들을 최종 합치기 — 배치는 이미 xfade 처리됨.
+    # 큰 배치들(각 30-50초)을 xfade filter_complex로 재결합하면 메모리 과부하 → 컨테이너 SIGKILL.
+    # 따라서 최종 배치 머지는 항상 demuxer concat (stream copy) 사용.
     final_concat = temp_dir / "final_concat.txt"
     with open(final_concat, "w") as f:
         for bp in batch_outputs:
             f.write(f"file '{bp}'\n")
-    return run_ffmpeg_command(["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(final_concat),
-                               "-c", "copy", "-y", str(output_video)])
+    if run_ffmpeg_command(["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(final_concat),
+                           "-c", "copy", "-y", str(output_video)]):
+        logger.info(f"최종 배치 머지 OK (demuxer concat): {len(batch_outputs)}개 -> {output_video.name}")
+        return True
+    
+    # 최종 fallback: re-encode concat (stream copy 실패 시 코덱/해상도 불일치)
+    logger.warning("demuxer concat 실패 -> filter_complex concat로 재시도 (re-encode)")
+    inputs = []
+    for bp in batch_outputs:
+        inputs.extend(["-i", str(bp)])
+    n = len(batch_outputs)
+    fg = "".join(f"[{i}:v:0]" for i in range(n)) + f"concat=n={n}:v=1:a=0[v]"
+    return run_ffmpeg_command(["ffmpeg"] + inputs + [
+        "-filter_complex", fg, "-map", "[v]",
+        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+        "-movflags", "+faststart", "-an", "-y", str(output_video)
+    ])
 
 
 def _UNUSED_old_xfade():
@@ -896,7 +942,7 @@ def add_subtitles_to_video(
     # ASS 스타일: 반투명 배경 박스 + 노란 자막 (한국어 폰트)
     style = (
         f"FontName=Noto Sans CJK KR,"
-        f"FontSize=72,"
+        f"FontSize=48,"
         f"Bold=1,"
         f"PrimaryColour=&H00FFFF00&,"
         f"OutlineColour=&H00000000&,"
@@ -904,7 +950,7 @@ def add_subtitles_to_video(
         f"BorderStyle=3,"
         f"Outline=3,"
         f"Shadow=1,"
-        f"MarginV=80,"
+        f"MarginV=50,"
         f"Alignment=2"
     )
 
@@ -1147,6 +1193,65 @@ def create_srt_from_text(text: str, total_duration: float, output_path: Path) ->
         return False
 
 
+def create_srt_from_scenes(scenes: list, output_path: Path) -> bool:
+    """씬별 description/keyword를 SRT 자막으로 변환 (씬 타이밍 완전 동기화)."""
+    try:
+        import re
+
+        def sec_to_srt_time(sec: float) -> str:
+            sec = max(0.0, sec)
+            h = int(sec // 3600)
+            m = int((sec % 3600) // 60)
+            s = int(sec % 60)
+            ms = int((sec - int(sec)) * 1000)
+            return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+        MAX_CHARS = 28
+        srt_entries = []
+        current_time = 0.0
+
+        for scene in scenes:
+            text = scene.description or scene.keyword or scene.scene_id
+            dur = max(scene.duration_seconds or 5.0, 1.0)
+
+            import re as _re
+            sentences = [s.strip() for s in _re.split(r'[.!?.]+', text) if s.strip()]
+            chunks = []
+            for sentence in sentences:
+                while len(sentence) > MAX_CHARS:
+                    chunks.append(sentence[:MAX_CHARS])
+                    sentence = sentence[MAX_CHARS:]
+                if sentence:
+                    chunks.append(sentence)
+
+            if not chunks:
+                chunks = [scene.keyword or scene.scene_id]
+
+            chunk_dur = dur / len(chunks)
+            for chunk in chunks:
+                start = current_time
+                end = current_time + chunk_dur - 0.1
+                srt_entries.append((start, end, chunk))
+                current_time += chunk_dur
+
+        if not srt_entries:
+            return False
+
+        srt_content = ""
+        for i, (start, end, txt) in enumerate(srt_entries):
+            srt_content += f"{i+1}\n"
+            srt_content += f"{sec_to_srt_time(start)} --> {sec_to_srt_time(end)}\n"
+            srt_content += f"{txt}\n\n"
+
+        output_path.write_text(srt_content, encoding="utf-8")
+        logger.info(f"씬 동기화 SRT 생성: {len(srt_entries)}개 구간")
+        return True
+
+    except Exception as e:
+        logger.error(f"씬 SRT 생성 오류: {e}")
+        return False
+
+
 def create_music_video(
     clips: List[Path],
     srt_path: Path,
@@ -1267,13 +1372,14 @@ def sync_scene_durations_from_timestamps(
     timestamps_path
 ):
     """
-    ElevenLabs with-timestamps JSON 기반으로 씬별 비디오 클립 길이 동기화.
+    TTS 오디오 타임스탬프(ElevenLabs alignment 또는 Whisper segments) 기반
+    씬별 비디오 클립 길이 동기화.
 
-    전략:
-    1. timestamps JSON에서 전체 TTS 오디오 길이 추출
-       (character_end_times_seconds 마지막 값)
-    2. scenes duration_seconds 합계 대비 비율로 각 씬에 오디오 시간 배분
-    3. 조정된 duration_seconds 반환 → 비디오 클립이 TTS와 정확히 일치
+    우선순위:
+    1. Whisper `segments` 가 있으면 → 씬별 실제 오디오 구간에 정밀 매핑
+       (세그먼트를 씬 개수에 맞춰 누적 길이 비례로 분할)
+    2. 그 외 → 전체 오디오 길이 기반 비례 배분
+       (ElevenLabs character_end_times_seconds[-1] 또는 Whisper duration)
 
     Returns: duration_seconds 조정된 씬 목록
     """
@@ -1281,29 +1387,96 @@ def sync_scene_durations_from_timestamps(
     from pathlib import Path as _Path
 
     if not timestamps_path:
-        logger.warning("타임스탬프 경로 없음 — 씬 길이 동기화 스킵")
+        logger.info("타임스탬프 경로 없음 — scenes.json 추정 duration 사용")
         return scenes
 
     ts_path = _Path(timestamps_path)
     if not ts_path.exists():
-        logger.warning(f"타임스탬프 파일 없음: {ts_path} — 씬 길이 동기화 스킵")
+        logger.info(f"타임스탬프 파일 없음: {ts_path} — scenes.json 추정 duration 사용")
         return scenes
 
     try:
         with open(ts_path, encoding="utf-8") as f:
             ts_data = _json.load(f)
 
-        alignment = ts_data.get("alignment", {})
-        end_times = alignment.get("character_end_times_seconds", [])
+        source = ts_data.get("source", "elevenlabs")
+        segments = ts_data.get("segments") or []
+        alignment = ts_data.get("alignment") or {}
+        end_times = alignment.get("character_end_times_seconds") or []
 
-        if not end_times:
-            logger.warning("alignment 데이터 없음 — 씬 길이 동기화 스킵")
+        # ── 전체 오디오 길이 확보 ──────────────────────────────────────
+        total_audio_sec = 0.0
+        if segments:
+            total_audio_sec = float(segments[-1].get("end", 0.0) or 0.0)
+        if total_audio_sec <= 0 and end_times:
+            total_audio_sec = float(end_times[-1])
+        if total_audio_sec <= 0:
+            total_audio_sec = float(ts_data.get("duration") or 0.0)
+
+        if total_audio_sec <= 0:
+            logger.warning(
+                f"타임스탬프에 길이 정보 없음 (source={source}) — 동기화 스킵"
+            )
             return scenes
 
-        # 전체 TTS 오디오 길이
-        total_audio_sec = float(end_times[-1])
-        logger.info(f"TTS 전체 길이: {total_audio_sec:.2f}초")
+        logger.info(
+            f"타임스탬프 로드: source={source} 총길이={total_audio_sec:.2f}s "
+            f"segments={len(segments)}"
+        )
 
+        # ── 전략 A: 세그먼트 정밀 매핑 (Whisper segments 있을 때) ──────
+        # 씬 개수에 세그먼트를 누적 길이 비례로 분할해 각 씬의 (start,end) 산출
+        if segments and len(segments) >= len(scenes) >= 1:
+            scene_weights = [max((s.duration_seconds or 5.0), 0.1) for s in scenes]
+            total_weight = sum(scene_weights)
+            # 누적 경계 초 단위 계산 (오디오 total * (누적 weight / total_weight))
+            boundaries = []
+            cum = 0.0
+            for w in scene_weights[:-1]:
+                cum += w
+                boundaries.append(total_audio_sec * cum / total_weight)
+            boundaries.append(total_audio_sec)
+
+            # 경계를 가장 가까운 세그먼트 경계로 스냅
+            seg_ends = [float(seg.get("end", 0.0) or 0.0) for seg in segments]
+            snapped = []
+            last_end_idx = -1
+            for b in boundaries[:-1]:
+                # 현재까지 쓴 세그먼트 이후 구간에서 b에 가장 가까운 end 선택
+                best_idx = last_end_idx + 1
+                best_diff = abs(seg_ends[best_idx] - b) if best_idx < len(seg_ends) else 1e9
+                for j in range(last_end_idx + 1, len(seg_ends)):
+                    d = abs(seg_ends[j] - b)
+                    if d < best_diff:
+                        best_diff = d
+                        best_idx = j
+                    else:
+                        # 정렬되어 있으므로 멀어지면 중단
+                        if seg_ends[j] > b:
+                            break
+                # 최소 1개 세그먼트는 남겨야 하므로 끝에서 2개는 남기기
+                best_idx = min(best_idx, len(seg_ends) - (len(scenes) - len(snapped)))
+                snapped.append(seg_ends[best_idx])
+                last_end_idx = best_idx
+            snapped.append(total_audio_sec)
+
+            synced = []
+            prev = 0.0
+            for s, end in zip(scenes, snapped):
+                dur = max(1.0, round(end - prev, 2))
+                if abs(dur - (s.duration_seconds or 5.0)) > 0.1:
+                    old = (s.duration_seconds or 5.0)
+                    logger.info(f"씬 '{s.scene_id}' 길이 조정 (segment-snap): {old:.1f}s -> {dur:.1f}s")
+                synced.append(s.model_copy(update={"duration_seconds": dur}))
+                prev = end
+            actual_total = sum(x.duration_seconds for x in synced)
+            logger.info(
+                f"씬 동기화 완료 (segment-snap, source={source}): "
+                f"TTS {total_audio_sec:.1f}s → 실제합계 {actual_total:.1f}s"
+            )
+            return synced
+
+        # ── 전략 B: 비례 배분 (세그먼트 부족 시 fallback) ───────────────
         total_scene_sec = sum((s.duration_seconds or 5.0) for s in scenes)
         if total_scene_sec <= 0:
             logger.warning("씬 총 길이 0 — 동기화 스킵")
@@ -1314,16 +1487,503 @@ def sync_scene_durations_from_timestamps(
         for s in scenes:
             new_dur = max(1.0, round((s.duration_seconds or 5.0) * ratio, 2))
             if abs(new_dur - (s.duration_seconds or 5.0)) > 0.1:
-                logger.info(f"씬 '{s.scene_id}' 길이 조정: {s.duration_seconds:.1f}s -> {new_dur:.1f}s")
+                logger.info(f"씬 '{s.scene_id}' 길이 조정 (ratio): {s.duration_seconds:.1f}s -> {new_dur:.1f}s")
             synced.append(s.model_copy(update={"duration_seconds": new_dur}))
 
         actual_total = sum(s.duration_seconds for s in synced)
-        logger.info(f"씬 동기화 완료: 씬합계 {total_scene_sec:.1f}s -> TTS {total_audio_sec:.1f}s (실제합계 {actual_total:.1f}s)")
+        logger.info(
+            f"씬 동기화 완료 (ratio, source={source}): "
+            f"씬합계 {total_scene_sec:.1f}s → TTS {total_audio_sec:.1f}s "
+            f"(실제합계 {actual_total:.1f}s)"
+        )
         return synced
 
     except Exception as e:
-        logger.error(f"씬 동기화 오류 (원본 사용): {e}")
+        logger.error(f"씬 동기화 오류 (원본 사용): {e}", exc_info=True)
         return scenes
+
+
+# [Q4] silencedetect 파라미터 (환경변수 override 가능)
+SILENCE_NOISE_DB = float(_rhythm_os.getenv("SILENCE_NOISE_DB", "-30"))      # 무음 임계 dB
+SILENCE_MIN_SEC  = float(_rhythm_os.getenv("SILENCE_MIN_SEC", "0.25"))      # 최소 무음 길이
+
+# [Q5] 자막 무음 스냅 파라미터
+SUBTITLE_SNAP_WINDOW_SEC       = float(_rhythm_os.getenv("SUBTITLE_SNAP_WINDOW_SEC", "0.6"))
+SUBTITLE_LEAD_AFTER_SIL_SEC    = float(_rhythm_os.getenv("SUBTITLE_LEAD_AFTER_SIL_SEC", "0.08"))
+SUBTITLE_TAIL_BEFORE_SIL_SEC   = float(_rhythm_os.getenv("SUBTITLE_TAIL_BEFORE_SIL_SEC", "0.05"))
+
+
+def _detect_audio_silences(audio_path) -> list:
+    """
+    ffmpeg silencedetect 로 오디오 내 무음 구간 검출.
+    Returns: [(start, end), ...] 단위는 초.
+    """
+    import subprocess as _sp
+    from pathlib import Path as _P
+    audio_path = _P(audio_path)
+    if not audio_path.exists():
+        return []
+    try:
+        cmd = [
+            "ffmpeg", "-hide_banner", "-nostats",
+            "-i", str(audio_path),
+            "-af", f"silencedetect=noise={SILENCE_NOISE_DB}dB:d={SILENCE_MIN_SEC}",
+            "-f", "null", "-"
+        ]
+        proc = _sp.run(cmd, capture_output=True, text=True, timeout=60)
+        silences = []
+        cur_start = None
+        for line in proc.stderr.splitlines():
+            if "silence_start:" in line:
+                try:
+                    cur_start = float(line.split("silence_start:")[1].strip().split()[0])
+                except Exception:
+                    cur_start = None
+            elif "silence_end:" in line and cur_start is not None:
+                try:
+                    end_str = line.split("silence_end:")[1].strip().split()[0]
+                    end = float(end_str)
+                    silences.append((round(cur_start, 3), round(end, 3)))
+                except Exception:
+                    pass
+                cur_start = None
+        logger.info(
+            f"silencedetect: {len(silences)}개 무음 구간 "
+            f"(noise={SILENCE_NOISE_DB}dB, d={SILENCE_MIN_SEC}s)"
+        )
+        return silences
+    except Exception as e:
+        logger.warning(f"silencedetect 실패 — {e}")
+        return []
+
+
+def _find_pause_split(seg_start: float, seg_end: float, ts_data: dict):
+    """
+    [Q2]+[Q4] segment 내부 분할 지점.
+    1순위: ts_data['audio_silences'] 의 무음 구간 중간 (실제 음향 검출, 가장 정확)
+    2순위: Whisper words 간 0.3초 이상 쉼
+    실패 → None (caller가 mid로 fallback)
+    """
+    # 1) 실제 음향 무음 우선 (양 끝 1초 여유)
+    silences = ts_data.get("audio_silences") or []
+    best_t = None
+    best_dur = 0.0
+    for (s_start, s_end) in silences:
+        # 무음이 segment 내부에 걸쳐있으면
+        if s_end < seg_start + 1.0 or s_start > seg_end - 1.0:
+            continue
+        clipped_s = max(s_start, seg_start + 1.0)
+        clipped_e = min(s_end, seg_end - 1.0)
+        if clipped_e <= clipped_s:
+            continue
+        dur = clipped_e - clipped_s
+        if dur > best_dur:
+            best_dur = dur
+            best_t = round((clipped_s + clipped_e) / 2.0, 3)
+    if best_t is not None:
+        return best_t
+
+    # 2) Whisper word gaps (한국어에서는 종종 무용지물이지만 fallback)
+    words = ts_data.get("words") or []
+    if not words:
+        return None
+    inside = []
+    for w in words:
+        ws = w.get("start")
+        we = w.get("end")
+        if ws is None or we is None:
+            continue
+        if seg_start <= float(ws) <= seg_end:
+            inside.append((float(ws), float(we)))
+    if len(inside) < 2:
+        return None
+
+    best_gap = 0.0
+    best_t = None
+    for i in range(len(inside) - 1):
+        gap = inside[i + 1][0] - inside[i][1]
+        if gap >= PAUSE_THRESHOLD_SEC and gap > best_gap:
+            t = (inside[i][1] + inside[i + 1][0]) / 2.0
+            if t - seg_start >= 1.0 and seg_end - t >= 1.0:
+                best_gap = gap
+                best_t = round(t, 3)
+    return best_t
+
+
+def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
+    """
+    [4] 의미 단위 재분해 + [7] 리듬 컷
+
+    Whisper segments가 있으면 scenes를 **한 문장=한 씬** 기준으로 재구성.
+    - 각 segment를 독립 씬으로 생성
+    - duration > SCENE_MAX_SEC 이면 2등분
+    - keyword는 원본 scenes에서 시간 비율로 승계
+    - 세그먼트 부족 / 타임스탬프 없음 → 원본 scenes 그대로 반환
+
+    Returns: 재구성된 씬 리스트 (또는 원본)
+    """
+    import json as _json
+    from pathlib import Path as _Path
+
+    if not timestamps_path:
+        return scenes
+    ts_path = _Path(timestamps_path)
+    if not ts_path.exists():
+        return scenes
+
+    try:
+        with open(ts_path, encoding="utf-8") as f:
+            ts_data = _json.load(f)
+        segments = ts_data.get("segments") or []
+        if not segments:
+            logger.info("Whisper segments 없음 — 의미 재분해 스킵")
+            return scenes
+
+        source = ts_data.get("source", "unknown")
+        logger.info(f"의미 재분해 시작: segments={len(segments)} (source={source})")
+
+        # [Q4] 오디오에서 실제 무음 구간 검출 (씬 분할 정확도 향상)
+        audio_path = ts_data.get("audio_path")
+        if audio_path and not ts_data.get("audio_silences"):
+            ts_data["audio_silences"] = _detect_audio_silences(audio_path)
+
+        # 원본 씬의 keyword·asset을 시간 비율로 승계하기 위해 누적 경계 계산
+        orig_total = sum((s.duration_seconds or 5.0) for s in scenes) or 1.0
+        orig_bounds = []  # [(end_sec, scene_idx)]
+        cum = 0.0
+        for i, s in enumerate(scenes):
+            cum += (s.duration_seconds or 5.0)
+            orig_bounds.append((cum / orig_total, i))
+
+        def pick_orig_scene(rel_t: float):
+            for bound, idx in orig_bounds:
+                if rel_t <= bound:
+                    return scenes[idx]
+            return scenes[-1]
+
+        # 각 세그먼트를 씬으로 (4초 초과 시 2등분)
+        total_audio = float(segments[-1].get("end", 0.0) or 0.0)
+        if total_audio <= 0:
+            logger.info("Whisper 총 길이 0 — 재분해 스킵")
+            return scenes
+
+        # [C-1] segment_keywords 가 있으면 키워드 자동 교체
+        segment_keywords = ts_data.get("segment_keywords") or []
+        # idx(1-based) → ["kw1", "kw2"]
+        seg_kw_map = {}
+        for item in segment_keywords:
+            idx = item.get("idx")
+            kws = item.get("keywords") or []
+            if isinstance(idx, int) and kws:
+                seg_kw_map[idx] = kws
+        if seg_kw_map:
+            logger.info(f"[C-1] 키워드 매핑 로드: {len(seg_kw_map)}개 segment")
+
+        new_scenes = []
+        seg_counter = 0
+        for seg_idx, seg in enumerate(segments, start=1):
+            seg_start = float(seg.get("start", 0.0) or 0.0)
+            seg_end = float(seg.get("end", 0.0) or 0.0)
+            seg_text = (seg.get("text") or "").strip()
+            seg_dur = max(0.5, seg_end - seg_start)
+            if seg_dur <= 0:
+                continue
+
+            # 리듬 컷: 4초 초과면 분할
+            # [Q2] words 간 쉼(≥ PAUSE_THRESHOLD_SEC) 지점에서 분할 시도
+            subclips = []
+            if seg_dur > SCENE_MAX_SEC:
+                pause_t = _find_pause_split(seg_start, seg_end, ts_data)
+                split_t = pause_t if pause_t is not None else seg_start + seg_dur / 2.0
+                reason = "pause" if pause_t is not None else "mid"
+                logger.info(
+                    f"  segment [{seg_start:.2f}-{seg_end:.2f}] 분할 ({reason}): {split_t:.2f}"
+                )
+                subclips.append((seg_start, split_t, seg_text))
+                subclips.append((split_t, seg_end, seg_text))
+            else:
+                subclips.append((seg_start, seg_end, seg_text))
+
+            for (sub_start, sub_end, sub_text) in subclips:
+                sub_dur = max(SCENE_MIN_SEC * 0.5, sub_end - sub_start)  # 최소 1초는 남김
+                # 원본 씬에서 keyword 승계 (시간 비율 기반)
+                rel_mid = ((sub_start + sub_end) / 2.0) / total_audio
+                orig = pick_orig_scene(rel_mid)
+                seg_counter += 1
+
+                # [C-1] segment_keywords 가 있으면 keyword 교체 (시각적 매칭)
+                kw_override = None
+                asset_override = None
+                if seg_idx in seg_kw_map:
+                    kws = seg_kw_map[seg_idx]
+                    # 첫 키워드를 메인, 두 번째는 fallback
+                    kw_override = kws[0] if kws else None
+                    # 원본 asset_url 은 리셋 (새 키워드로 재다운로드 되도록)
+                    asset_override = None
+
+                update_dict = {
+                    "scene_id": f"{orig.scene_id}_seg{seg_counter}",
+                    "duration_seconds": round(sub_dur, 2),
+                    "description": sub_text or orig.description,
+                }
+                if kw_override:
+                    update_dict["keyword"] = kw_override
+                    update_dict["asset_url"] = None  # 재검색 트리거
+                new_scenes.append(orig.model_copy(update=update_dict))
+
+        if not new_scenes:
+            logger.info("재분해 결과 없음 — 원본 사용")
+            return scenes
+
+        # ── [C] 짧은 씬 인접 병합 (SCENE_MIN_SEC 미만) ────────────────────
+        merged = []
+        for sc in new_scenes:
+            if merged and sc.duration_seconds < SCENE_MIN_SEC:
+                prev = merged[-1]
+                combined = round(prev.duration_seconds + sc.duration_seconds, 2)
+                # 여전히 너무 크면 병합하지 않음 (SCENE_MAX_SEC 초과 방지)
+                if combined <= SCENE_MAX_SEC * 1.25:
+                    # 병합: 이전 씬의 duration 확장 + description 이어붙이기
+                    new_desc = prev.description or ""
+                    if sc.description and sc.description.strip() and sc.description.strip() != prev.description:
+                        new_desc = (new_desc + " " + sc.description).strip() if new_desc else sc.description
+                    merged[-1] = prev.model_copy(update={
+                        "duration_seconds": combined,
+                        "description": new_desc,
+                    })
+                    continue
+            merged.append(sc)
+
+        # 첫 씬이 너무 짧으면 다음 씬에 병합
+        if len(merged) >= 2 and merged[0].duration_seconds < SCENE_MIN_SEC:
+            first = merged.pop(0)
+            nxt = merged[0]
+            combined = round(first.duration_seconds + nxt.duration_seconds, 2)
+            if combined <= SCENE_MAX_SEC * 1.25:
+                new_desc = first.description or ""
+                if nxt.description and nxt.description.strip() and nxt.description.strip() != first.description:
+                    new_desc = (new_desc + " " + nxt.description).strip() if new_desc else nxt.description
+                merged[0] = nxt.model_copy(update={
+                    "scene_id": first.scene_id,  # 첫 씬 ID 유지
+                    "duration_seconds": combined,
+                    "description": new_desc,
+                    "keyword": first.keyword,    # 키워드도 첫 씬 것 승계
+                })
+            else:
+                merged.insert(0, first)  # 병합 안 하고 되돌림
+
+        if len(merged) != len(new_scenes):
+            logger.info(
+                f"짧은 씬 병합: {len(new_scenes)}씬 → {len(merged)}씬 "
+                f"(SCENE_MIN_SEC={SCENE_MIN_SEC}s)"
+            )
+
+        logger.info(
+            f"의미 재분해 완료: {len(scenes)}씬 → {len(merged)}씬 "
+            f"(총 {sum(s.duration_seconds for s in merged):.1f}s / TTS {total_audio:.1f}s)"
+        )
+        return merged
+
+    except Exception as e:
+        logger.error(f"의미 재분해 오류 (원본 사용): {e}", exc_info=True)
+        return scenes
+
+
+def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: float = None) -> bool:
+    """
+    [8] 자막 0.15초 선행
+
+    Whisper segments 기반 SRT 생성. 각 cue의 start를 lead_sec 만큼 당겨서
+    음성보다 먼저 자막이 뜨게 함.
+
+    Returns: 생성 성공 여부
+    """
+    import json as _json
+    from pathlib import Path as _Path
+
+    if not timestamps_path:
+        return False
+    ts_path = _Path(timestamps_path)
+    if not ts_path.exists():
+        return False
+
+    if lead_sec is None:
+        lead_sec = SUBTITLE_LEAD_SEC
+
+    try:
+        with open(ts_path, encoding="utf-8") as f:
+            ts_data = _json.load(f)
+        segments = ts_data.get("segments") or []
+        if not segments:
+            return False
+
+        # [Q5] 오디오 무음 구간 로드 (캐시가 있으면 재사용, 없으면 직접 검출)
+        audio_silences = ts_data.get("audio_silences") or []
+        if not audio_silences:
+            ap = ts_data.get("audio_path")
+            if ap:
+                audio_silences = _detect_audio_silences(ap)
+
+        def _snap_to_silence(t: float, is_start: bool) -> float:
+            """
+            t 에 가장 가까운 무음 경계를 찾아 스냅.
+            is_start=True  : 시작 → 가장 가까운 무음 end + LEAD
+            is_start=False : 끝   → 가장 가까운 무음 start - TAIL
+
+            윈도우 내 여러 무음이 있으면 가장 가까운 것 선택.
+            t 가 무음 안쪽이면 해당 무음의 경계로 우선 스냅.
+            """
+            if not audio_silences:
+                return t
+            win = SUBTITLE_SNAP_WINDOW_SEC
+
+            # t 가 무음 내부에 있는지 먼저 확인
+            for (s, e) in audio_silences:
+                if s - 0.05 <= t <= e + 0.05:
+                    # 무음 안쪽 → 시작이면 무음 end + lead, 끝이면 무음 start - tail
+                    if is_start:
+                        return round(e + SUBTITLE_LEAD_AFTER_SIL_SEC, 3)
+                    else:
+                        return round(s - SUBTITLE_TAIL_BEFORE_SIL_SEC, 3)
+
+            best = None
+            best_diff = 1e9
+            if is_start:
+                # 가장 가까운 무음의 end 를 찾음 (t 앞뒤 win 범위 내)
+                for (s, e) in audio_silences:
+                    if abs(e - t) <= win:
+                        diff = abs(e - t)
+                        if diff < best_diff:
+                            best_diff = diff
+                            best = e
+                if best is not None:
+                    return round(best + SUBTITLE_LEAD_AFTER_SIL_SEC, 3)
+            else:
+                # 가장 가까운 무음의 start 를 찾음
+                for (s, e) in audio_silences:
+                    if abs(s - t) <= win:
+                        diff = abs(s - t)
+                        if diff < best_diff:
+                            best_diff = diff
+                            best = s
+                if best is not None:
+                    return round(best - SUBTITLE_TAIL_BEFORE_SIL_SEC, 3)
+            return t
+
+        def sec_to_srt(sec: float) -> str:
+            sec = max(0.0, sec)
+            h = int(sec // 3600)
+            m = int((sec % 3600) // 60)
+            s = int(sec % 60)
+            ms = int((sec - int(sec)) * 1000)
+            return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+        # [Q3] 복합어 보호 + 자연 줄바꿈
+        def wrap_lines(text: str, max_chars: int = SUBTITLE_MAX_CHARS) -> list:
+            text = text.strip()
+            if len(text) <= max_chars:
+                return [text]
+            # 1) NO_BREAK_TERMS 내부 공백을 NBSP로 치환 → split 시 한 토큰으로 유지
+            protected = text
+            for term in NO_BREAK_TERMS:
+                if term and term in protected:
+                    protected = protected.replace(term, term.replace(" ", _NBSP))
+            # 2) 쉼표 뒤에 공백 보장
+            protected = protected.replace(",", ", ")
+            # split(" ") 로 NBSP 분할 방지 (NBSP는 whitespace로 인식되지만 공백 " " 문자는 아님)
+            words = [w for w in protected.split(" ") if w]
+            lines = []
+            cur = ""
+            for w in words:
+                if not cur:
+                    cur = w
+                elif len(cur) + 1 + len(w) <= max_chars:
+                    cur = cur + " " + w
+                else:
+                    lines.append(cur)
+                    cur = w
+            if cur:
+                lines.append(cur)
+            # NBSP 복원
+            return [ln.replace(_NBSP, " ") for ln in lines]
+
+        cues = []  # [(start, end, [line1, line2])]
+        for seg in segments:
+            seg_start = float(seg.get("start", 0.0) or 0.0)
+            seg_end = float(seg.get("end", 0.0) or 0.0)
+            seg_text = (seg.get("text") or "").strip()
+            if not seg_text or seg_end <= seg_start:
+                continue
+
+            lines = wrap_lines(seg_text, SUBTITLE_MAX_CHARS)
+            # 2줄 초과면 cue를 분할 (2줄씩 묶어서)
+            cue_chunks = [lines[i:i+2] for i in range(0, len(lines), 2)]
+            if not cue_chunks:
+                continue
+            total_chars = sum(len(l) for l in lines) or 1
+            cum_chars = 0
+            for chunk in cue_chunks:
+                chunk_chars = sum(len(l) for l in chunk)
+                ratio_start = cum_chars / total_chars
+                cum_chars += chunk_chars
+                ratio_end = cum_chars / total_chars
+                cue_start = seg_start + (seg_end - seg_start) * ratio_start
+                cue_end = seg_start + (seg_end - seg_start) * ratio_end
+                cues.append((cue_start, cue_end, chunk))
+
+        if not cues:
+            return False
+
+        # [Q5] 자막 무음 스냅 + 선행 적용
+        #   1. 먼저 각 cue의 start/end 를 무음에 스냅 시도
+        #   2. 스냅 실패한 부분만 기존 lead_sec 방식 적용
+        #   3. 이전 cue end 보다 앞서지 않도록 보정
+        snapped_count = 0
+        adjusted = []
+        prev_end = 0.0
+        for (start, end, chunk) in cues:
+            snap_s = _snap_to_silence(start, is_start=True)
+            snap_e = _snap_to_silence(end, is_start=False)
+
+            # 스냅 결과가 원본과 다르면 카운트
+            used_snap_s = abs(snap_s - start) > 0.01
+            used_snap_e = abs(snap_e - end) > 0.01
+            if used_snap_s or used_snap_e:
+                snapped_count += 1
+
+            # 스냅 실패 시 lead/tail fallback
+            adj_start = snap_s if used_snap_s else max(prev_end, start - lead_sec)
+            adj_start = max(prev_end, adj_start)  # 겹침 방지
+            adj_end = snap_e if used_snap_e else max(adj_start + 0.3, end - 0.05)
+            if adj_end <= adj_start:
+                adj_end = adj_start + 0.3
+            adjusted.append((adj_start, adj_end, chunk))
+            prev_end = adj_end
+
+        if snapped_count > 0:
+            logger.info(
+                f"자막 무음 스냅: {snapped_count}/{len(cues)} cue "
+                f"(window={SUBTITLE_SNAP_WINDOW_SEC}s)"
+            )
+
+        srt = []
+        for i, (start, end, chunk) in enumerate(adjusted, 1):
+            srt.append(str(i))
+            srt.append(f"{sec_to_srt(start)} --> {sec_to_srt(end)}")
+            for line in chunk:
+                srt.append(line)
+            srt.append("")
+        output_path.write_text("\n".join(srt), encoding="utf-8")
+        logger.info(
+            f"Whisper SRT 생성: {len(adjusted)}개 cue, lead={lead_sec:.2f}s, "
+            f"max_chars={SUBTITLE_MAX_CHARS}"
+        )
+        return True
+
+    except Exception as e:
+        logger.error(f"Whisper SRT 생성 오류: {e}", exc_info=True)
+        return False
+
 
 async def process_video_creation(
     job_id: str,
@@ -1343,14 +2003,40 @@ async def process_video_creation(
         job_temp_dir = TMP_DIR / job_id
         job_temp_dir.mkdir(parents=True, exist_ok=True)
         
-        # 장면 파일 로드
+        # 장면 로드 — request.scenes 우선, 없으면 파일
+        req_scenes = getattr(request, "scenes", None) or []
         scenes_file = JOBS_DIR / job_id / "scenes.json"
-        if not scenes_file.exists():
-            raise FileNotFoundError(f"장면 파일 없음: {scenes_file}")
-        
-        with open(scenes_file) as f:
-            scenes_data = json.load(f)
-        scenes = [Scene(**s) for s in scenes_data]
+        if req_scenes:
+            # request body 로 전달된 scenes 사용 (UI/브라우저 경로)
+            scenes_data = [
+                (s.model_dump(mode="json") if hasattr(s, "model_dump") else s)
+                for s in req_scenes
+            ]
+            # 디스크에도 저장 (rebuild 등에서 참조 가능)
+            scenes_file.parent.mkdir(parents=True, exist_ok=True)
+            scenes_file.write_text(
+                json.dumps(scenes_data, ensure_ascii=False, indent=2),
+                encoding="utf-8"
+            )
+            logger.info(f"요청 scenes 로드: {len(scenes_data)}개 (파일로도 저장)")
+        else:
+            if not scenes_file.exists():
+                raise FileNotFoundError(f"장면 파일 없음: {scenes_file}")
+            with open(scenes_file) as f:
+                scenes_data = json.load(f)
+        # scenes.json 형태 정규화: list | {"scenes":[...]} | 단일 dict 모두 허용
+        if isinstance(scenes_data, dict):
+            if isinstance(scenes_data.get('scenes'), list):
+                scenes_data = scenes_data['scenes']
+            else:
+                scenes_data = [scenes_data]
+        if not isinstance(scenes_data, list):
+            raise ValueError(f"scenes.json 형식 오류: list 또는 dict 기대, got {type(scenes_data).__name__}")
+        scenes = []
+        for idx, s in enumerate(scenes_data):
+            if not isinstance(s, dict):
+                raise ValueError(f"scenes[{idx}] 형식 오류: dict 기대, got {type(s).__name__}")
+            scenes.append(Scene(**s))
         
         logger.info(f"로드된 장면: {len(scenes)}개")
 
@@ -1367,7 +2053,36 @@ async def process_video_creation(
             except Exception as _e:
                 logger.warning(f"타임스탬프 fallback 탐색 실패: {_e}")
         scenes = sync_scene_durations_from_timestamps(scenes, tts_timestamps)
-        
+
+        # [4]+[7] Whisper segments 기반 의미 재분해 + 리듬 컷 적용
+        scenes = rebuild_scenes_from_whisper_segments(scenes, tts_timestamps)
+
+        # [C-1] segment_keywords 로 keyword 교체된 씬(asset_url=None) 재검색·다운로드
+        need_download = [s for s in scenes if s.asset_url is None]
+        if need_download:
+            logger.info(
+                f"[C-1] {len(need_download)}개 씬 재검색·다운로드 필요 "
+                f"(총 {len(scenes)}개 중)"
+            )
+            try:
+                refreshed = await search_and_download_assets(job_id, need_download)
+                refreshed_map = {s.scene_id: s for s in refreshed}
+                scenes = [
+                    refreshed_map.get(s.scene_id, s) if s.asset_url is None else s
+                    for s in scenes
+                ]
+            except Exception as _e:
+                logger.warning(f"[C-1] 재검색·다운로드 실패 (원본 asset fallback 적용): {_e}")
+
+        # asset_url 여전히 없는 씬은 다른 씬의 asset 으로 fallback
+        has_assets = [s for s in scenes if s.asset_url]
+        if has_assets:
+            fallback_url = has_assets[0].asset_url
+            for i, s in enumerate(scenes):
+                if s.asset_url is None:
+                    scenes[i] = s.model_copy(update={"asset_url": fallback_url})
+                    logger.info(f"[C-1] 씬 '{s.scene_id}' fallback asset 적용: {fallback_url}")
+
         # 뮤직비디오 모드
         if request.mode == VideoMode.MUSIC_VIDEO:
             await update_job_status(job_id, JobStatus.PROCESSING, progress=20.0)
@@ -1468,17 +2183,31 @@ async def process_video_creation(
                 duration_seconds=duration
             )
 
-            # 자막 오버레이 (subtitle=True)
-            if request.add_subtitles and request.subtitle_text:
+
+            # 자막 오버레이 (add_subtitles=True 이면 항상 생성)
+            # 씬 description 있으면 씬 동기화 SRT 우선, 없으면 subtitle_text fallback
+            if request.add_subtitles:
                 try:
                     srt_path = job_temp_dir / f"{job_id}_narration.srt"
-                    total_dur = duration or sum((s.duration_seconds or 5.0) for s in scenes)
-                    create_srt_from_text(request.subtitle_text, total_dur, srt_path)
-                    out_sub = LONGFORM_DIR / f"{job_id}_sub.mp4"
-                    if add_subtitles_to_video(output_video, srt_path, out_sub):
-                        shutil.move(str(out_sub), str(output_video))
-                        output_files["longform"] = str(output_video)
-                        logger.info("자막 오버레이 완료")
+                    srt_ok = False
+                    # [8] Whisper timestamps가 있으면 최우선 (단어 단위 정확도 + 선행)
+                    if tts_timestamps and tts_timestamps.exists():
+                        srt_ok = create_srt_from_whisper_segments(tts_timestamps, srt_path)
+                        if srt_ok:
+                            logger.info(f"Whisper 자막 사용 (lead={SUBTITLE_LEAD_SEC}s)")
+                    if not srt_ok and scenes and any(s.description for s in scenes):
+                        srt_ok = create_srt_from_scenes(scenes, srt_path)
+                        logger.info("씬 동기화 자막 fallback 사용")
+                    if not srt_ok and request.subtitle_text:
+                        total_dur = duration or sum((s.duration_seconds or 5.0) for s in scenes)
+                        srt_ok = create_srt_from_text(request.subtitle_text, total_dur, srt_path)
+                        logger.info("텍스트 자막 fallback 사용")
+                    if srt_ok:
+                        out_sub = LONGFORM_DIR / f"{job_id}_sub.mp4"
+                        if add_subtitles_to_video(output_video, srt_path, out_sub):
+                            shutil.move(str(out_sub), str(output_video))
+                            output_files["longform"] = str(output_video)
+                            logger.info("자막 오버레이 완료")
                 except Exception as e:
                     logger.error(f"자막 오류: {e}")
 
@@ -1586,7 +2315,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.7.0",
+        "version": "15.8.0",
         "timestamp": datetime.now().isoformat()
     }
 

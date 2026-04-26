@@ -3201,6 +3201,161 @@ def _highlight_keywords_in_srt(srt_path: Path, scenes: list) -> bool:
     return False
 
 
+async def generate_tts_for_job(job_id: str, scenes: list, request) -> bool:
+    """
+    [TTS-AUTO] 씬 narration/description 텍스트를 lf2_tts:8001/tts 로 전송해
+    /data/tmp/{job_id}.mp3 + {job_id}_timestamps.json 자동 생성.
+    audio_url이 이미 있거나 mp3가 존재하면 스킵.
+    """
+    mp3_path = TMP_DIR / f"{job_id}.mp3"
+    ts_path  = TMP_DIR / f"{job_id}_timestamps.json"
+
+    if mp3_path.exists() and mp3_path.stat().st_size > 1024:
+        logger.info(f"[TTS-AUTO] 기존 TTS 재사용: {mp3_path} ({mp3_path.stat().st_size//1024}KB)")
+        return True
+
+    if getattr(request, "audio_url", None):
+        logger.info(f"[TTS-AUTO] audio_url 지정됨, 자동생성 스킵")
+        return True
+
+    narration_parts = []
+    for s in scenes:
+        s_dict = s.model_dump() if hasattr(s, "model_dump") else (s if isinstance(s, dict) else {})
+        text = (s_dict.get("narration") or s_dict.get("description") or s_dict.get("keyword") or "").strip()
+        if text:
+            narration_parts.append(text)
+
+    if not narration_parts:
+        logger.warning("[TTS-AUTO] 나레이션 텍스트 없음 — TTS 스킵")
+        return False
+
+    full_script = " ".join(narration_parts)
+    logger.info(f"[TTS-AUTO] TTS 생성: {len(full_script)}자 / {len(narration_parts)}씬")
+
+    try:
+        import httpx as _httpx
+        payload = {
+            "text": full_script,
+            "filename": job_id,
+            "engine": "edge",
+            "edge_voice": "ko-KR-SunHiNeural",
+            "edge_rate": "-5%",
+            "preprocess": True,
+        }
+        async with _httpx.AsyncClient(timeout=300.0) as _cli:
+            resp = await _cli.post("http://lf2_tts:8001/tts", json=payload)
+            if resp.status_code != 200:
+                logger.error(f"[TTS-AUTO] TTS 서비스 오류: {resp.status_code} {resp.text[:200]}")
+                return False
+            data = resp.json()
+
+        tts_file = data.get("file_path", "")
+        ts_file  = data.get("timestamps_path", "")
+        import shutil as _shutil
+
+        if tts_file and Path(tts_file).exists():
+            _shutil.copy2(tts_file, mp3_path)
+            logger.info(f"[TTS-AUTO] mp3 저장: {mp3_path} ({mp3_path.stat().st_size//1024}KB)")
+        else:
+            logger.error(f"[TTS-AUTO] TTS 파일 없음: {tts_file}")
+            return False
+
+        if ts_file and Path(ts_file).exists():
+            _shutil.copy2(ts_file, ts_path)
+            logger.info(f"[TTS-AUTO] timestamps 저장: {ts_path}")
+
+        return True
+
+    except Exception as _e:
+        logger.error(f"[TTS-AUTO] 생성 실패: {_e}", exc_info=True)
+        return False
+
+
+def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: float = 0.0) -> bool:
+    """
+    [KARAOKE] Whisper 단어 단위 타임스탬프 → ASS 카라오케 자막.
+    발음 중인 단어: 노란 굵게 (\\kf 채워지는 효과) / 나머지: 흰색.
+    PlayResX=1920, PlayResY=1080 기준. 유료 서비스 수준 품질.
+    """
+    import json as _json
+    MAX_CHARS = 20  # 한국어 기준 한 줄 최대
+
+    try:
+        if not timestamps_path or not Path(timestamps_path).exists():
+            return False
+
+        with open(timestamps_path, encoding="utf-8") as f:
+            ts_data = _json.load(f)
+
+        # 단어 목록 수집 (words → segments.words → segments 순)
+        words = list(ts_data.get("words") or [])
+        if not words:
+            for seg in (ts_data.get("segments") or []):
+                for w in (seg.get("words") or []):
+                    words.append(w)
+        if not words:
+            for seg in (ts_data.get("segments") or []):
+                text = (seg.get("text") or "").strip()
+                if text:
+                    words.append({"word": text, "start": seg.get("start", 0), "end": seg.get("end", 0)})
+        if not words:
+            return False
+
+        def _t(sec):
+            sec = max(0.0, float(sec) + lead_sec)
+            h = int(sec // 3600); m = int((sec % 3600) // 60); s = sec % 60
+            return f"{h}:{m:02d}:{s:05.2f}"
+
+        ass_header = (
+            "[Script Info]\n"
+            "ScriptType: v4.00+\n"
+            "PlayResX: 1920\n"
+            "PlayResY: 1080\n"
+            "ScaledBorderAndShadow: yes\n\n"
+            "[V4+ Styles]\n"
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, "
+            "Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, "
+            "Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
+            "Style: Karaoke,Noto Sans CJK KR,46,&H00FFFFFF,&H0000FFFF,&H00000000,&HB4000000,"
+            "-1,0,0,0,100,100,0,0,1,2.5,1.2,2,80,80,50,1\n\n"
+            "[Events]\n"
+            "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+        )
+
+        # 단어 → 줄 그룹핑
+        groups, cur, cur_len = [], [], 0
+        for w in words:
+            wt = (w.get("word") or "").strip()
+            if not wt:
+                continue
+            if cur_len + len(wt) > MAX_CHARS and cur:
+                groups.append(cur); cur = []; cur_len = 0
+            cur.append(w); cur_len += len(wt) + 1
+        if cur:
+            groups.append(cur)
+
+        dialogues = []
+        for grp in groups:
+            ls = grp[0].get("start", 0)
+            le = grp[-1].get("end", ls + 3)
+            kara = ""
+            for w in grp:
+                ws = float(w.get("start", 0)); we = float(w.get("end", ws + 0.3))
+                cs = max(1, int((we - ws) * 100))
+                kara += f"{{\\kf{cs}}}{(w.get('word') or '').strip()} "
+            dialogues.append(
+                f"Dialogue: 0,{_t(ls)},{_t(le)},Karaoke,,0,0,0,,{kara.strip()}"
+            )
+
+        Path(output_path).write_text(ass_header + "\n".join(dialogues) + "\n", encoding="utf-8-sig")
+        logger.info(f"[KARAOKE] ASS 생성: {len(dialogues)}줄 → {output_path}")
+        return True
+
+    except Exception as _e:
+        logger.error(f"[KARAOKE] ASS 생성 실패: {_e}", exc_info=True)
+        return False
+
+
 def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: float = None) -> bool:
     """
     [8] 자막 0.15초 선행
@@ -3653,6 +3808,14 @@ async def process_video_creation(
         logger.info(f"로드된 장면: {len(scenes)}개")
         state.mark("scenes_loaded", {"count": len(scenes)})  # [AC] MARKER body
 
+        # [TTS-AUTO] audio_url 없을 때 TTS 자동 생성 (lf2_tts:8001 호출)
+        if not getattr(request, "audio_url", None) and not (TMP_DIR / f"{job_id}.mp3").exists():
+            _tts_ok = await generate_tts_for_job(job_id, scenes, request)
+            if _tts_ok:
+                logger.info("[TTS-AUTO] TTS 자동 생성 완료")
+            else:
+                logger.warning("[TTS-AUTO] TTS 자동 생성 실패 — 음성 없이 진행")
+
         # TTS 타임스탬프로 씬 길이 동기화 (나레이션-영상 일치)
         # 1순위: job_id 기반 / 2순위: audio_url 파일명 기반 (자산 재활용 시)
         tts_timestamps = TMP_DIR / f"{job_id}_timestamps.json"
@@ -3977,9 +4140,17 @@ async def process_video_creation(
                     srt_ok = False
                     # [8] Whisper timestamps가 있으면 최우선 (단어 단위 정확도 + 선행)
                     if tts_timestamps and tts_timestamps.exists():
-                        srt_ok = create_srt_from_whisper_segments(tts_timestamps, srt_path)
-                        if srt_ok:
-                            logger.info(f"Whisper 자막 사용 (lead={SUBTITLE_LEAD_SEC}s)")
+                        # [KARAOKE] ASS 카라오케 우선 (단어별 하이라이트) → SRT fallback
+                        ass_path = srt_path.with_suffix(".ass")
+                        ass_ok = create_ass_karaoke_from_whisper(tts_timestamps, ass_path)
+                        if ass_ok:
+                            srt_path = ass_path
+                            srt_ok = True
+                            logger.info("[SUBTITLE] ASS 카라오케 자막 적용 (유료 수준)")
+                        else:
+                            srt_ok = create_srt_from_whisper_segments(tts_timestamps, srt_path)
+                            if srt_ok:
+                                logger.info(f"Whisper 자막 사용 (lead={SUBTITLE_LEAD_SEC}s)")
                     if not srt_ok and scenes and any(s.description for s in scenes):
                         srt_ok = create_srt_from_scenes(scenes, srt_path)
                         logger.info("씬 동기화 자막 fallback 사용")

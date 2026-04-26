@@ -191,6 +191,7 @@ services:
       - E:/longform_factory/v2/bgm:/data/bgm
       - E:/longform_factory/v2/tmp:/data/tmp
       - E:/longform_factory/v2/logs:/logs
+      - E:/LF_완성:/data/complete
     tmpfs:
       - /tmp:size=4g,mode=1777,exec
       - /var/cache/ffmpeg:size=2g,mode=1777
@@ -310,5 +311,6 @@ networks:
   lf2_net:
     driver: bridge
     name: lf2_net
+
 
 

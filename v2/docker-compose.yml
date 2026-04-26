@@ -15,7 +15,7 @@ services:
       - E:/longform_factory/v2/config/nginx.conf:/etc/nginx/nginx.conf:ro
       - E:/longform_factory/v2/static:/usr/share/nginx/html:ro
       - E:/longform_factory/v2/output:/data/output:ro
-      - E:/LF_?袁⑷??/data/complete:ro
+      - E:/LF_완성:/data/complete:ro
     networks:
       - lf2_net
     depends_on:
@@ -99,7 +99,7 @@ services:
       - n8n_data:/home/node/.n8n
       - E:/longform_factory/v2/input:/data/input
       - E:/longform_factory/v2/output:/data/output
-      - E:/LF_?袁⑷??/data/complete
+      - E:/LF_완성:/data/complete
       - E:/longform_factory/v2/tmp:/data/tmp
       - E:/longform_factory/v2/bgm:/data/bgm
       - E:/longform_factory/v2/jobs:/data/jobs
@@ -153,7 +153,7 @@ services:
       start_period: 20s
 
   ffmpeg-worker:
-    image: lf_ffmpeg_worker:15.7.0
+    image: lf_ffmpeg_worker:15.57.0
     build:
       context: E:/longform_factory/services/ffmpeg-worker
       dockerfile: Dockerfile
@@ -182,6 +182,8 @@ services:
       - LF_API_KEY=${LF_API_KEY:-longform-2026-secret}
       - GENERATE_SHORTS=true
       - GENERATE_THUMBNAIL=true
+      - SUBTITLE_FONT_SIZE_RATIO=0.018
+      - SUBTITLE_MARGIN_V=30
     volumes:
       - E:/longform_factory/v2/jobs:/data/jobs
       - E:/longform_factory/v2/input:/data/input
@@ -292,7 +294,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1G
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')"]
       interval: 30s
@@ -308,3 +310,5 @@ networks:
   lf2_net:
     driver: bridge
     name: lf2_net
+
+

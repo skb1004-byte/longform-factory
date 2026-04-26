@@ -9,7 +9,7 @@
 # [AJ] MARKER v1
 # [AI-pack2] MARKER v1
 """
-LongForm Factory - FFmpeg Worker v15.66.0 (안정화·운영개선)
+LongForm Factory - FFmpeg Worker v15.68.0 (안정화·운영개선)
 롱폼/숏폼 자동화 영상 제작 서비스
 
 주요 기능:
@@ -762,6 +762,8 @@ class Scene(BaseModel):
     tone_profile: Optional[str] = Field(None, description="톤 (info/news/edu/ad/story)")
     visual_pacing: Optional[str] = Field(None, description="페이싱 (fast/normal/slow)")
     timing: Optional[Dict[str, float]] = Field(None, description="타임라인 타이밍")
+    alt_asset_url: Optional[str] = Field(None, description="[v15.68] 2번째 소스 영상 경로 (서브클립 다양화)")
+    alt_keywords: List[str] = Field(default_factory=list, description="[v15.68] 대체 검색 키워드")
 
 
 class AssetsSearchRequest(BaseModel):
@@ -846,6 +848,54 @@ BGM_DIR = BASE_DATA_DIR / "bgm"
 LONGFORM_DIR = OUTPUT_DIR / "longform"
 SHORTS_DIR = OUTPUT_DIR / "shorts"
 THUMBNAILS_DIR = OUTPUT_DIR / "thumbnails"
+
+# ─── 국가명 → 국기 이모지 매핑 v15.67.0 ──────────────────────────────
+_COUNTRY_FLAG_MAP: dict = {
+    "미국": "🇺🇸", "미합중국": "🇺🇸", "아메리카": "🇺🇸", "usa": "🇺🇸", "us ": "🇺🇸",
+    "중국": "🇨🇳", "중화인민공화국": "🇨🇳", "차이나": "🇨🇳", "china": "🇨🇳",
+    "일본": "🇯🇵", "일본국": "🇯🇵", "japan": "🇯🇵",
+    "한국": "🇰🇷", "대한민국": "🇰🇷", "남한": "🇰🇷", "korea": "🇰🇷",
+    "영국": "🇬🇧", "uk": "🇬🇧", "britain": "🇬🇧",
+    "독일": "🇩🇪", "germany": "🇩🇪",
+    "프랑스": "🇫🇷", "france": "🇫🇷",
+    "러시아": "🇷🇺", "russia": "🇷🇺",
+    "캐나다": "🇨🇦", "canada": "🇨🇦",
+    "인도": "🇮🇳", "india": "🇮🇳",
+    "호주": "🇦🇺", "australia": "🇦🇺",
+    "유럽": "🇪🇺", "유럽연합": "🇪🇺",
+    "이스라엘": "🇮🇱",
+    "북한": "🇰🇵",
+    "대만": "🇹🇼",
+    "이탈리아": "🇮🇹",
+    "스페인": "🇪🇸",
+    "브라질": "🇧🇷",
+    "사우디": "🇸🇦", "사우디아라비아": "🇸🇦",
+    "싱가포르": "🇸🇬",
+    "우크라이나": "🇺🇦",
+    "스웨덴": "🇸🇪",
+}
+
+def detect_countries_in_text(text: str) -> list:
+    """텍스트에서 국가 감지 → 국기 이모지 리스트 (중복 제거, 순서 유지)"""
+    found, seen = [], set()
+    tl = text.lower()
+    for name, flag in _COUNTRY_FLAG_MAP.items():
+        if name.lower() in tl and flag not in seen:
+            found.append(flag)
+            seen.add(flag)
+    return found
+
+def inject_flags_in_word(word: str) -> str:
+    """단어에 국가명 포함 시 국기 이모지 앞에 삽입"""
+    import re as _re2
+    for name, flag in _COUNTRY_FLAG_MAP.items():
+        if name.lower() in word.lower() and flag not in word:
+            word = _re2.sub(
+                _re2.escape(name), flag + name, word, flags=_re2.IGNORECASE, count=1
+            )
+            break  # 단어 1개에 이모지 1개만
+    return word
+
 COMPLETE_DIR = BASE_DATA_DIR / "complete"
 
 # 디렉토리 생성
@@ -861,7 +911,7 @@ logger.info(f"데이터 디렉토리 초기화 완료: {BASE_DATA_DIR}")
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
     description="롱폼/숏폼 자동화 영상 제작 서비스",
-    version="15.66.0"
+    version="15.67.0"
 )
 
 
@@ -1277,6 +1327,28 @@ async def download_video(video_url: str, output_path: Path, timeout: float = 120
         logger.error(f"영상 다운로드 실패: {e}")
         return False
 
+
+def _get_topic_fallback(keyword: str, topic_hint: str = "") -> str:
+    """[v15.68.0] 토픽 카테고리 기반 폴백 쿼리."""
+    c = (keyword + " " + topic_hint).lower()
+    if any(t in c for t in ["economy","finance","stock","bank","market","money","gdp"]):
+        return "business finance city"
+    if any(t in c for t in ["tech","ai","robot","computer","digital","semiconductor","chip"]):
+        return "technology innovation lab"
+    if any(t in c for t in ["politic","government","election","parliament","president"]):
+        return "government building city"
+    if any(t in c for t in ["environment","climate","green","carbon","emission","energy"]):
+        return "nature sky environment"
+    if any(t in c for t in ["war","military","weapon","defense","missile","drone"]):
+        return "military defense aircraft"
+    if any(t in c for t in ["health","medical","hospital","doctor","virus","vaccine"]):
+        return "hospital medical doctor"
+    if any(t in c for t in ["space","satellite","rocket","orbit","launch","nasa"]):
+        return "rocket space launch"
+    if any(t in c for t in ["korea","seoul","asian","japan","china","tokyo","beijing"]):
+        return "asian city urban street"
+    return "city street people"
+
 async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[Scene]:
     """각 장면에 대해 자산 검색 및 다운로드 ([AF-14] 영상 중복 제거)."""
     seen_urls: set = set()
@@ -1305,20 +1377,29 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
             # 부정 키워드 필터링
             pexels_videos = [v for v in pexels_videos if not _is_negative(v, expanded_kw)]
             pixabay_videos = [v for v in pixabay_videos if not _is_negative(v, expanded_kw)]
-            # [Z] 검색 결과 2개 미만이면 백업 키워드로 재검색
-            total = len(pexels_videos) + len(pixabay_videos)
-            if total < 2:
-                backup_kw = f"{expanded_kw} industrial technology"
-                logger.info(f"[Z] 검색 결과 부족({total}) → 백업: '{backup_kw}'")
+            # [v15.68] 캐스케이드 쿼리: alt_keywords 순서대로 시도
+            _cascade = [scene.keyword] + list(getattr(scene,'alt_keywords',[]) or [])
+            _cascade.append(_get_topic_fallback(scene.keyword, ''))
+            _seen_q = set()
+            for _ci, _cq_raw in enumerate(_cascade[:4]):
+                _cq = _expand_domain_keyword(_cq_raw)
+                if _cq in _seen_q: continue
+                _seen_q.add(_cq)
                 try:
-                    px_b, pb_b = await asyncio.gather(
-                        get_pexels_videos(backup_kw),
-                        get_pixabay_videos(backup_kw),
+                    _px_c, _pb_c = await asyncio.gather(
+                        get_pexels_videos(_cq, per_page=5),
+                        get_pixabay_videos(_cq, per_page=5)
                     )
-                    pexels_videos += [v for v in px_b if not _is_negative(v)]
-                    pixabay_videos += [v for v in pb_b if not _is_negative(v)]
-                except Exception as _e:
-                    logger.warning(f"[Z] 백업 검색 실패: {_e}")
+                    _px_c = [v for v in _px_c if not _is_negative(v, _cq)]
+                    _pb_c = [v for v in _pb_c if not _is_negative(v, _cq)]
+                    pexels_videos += _px_c
+                    pixabay_videos += _pb_c
+                    _total_c = len(pexels_videos) + len(pixabay_videos)
+                    logger.info(f'[v15.68 CQ{_ci+1}] "{_cq}" -> {len(_px_c)+len(_pb_c)} (total {_total_c})')
+                    if _total_c >= 3: break
+                except Exception as _ce:
+                    logger.warning(f'[v15.68 CQ{_ci+1}] "{_cq}" 실패: {_ce}')
+            
             
             # 최고 품질의 영상 선택
             best_video_url = select_best_video(pexels_videos, pixabay_videos, scene_index=idx, exclude_urls=seen_urls, query_keyword=scene.keyword or "")
@@ -1365,6 +1446,27 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
             if success:
                 scene.asset_url = str(asset_path)
                 logger.info(f"장면 '{scene.scene_id}' 다운로드 완료: {asset_path}")
+                # [v15.68] alt 소스 영상 다운로드 (서브클립 3-4번 다양화)
+                _scene_alt_kws = getattr(scene, 'alt_keywords', []) or []
+                if _scene_alt_kws and not getattr(scene, 'alt_asset_url', None):
+                    _alt_kw2 = _expand_domain_keyword(_scene_alt_kws[0])
+                    try:
+                        _apx, _apb = await asyncio.gather(
+                            get_pexels_videos(_alt_kw2, per_page=3),
+                            get_pixabay_videos(_alt_kw2, per_page=3)
+                        )
+                        _apx = [v for v in _apx if not _is_negative(v, _alt_kw2)]
+                        _apb = [v for v in _apb if not _is_negative(v, _alt_kw2)]
+                        _au = select_best_video(_apx, _apb, scene_index=idx+200,
+                                               exclude_urls=seen_urls, query_keyword=_alt_kw2)
+                        if _au:
+                            _ap = job_assets_dir / f"{scene.scene_id}_alt.mp4"
+                            if await download_video(_au, _ap):
+                                scene.alt_asset_url = str(_ap)
+                                seen_urls.add(_au)
+                                logger.info(f'[v15.68] alt DL ok: {scene.scene_id}')
+                    except Exception as _adl_e:
+                        logger.debug(f'[v15.68] alt DL skip: {_adl_e}')
             else:
                 logger.error(f"장면 '{scene.scene_id}' 다운로드 실패 (3회 시도 후)")
             
@@ -1480,11 +1582,28 @@ async def prepare_clips_for_longform(
 
         logger.info(f"'{scene.scene_id}': {scene_dur:.1f}초 → {n_subs}개 서브클립 (src={actual_src_dur:.1f}s, loop={needs_loop})")
 
+        # [v15.68] alt 소스 준비 (sub_i >= 3에서 사용)
+        _alt_src2 = getattr(scene, 'alt_asset_url', None)
+        _alt_src2_dur = 0.0
+        if _alt_src2 and Path(_alt_src2).exists() and Path(_alt_src2).stat().st_size > 4096:
+            try:
+                _alt_p = subprocess.run(['ffprobe','-v','error','-show_entries',
+                    'format=duration','-of','csv=p=0',_alt_src2],
+                    capture_output=True,text=True,timeout=10)
+                _rd = (_alt_p.stdout.strip() or '').replace('\n','')
+                _alt_src2_dur = float(_rd) if _rd and _rd not in ('N/A','') else 0.0
+            except Exception: pass
+
         for sub_i in range(n_subs):
             sub_dur    = scene_dur / n_subs
             sub_dur    = max(sub_dur, 3.0)
+            # [v15.68] sub_i>=3이면 alt 소스 사용
+            _use_alt2 = _alt_src2 and _alt_src2_dur > 1.0 and sub_i >= 3
+            _clip_src2 = _alt_src2 if _use_alt2 else scene.asset_url
+            _clip_src2_dur = _alt_src2_dur if _use_alt2 else actual_src_dur
+            _needs_loop2 = _clip_src2_dur < scene_dur * 0.95
             # v15.12 — seek 은 항상 실제 소스 범위 안에서 분포
-            seek_usable = max(actual_src_dur - 0.3, 0.0)
+            seek_usable = max((_clip_src2_dur if '_clip_src2_dur' in dir() else actual_src_dur) - 0.3, 0.0)
             if n_subs > 1 and seek_usable > 0:
                 seek_start = seek_usable * sub_i / n_subs
             else:
@@ -1524,11 +1643,11 @@ async def prepare_clips_for_longform(
             clip_output = output_dir / f"clip_{scene.scene_id}_{sub_i}.mp4"
 
             command = ["ffmpeg"]
-            if needs_loop:
+            if (_needs_loop2 if '_needs_loop2' in dir() else needs_loop):
                 command += ["-stream_loop", "-1"]
             command += [
                 "-ss", str(seek_start),
-                "-i", scene.asset_url,
+                "-i", (_clip_src2 if "_clip_src2" in dir() else scene.asset_url),
                 "-t", str(sub_dur),
                 "-vf", vf,
                 "-c:v", "libx264", "-preset", VIDEO_PRESET, "-crf", str(VIDEO_CRF),
@@ -2206,6 +2325,115 @@ def generate_pro_thumbnail(
             fill=GOLD
         )
 
+
+        # ── 13-b. 국기 PIL 직접 드로잉 스트립 ─────────────────────────
+        _FLAG_DRAW = {
+            "🇺🇸": [  # USA — 파란 캔턴 + 빨강/흰 가로줄
+                ("rect_full", (178, 34, 52)),          # 빨강 배경
+                ("hstripes_white", None),               # 흰 줄 6개
+                ("rect_canton", (60, 59, 110)),         # 파란 캔턴
+                ("stars", (255, 255, 255)),
+            ],
+            "🇨🇳": [("rect_full", (222, 41, 16)), ("star_big", (255, 215, 0))],
+            "🇯🇵": [("rect_full", (255, 255, 255)), ("circle_red", (188, 0, 45))],
+            "🇰🇷": [("rect_full", (255, 255, 255)), ("taegeuk", None)],
+            "🇬🇧": [("union_jack", None)],
+            "🇩🇪": [("tricolor_h", [(0,0,0),(221,0,0),(255,206,0)])],
+            "🇫🇷": [("tricolor_v", [(0,35,149),(255,255,255),(237,41,57)])],
+            "🇷🇺": [("tricolor_h", [(255,255,255),(0,57,166),(213,43,30)])],
+            "🇨🇦": [("rect_full", (255,0,0)), ("maple_leaf", None)],
+            "🇮🇳": [("tricolor_h", [(255,153,51),(255,255,255),(19,136,8)])],
+            "🇦🇺": [("rect_full", (0,0,128))],
+            "🇪🇺": [("rect_full", (0,51,153)), ("eu_stars", (255,204,0))],
+            "🇰🇵": [("tricolor_h", [(0,42,142),(255,255,255),(205,46,58)])],
+            "🇹🇼": [("rect_full", (255,0,0))],
+            "🇮🇹": [("tricolor_v", [(0,140,69),(255,255,255),(206,43,55)])],
+            "🇪🇸": [("tricolor_h", [(170,21,27),(255,196,0),(170,21,27)])],
+        }
+
+        def _draw_flag_badge(draw_ctx: ImageDraw.Draw, fx: int, fy: int, fw: int, fh: int, flag_emoji: str):
+            """국기 배지를 PIL로 직접 그림"""
+            specs = _FLAG_DRAW.get(flag_emoji)
+            if not specs:
+                # 기본: 회색 배지에 국기 이모지 첫 글자
+                draw_ctx.rectangle([(fx, fy), (fx+fw, fy+fh)], fill=(80,80,100))
+                return
+            for spec, color in specs:
+                if spec == "rect_full":
+                    draw_ctx.rectangle([(fx, fy), (fx+fw, fy+fh)], fill=color)
+                elif spec == "hstripes_white":
+                    sh = fh // 13
+                    for i in range(6):
+                        sy = fy + (2*i+1)*sh
+                        draw_ctx.rectangle([(fx, sy), (fx+fw, sy+sh)], fill=(255,255,255))
+                elif spec == "rect_canton":
+                    draw_ctx.rectangle([(fx, fy), (fx+fw//2, fy+fh//2)], fill=color)
+                elif spec == "stars":
+                    pass  # 너무 복잡 — 캔턴 색으로 대체
+                elif spec == "star_big":
+                    cx, cy = fx + fw//3, fy + fh//2
+                    r = min(fw, fh) // 4
+                    draw_ctx.ellipse([(cx-r, cy-r), (cx+r, cy+r)], fill=color)
+                elif spec == "circle_red":
+                    cx, cy = fx + fw//2, fy + fh//2
+                    r = min(fw, fh) // 3
+                    draw_ctx.ellipse([(cx-r, cy-r), (cx+r, cy+r)], fill=color)
+                elif spec == "taegeuk":
+                    cx, cy = fx + fw//2, fy + fh//2
+                    r = min(fw, fh) // 3
+                    draw_ctx.ellipse([(cx-r, cy-r), (cx+r, cy+r)], fill=(205, 46, 58))
+                    draw_ctx.ellipse([(cx, cy-r), (cx+r, cy)], fill=(0, 42, 142))
+                elif spec == "union_jack":
+                    draw_ctx.rectangle([(fx, fy), (fx+fw, fy+fh)], fill=(0,0,128))
+                    draw_ctx.line([(fx, fy), (fx+fw, fy+fh)], fill=(255,255,255), width=max(2, fh//7))
+                    draw_ctx.line([(fx+fw, fy), (fx, fy+fh)], fill=(255,255,255), width=max(2, fh//7))
+                    draw_ctx.line([(fx+fw//2, fy), (fx+fw//2, fy+fh)], fill=(255,255,255), width=max(2, fh//5))
+                    draw_ctx.line([(fx, fy+fh//2), (fx+fw, fy+fh//2)], fill=(255,255,255), width=max(2, fh//5))
+                    draw_ctx.line([(fx, fy), (fx+fw, fy+fh)], fill=(207,20,43), width=max(1, fh//10))
+                    draw_ctx.line([(fx+fw, fy), (fx, fy+fh)], fill=(207,20,43), width=max(1, fh//10))
+                elif spec == "tricolor_h":
+                    bands = color  # list of 3 RGB
+                    bh = fh // 3
+                    for i, c in enumerate(bands):
+                        draw_ctx.rectangle([(fx, fy+i*bh), (fx+fw, fy+(i+1)*bh)], fill=c)
+                elif spec == "tricolor_v":
+                    bands = color
+                    bw = fw // 3
+                    for i, c in enumerate(bands):
+                        draw_ctx.rectangle([(fx+i*bw, fy), (fx+(i+1)*bw, fy+fh)], fill=c)
+                elif spec == "maple_leaf":
+                    cx, cy = fx + fw//2, fy + fh//2
+                    r = min(fw, fh) // 4
+                    draw_ctx.ellipse([(cx-r, cy-r), (cx+r, cy+r)], fill=(255, 0, 0))
+                elif spec == "eu_stars":
+                    cx, cy = fx + fw//2, fy + fh//2
+                    r_orbit = min(fw, fh) // 3
+                    r_star  = max(2, min(fw, fh) // 9)
+                    import math as _math
+                    for i in range(12):
+                        a = _math.pi/2 - i * _math.pi/6
+                        sx = int(cx + r_orbit * _math.cos(a))
+                        sy = int(cy - r_orbit * _math.sin(a))
+                        draw_ctx.ellipse([(sx-r_star, sy-r_star), (sx+r_star, sy+r_star)], fill=color)
+
+        _detected_flags = detect_countries_in_text(title + " " + (subtitle or ""))
+        if _detected_flags:
+            try:
+                FW, FH = 44, 30   # 국기 배지 크기
+                _badge_x = 42
+                _badge_y = icon_y + 46
+                for _flag_emoji in _detected_flags[:5]:
+                    # 테두리 라운드 배지
+                    _pad = 3
+                    draw.rounded_rectangle(
+                        [(_badge_x-_pad, _badge_y-_pad), (_badge_x+FW+_pad, _badge_y+FH+_pad)],
+                        radius=4, fill=(255,255,255,200)
+                    )
+                    _draw_flag_badge(draw, _badge_x, _badge_y, FW, FH, _flag_emoji)
+                    _badge_x += FW + 12
+            except Exception as _fe:
+                logger.debug(f"[THUMB] 국기 배지 오류: {_fe}")
+
         # ── 14. 하단 바 텍스트 ───────────────────────────────────
         bar_text = subtitle.strip() if subtitle else (line2 if line2 and line1 != line2 else "")
         if not bar_text:
@@ -2439,7 +2667,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.66.0",
+        "job_id": job_id, "version": "15.68.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -3884,7 +4112,9 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
             for w in grp:
                 ws = float(w.get("start", 0)); we = float(w.get("end", ws + 0.3))
                 cs = max(1, int((we - ws) * 100))
-                kara += f"{{\\kf{cs}}}{(w.get('word') or '').strip()} "
+                _raw_w = (w.get('word') or '').strip()
+                _raw_w = inject_flags_in_word(_raw_w)
+                kara += f"{{\\kf{cs}}}{_raw_w} "
             dialogues.append(
                 f"Dialogue: 0,{_t(ls)},{_t(le)},Karaoke,,0,0,0,,{kara.strip()}"
             )
@@ -4929,7 +5159,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.66.0",
+        "version": "15.68.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -4960,7 +5190,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.66.0",
+        "version": "15.68.0",
         "timestamp": datetime.now().isoformat()
     }
 

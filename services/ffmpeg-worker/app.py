@@ -9,7 +9,7 @@
 # [AJ] MARKER v1
 # [AI-pack2] MARKER v1
 """
-LongForm Factory - FFmpeg Worker v15.59.0 (안정화·운영개선)
+LongForm Factory - FFmpeg Worker v15.65.0 (안정화·운영개선)
 롱폼/숏폼 자동화 영상 제작 서비스
 
 주요 기능:
@@ -37,12 +37,6 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Header, Depends, We
 from pydantic import BaseModel, Field
 import httpx
 import aiofiles
-try:
-    from redis import asyncio as aioredis
-    _REDIS_AVAILABLE = True
-except ImportError:
-    _REDIS_AVAILABLE = False
-import secrets as _secrets
 try:
     from redis import asyncio as aioredis
     _REDIS_AVAILABLE = True
@@ -1832,7 +1826,7 @@ def mix_audio(
                 "ffmpeg", "-i", str(video_path), "-i", str(bgm_path),
                 "-filter_complex", f"[1:a]volume={bgm_volume}[audio]",
                 "-map", "0:v", "-map", "[audio]",
-                "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-y", str(output_video)
+                "-c:v", "copy", "-c:a", "aac", "-ac", "2", "-b:a", "192k", "-y", str(output_video)
             ]
         else:
             command = ["ffmpeg", "-i", str(video_path), "-c", "copy", "-y", str(output_video)]
@@ -1862,7 +1856,7 @@ def mix_audio(
             "-map", "0:v",
             "-map", "[aout]",
             "-c:v", "copy",
-            "-c:a", "aac", "-b:a", "192k",
+            "-c:a", "aac", "-ac", "2", "-b:a", "192k",
             "-shortest",
             "-y", str(output_video)
         ]
@@ -1877,7 +1871,7 @@ def mix_audio(
             "-map", "0:v",
             "-map", "[aout]",
             "-c:v", "copy",
-            "-c:a", "aac", "-b:a", "192k",
+            "-c:a", "aac", "-ac", "2", "-b:a", "192k",
             "-shortest",
             "-y", str(output_video)
         ]
@@ -1889,7 +1883,7 @@ def mix_audio(
         simple_cmd = [
             "ffmpeg", "-i", str(video_path), "-i", str(tts_audio_path),
             "-map", "0:v", "-map", "1:a",
-            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+            "-c:v", "copy", "-c:a", "aac", "-ac", "2", "-b:a", "192k",
             "-shortest", "-y", str(output_video)
         ]
         return run_ffmpeg_command(simple_cmd)
@@ -4640,7 +4634,7 @@ async def process_video_creation(
                     ln_cmd = [
                         "ffmpeg", "-y", "-i", str(output_video),
                         "-af", "loudnorm=I=-16:TP=-1.0:LRA=11,alimiter=limit=0.98:attack=5:release=50",
-                        "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+                        "-c:v", "copy", "-c:a", "aac", "-ac", "2", "-b:a", "192k",
                         str(ln_tmp),
                     ]
                     if run_ffmpeg_command(ln_cmd, timeout=120.0) and ln_tmp.exists() and ln_tmp.stat().st_size > 4096:

@@ -1377,7 +1377,7 @@ def _sanitize_keyword_for_search(kw: str, narration: str = "", fallback: str = "
 # ========== END sanitizer ====================================================
 
 def _get_topic_fallback(keyword: str, topic_hint: str = "") -> str:
-    """[v15.74.1] 토픽 카테고리 기반 폴백 쿼리."""
+    """[v15.76.0] 토픽 카테고리 기반 폴백 쿼리."""
     c = (keyword + " " + topic_hint).lower()
     if any(t in c for t in ["economy","finance","stock","bank","market","money","gdp"]):
         return "business finance city"
@@ -1551,6 +1551,20 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
             expanded_kw = _expand_domain_keyword(scene.keyword)
             if expanded_kw != scene.keyword:
                 logger.info(f"[Y2] 키워드 확장: '{scene.keyword}' → '{expanded_kw}'")
+            # [v15.75] empty keyword fallback
+            if not expanded_kw.strip():
+                import re as _re_kw
+                _nrr = scene.narration or scene.description or ""
+                _en_w = _re_kw.findall(r'[A-Za-z]{3,}', _nrr)
+                _ko_w = [w for w in _re_kw.findall(r'[가-힣]{2,}', _nrr) if w not in _KO_STOPWORDS]
+                if _en_w:
+                    expanded_kw = ' '.join(_en_w[:3]) + ' footage'
+                elif _ko_w:
+                    expanded_kw = _get_topic_fallback(' '.join(_ko_w[:3]), '')
+                else:
+                    expanded_kw = _get_topic_fallback(_raw_kw, '')
+                scene.keyword = expanded_kw
+                logger.info(f"[v15.75] empty kw fallback: '{_raw_kw}' -> '{expanded_kw}'")
             pexels_videos, pixabay_videos = await asyncio.gather(
                 get_pexels_videos(expanded_kw),
                 get_pixabay_videos(expanded_kw)
@@ -2848,7 +2862,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.74.1",
+        "job_id": job_id, "version": "15.76.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -3822,12 +3836,35 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                             "description": phrase or orig.description,
                             "duration_seconds": round(sub_dur, 2),
                         }
+                        # [v15.76] phrase-level keyword diversity
+                        import re as _re76ph
+                        _en_ph76 = _re76ph.findall(r'[A-Za-z]{3,}', phrase)
+                        _ko_ph76 = [w for w in _re76ph.findall(r'[가-힣]{2,}', phrase) if w not in _KO_STOPWORDS]
+                        _phrase_kw76 = None
+                        if _en_ph76:
+                            _phrase_kw76 = ' '.join(_en_ph76[:3])
+                        elif _ko_ph76:
+                            _phrase_kw76 = _expand_domain_keyword(_ko_ph76[0])
+                            if not (_phrase_kw76 and _phrase_kw76.strip()):
+                                _phrase_kw76 = _get_topic_fallback(_ko_ph76[0], '')
                         seg_idx_1based = i + 1
                         if seg_idx_1based in seg_kw_map:
                             kws = seg_kw_map[seg_idx_1based]
                             if kws:
-                                update["keyword"] = kws[0]
+                                # split phrase -> phrase-specific keyword for diversity
+                                if len(phrases) > 1 and j > 0 and _phrase_kw76 and _phrase_kw76.strip():
+                                    update["keyword"] = _phrase_kw76
+                                else:
+                                    update["keyword"] = kws[0]
+                                # alt_keywords: phrase-derived for sub-scene diversity
+                                _alt76 = [_phrase_kw76] if (_phrase_kw76 and _phrase_kw76 != update["keyword"]) else []
+                                update["alt_keywords"] = _alt76 + list(orig.alt_keywords or [])[:2]
                                 update["asset_url"] = None
+                        elif _phrase_kw76 and _phrase_kw76.strip():
+                            # no segment keyword -> derive from phrase text
+                            update["keyword"] = _phrase_kw76
+                            update["alt_keywords"] = list(orig.alt_keywords or [])[:2]
+                            update["asset_url"] = None
                         aligned_scenes.append(orig.model_copy(update=update))
                 total = sum(s.duration_seconds for s in aligned_scenes)
                 logger.info(
@@ -5340,7 +5377,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.74.1",
+        "version": "15.76.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -5371,7 +5408,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.74.1",
+        "version": "15.76.0",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -6278,7 +6315,9 @@ async def auto_build_scenes(
 ## 씬 규칙 (프로):
 - 총 씬 수: {_min_scenes}~{_max_scenes}개 (권장 {_rec_scenes}개, target_duration={_target_dur}초 기준)
 - B-roll 교체: 최대 5초 (시청유지율 핵심)
-- visual_keywords: 씬마다 완전히 다른 키워드 (반복 금지!)
+- visual_keywords: 씬마다 완전히 다른 영어 키워드 (반복 금지! 한국어/조사/단음절 절대 금지)
+- visual_keywords 형식: 영어 명사구 2~4단어 ("semiconductor factory", "AI robot lab")
+- narration: 각 씬마다 완전히 다른 고유 내용, 인접 씬 복사 금지
 - 나레이션 내용과 영상 일치: economy → stock market trading floor
 - negative_keywords: cartoon, animation, low quality
 - tone_profile: hook/problem/agitation/stats/solution/cta/closing
@@ -6312,7 +6351,7 @@ JSON:
     "expected_duration": 5.0
   }}
 ]"""
-    result = await _call_llm_json(prompt, max_tokens=8000  # [v15.74], temperature=0.5, quality_first=True)
+    result = await _call_llm_json(prompt, max_tokens=8000, temperature=0.5, quality_first=True)  # [v15.74]
 
     if not isinstance(result, list) or not result:
         # fallback: 섹션별로 단순 씬 생성
@@ -6781,7 +6820,7 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         _save_project_file(project_dir, "scenes_raw.json", scenes_data)
         # [v15.72] 나레이션 품질 검증 — 짧으면 스크립트 섹션 직접 주입
         _total_narr_chars = sum(len(s.get("narration", "")) for s in scenes_data)
-        _min_target_chars = int(request.target_duration_sec * 5.0  # [v15.74] TTS 5.5자/초 기준)
+        _min_target_chars = int(request.target_duration_sec * 5.0)  # [v15.74] TTS 5.5자/초 기준
         logger.info(f"[v15.72] 나레이션 검증: {_total_narr_chars}자 (목표 {_min_target_chars}자 이상)")
         if _total_narr_chars < _min_target_chars:
             logger.warning(f"[v15.72] 나레이션 부족 → 섹션 직접 주입")
@@ -6799,8 +6838,50 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
                 _inject_txt = _pool_narr[:_max_inject]
                 if len(_inject_txt) > _cur_len:
                     scenes_data[_si]["narration"] = _inject_txt
+            # [v15.75] Phase 2: boost all short scenes (<60 chars)
+            _min_sc = 60
+            for _si2 in range(len(scenes_data)):
+                _c2 = scenes_data[_si2].get("narration", "")
+                if len(_c2) < _min_sc:
+                    _pi2 = _si2 % _pool_len
+                    _src2 = _narr_pool[_pi2]
+                    _chunk = max(len(_src2) // 3, 60)
+                    _off2 = ((_si2 // _pool_len) * _chunk) % max(len(_src2) - _chunk, 1)
+                    _inj2 = _src2[_off2:_off2 + _chunk] or _src2[:_chunk]
+                    if len(_inj2) > len(_c2):
+                        scenes_data[_si2]["narration"] = _inj2
             _new_total = sum(len(s.get("narration", "")) for s in scenes_data)
             logger.info(f"[v15.72] 주입 완료: {_total_narr_chars}자 → {_new_total}자")
+        # [v15.76] 나레이션 기반 visual_keywords 재도출 (단어/음절 매핑 최대화)
+        import re as _re76
+        for _sd76 in scenes_data:
+            _narr76 = _sd76.get("narration", "")
+            if not _narr76:
+                continue
+            # 영어 단어 추출 (3자 이상)
+            _en76 = _re76.findall(r'[A-Za-z]{3,}', _narr76)
+            # 한국어 2자 이상 단어 추출 (stopwords 제외)
+            _ko76 = [w for w in _re76.findall(r'[가-힣]{2,}', _narr76) if w not in _KO_STOPWORDS]
+            _new_vkws = []
+            # 1) 영어 단어 → 직접 사용
+            if _en76:
+                _new_vkws.append(" ".join(_en76[:3]))
+            # 2) 한국어 핵심어 → _expand_domain_keyword로 영어 변환
+            for _kw76 in _ko76[:4]:
+                _exp76 = _expand_domain_keyword(_kw76)
+                if _exp76 and _exp76.strip() and _exp76 not in _new_vkws:
+                    _new_vkws.append(_exp76)
+                    if len(_new_vkws) >= 4:
+                        break
+            # 3) 변환 결과가 없으면 topic fallback
+            if not _new_vkws:
+                _new_vkws = [_get_topic_fallback(" ".join(_ko76[:3]), "")]
+            # 4) 기존 visual_keywords와 merge (앞에 narration 기반 키워드 배치)
+            _old_vkws = [v for v in (_sd76.get("visual_keywords", []) or []) if v and v.strip()]
+            _merged = list(dict.fromkeys(_new_vkws + _old_vkws))[:4]
+            _sd76["visual_keywords"] = _merged
+            _sd76["backup_keywords"] = list(dict.fromkeys((_sd76.get("backup_keywords", []) or []) + _old_vkws))[:3]
+        logger.info(f"[v15.76] visual_keywords 재도출 완료: {len(scenes_data)}개 씬")
 
         # ── 5. 나레이션 톤 설정 ──────────────────────────
         _auto_set_status(job_id, "voice_planning", 30, "나레이션 톤 설정 중")

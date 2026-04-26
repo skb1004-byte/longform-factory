@@ -9,7 +9,7 @@
 # [AJ] MARKER v1
 # [AI-pack2] MARKER v1
 """
-LongForm Factory - FFmpeg Worker v15.65.0 (안정화·운영개선)
+LongForm Factory - FFmpeg Worker v15.66.0 (안정화·운영개선)
 롱폼/숏폼 자동화 영상 제작 서비스
 
 주요 기능:
@@ -828,7 +828,7 @@ PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY", "")
 LF_API_KEY = os.getenv("LF_API_KEY", "")
 
-# [v15.65.0] 공통 API Key 검증 Depends 함수
+# [v15.66.0] 공통 API Key 검증 Depends 함수
 def verify_api_key(x_lf_api_key: str = Header(None, alias="X-LF-API-Key")):
     """X-LF-API-Key 헤더 검증. 키 미설정 환경에서는 통과."""
     if LF_API_KEY and x_lf_api_key != LF_API_KEY:
@@ -861,7 +861,7 @@ logger.info(f"데이터 디렉토리 초기화 완료: {BASE_DATA_DIR}")
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
     description="롱폼/숏폼 자동화 영상 제작 서비스",
-    version="15.65.0"
+    version="15.66.0"
 )
 
 
@@ -1840,7 +1840,7 @@ def mix_audio(
         # 명시적 bgm_volume 지정 시 (기본 0.3 아닌 경우) 반영
         if bgm_volume not in (0.3, 0.8):
             actual_bgm_vol = min(bgm_volume * 0.15, BGM_VOLUME_DEFAULT)
-        # [v15.65.0] sidechaincompress -> volume+amix (ffmpeg 7.x compat)
+        # [v15.66.0] sidechaincompress -> volume+amix (ffmpeg 7.x compat)
         filter_complex = (
             f"[1:a]loudnorm=I=-16:TP=-1.5:LRA=11,aformat=sample_rates=48000:channel_layouts=stereo[tts_norm];"
             f"[2:a]volume={BGM_VOLUME_DURING_VOICE},aformat=sample_rates=48000:channel_layouts=stereo[bgm_duck];"
@@ -2439,7 +2439,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.65.0",
+        "job_id": job_id, "version": "15.66.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -4929,7 +4929,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.65.0",
+        "version": "15.66.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -4960,7 +4960,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.65.0",
+        "version": "15.66.0",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -5292,7 +5292,7 @@ if __name__ == "__main__":
 
 
 # ============================================================================
-# [v15.65.0] Auto Topic Production Engine
+# [v15.66.0] Auto Topic Production Engine
 # POST /api/auto/topic-job  →  주제 입력 하나로 YouTube private 업로드까지 자동화
 # ============================================================================
 
@@ -5382,8 +5382,9 @@ async def _call_llm_json(
     max_tokens: int = 4000,
     temperature: float = 0.4,
     retries: int = 1,
+    quality_first: bool = False,  # True = anthropic/gemini 우선 (스크립트/분석 태스크)
 ) -> Optional[Dict]:
-    """전체 활성 프로바이더 병렬 레이스 → 가장 빠른 JSON 응답 채택."""
+    """품질 우선 병렬 레이스 — quality_first=True 시 anthropic/gemini 8초 유예."""
     import asyncio
 
     def _parse_json_raw(raw: str) -> Optional[Dict]:
@@ -5541,24 +5542,57 @@ async def _call_llm_json(
     if len(candidates) == 1:
         return await _call_one(candidates[0])
 
-    # 병렬 레이스: asyncio.wait FIRST_COMPLETED
+    # 품질 우선 병렬 레이스: HIGH_QUALITY 8초 유예 → 그 후 ANY
+    # anthropic/gemini = 품질 우선, 나머지 = 속도 fallback
+    _HQ = {"anthropic", "gemini"} if quality_first else set()
     loop_tasks = {asyncio.ensure_future(_call_one(p)): p for p in candidates}
     pending = set(loop_tasks.keys())
     winner = None
+    winner_provider = None
     try:
-        while pending:
-            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-            for task in done:
-                result = task.result()
-                pname = loop_tasks[task]
-                if result is not None:
-                    logger.info(f"[LLM/race] 승자: {pname}")
-                    winner = result
-                    # 나머지 취소
-                    for t in pending:
-                        t.cancel()
-                    pending = set()
+        async def _race_inner():
+            _nonlocal_winner = [None, None]  # [result, provider]
+            _pending = set(loop_tasks.keys())
+            # 1단계: 8초 대기 — HQ 응답 우선
+            while _pending:
+                _done, _pending = await asyncio.wait(_pending, return_when=asyncio.FIRST_COMPLETED, timeout=8.0)
+                if not _done:  # 8초 타임아웃 — 남은 것 중 any 수락
                     break
+                for task in _done:
+                    res = task.result()
+                    pname = loop_tasks[task]
+                    if res is not None:
+                        if pname in _HQ:
+                            logger.info(f"[LLM/race] HQ 승자: {pname}")
+                            for t in _pending: t.cancel()
+                            _nonlocal_winner = [res, pname]
+                            return _nonlocal_winner
+                        else:
+                            # 속도 후보 — HQ 8초 유예 대기 중 홀드
+                            if _nonlocal_winner[0] is None:
+                                _nonlocal_winner = [res, pname]  # 임시 저장
+            # 2단계: HQ 없으면 속도 후보 수락 또는 나머지 대기
+            if _nonlocal_winner[0] is not None:
+                logger.info(f"[LLM/race] 속도 fallback 승자: {_nonlocal_winner[1]}")
+                for t in _pending: t.cancel()
+                return _nonlocal_winner
+            # 아직 남은 태스크 대기 (최대 130s 총 타임아웃)
+            while _pending:
+                _done2, _pending = await asyncio.wait(_pending, return_when=asyncio.FIRST_COMPLETED)
+                for task in _done2:
+                    res = task.result()
+                    pname = loop_tasks[task]
+                    if res is not None:
+                        logger.info(f"[LLM/race] 잔여 승자: {pname}")
+                        for t in _pending: t.cancel()
+                        return [res, pname]
+            return [None, None]
+
+        _result = await asyncio.wait_for(_race_inner(), timeout=130.0)
+        winner, winner_provider = _result[0], _result[1]
+    except asyncio.TimeoutError:
+        logger.warning("[LLM/race] 130초 타임아웃 — 모든 프로바이더 실패")
+        for t in pending: t.cancel()
     except Exception as e:
         logger.warning(f"[LLM/race] 예외: {e}")
 
@@ -5617,7 +5651,7 @@ JSON으로 반환:
   "risk_level": "low/medium/high",
   "suggested_sections": ["섹션1", "섹션2", "섹션3", "섹션4"]
 }}"""
-    result = await _call_llm_json(prompt, max_tokens=1500)
+    result = await _call_llm_json(prompt, max_tokens=1500, quality_first=True)
     if not result:
         result = {
             "main_topic": topic,
@@ -5734,7 +5768,7 @@ JSON:
   "closing": "강력한 CTA 마무리",
   "total_estimated_duration_sec": {target_duration_sec}
 }}"""
-    result = await _call_llm_json(prompt, max_tokens=4000, temperature=0.6)
+    result = await _call_llm_json(prompt, max_tokens=4000, temperature=0.6, quality_first=True)
     if not result:
         result = {
             "title": topic,
@@ -5794,7 +5828,7 @@ JSON:
     "expected_duration": 5.0
   }}
 ]"""
-    result = await _call_llm_json(prompt, max_tokens=5000, temperature=0.5)
+    result = await _call_llm_json(prompt, max_tokens=5000, temperature=0.5, quality_first=True)
 
     if not isinstance(result, list) or not result:
         # fallback: 섹션별로 단순 씬 생성
@@ -6026,9 +6060,22 @@ async def auto_run_quality_check(
     ntl_timeline: Dict,
 ) -> Dict:
     """[AUTO 10/12] 품질 검사 → quality_score 100점 기준"""
+    import glob as _glob
     score = 0
     warnings = []
     errors = []
+
+    # ── timeline_report.json 우선 로드 (process_video_creation 렌더 후 최신 데이터) ──
+    tr_path = JOBS_DIR / job_id / "timeline_report.json"
+    if tr_path.exists():
+        try:
+            import json as _jq
+            _tr = _jq.loads(tr_path.read_text(encoding="utf-8"))
+            scene_timings = _tr.get("scene_timings") or ntl_timeline.get("scene_timings", [])
+        except Exception:
+            scene_timings = ntl_timeline.get("scene_timings", [])
+    else:
+        scene_timings = ntl_timeline.get("scene_timings", [])
 
     # 1. 나레이션 정상 생성 (20점)
     mp3_path = TMP_DIR / f"{job_id}.mp3"
@@ -6038,9 +6085,9 @@ async def auto_run_quality_check(
         warnings.append("TTS 오디오 파일 없거나 비정상")
 
     # 2. 영상-나레이션 매칭 점수 (25점)
-    scene_timings = ntl_timeline.get("scene_timings", [])
     if scene_timings:
-        matched = sum(1 for st in scene_timings if st.get("narration_end", 0) > st.get("narration_start", 0))
+        matched = sum(1 for st in scene_timings
+                      if st.get("narration_end", 0) > st.get("narration_start", 0))
         match_ratio = matched / max(len(scene_timings), 1)
         match_pts = int(match_ratio * 25)
         score += match_pts
@@ -6049,17 +6096,25 @@ async def auto_run_quality_check(
     else:
         score += 12  # partial
 
-    # 3. 자막 생성 (15점)
+    # 3. 자막 생성 (15점) — 경로 다중 검사
     longform_path = output_files.get("longform", "")
-    ass_path = TMP_DIR / f"{job_id}.ass"
-    srt_path = TMP_DIR / f"{job_id}.srt"
-    if ass_path.exists() or srt_path.exists():
+    # 검색 경로: /data/tmp/{id}.ass, /data/tmp/{id}.srt, /data/tmp/{id}/*.ass|srt
+    _sub_patterns = [
+        str(TMP_DIR / f"{job_id}.ass"),
+        str(TMP_DIR / f"{job_id}.srt"),
+        str(TMP_DIR / job_id / "*.ass"),
+        str(TMP_DIR / job_id / "*.srt"),
+        str(TMP_DIR / job_id / f"{job_id}*.ass"),
+        str(TMP_DIR / job_id / f"{job_id}*.srt"),
+    ]
+    _sub_found = any(_glob.glob(p) for p in _sub_patterns)
+    if _sub_found:
         score += 15
     else:
         warnings.append("자막 파일 없음")
         score += 5
 
-    # 4. 오디오/BGM 밸런스 (10점) — 출력 파일이 있으면 OK
+    # 4. 오디오/BGM 밸런스 (10점)
     if longform_path and Path(longform_path).exists():
         out_dur = get_video_duration(Path(longform_path))
         if out_dur and out_dur > 10:
@@ -6069,7 +6124,7 @@ async def auto_run_quality_check(
     else:
         errors.append("출력 영상 파일 없음")
 
-    # 5. 영상 품질/해상도 (10점) — 파일 크기 기준 간이 판정
+    # 5. 영상 품질/해상도 (10점)
     if longform_path and Path(longform_path).exists():
         size_mb = Path(longform_path).stat().st_size / 1024 / 1024
         if size_mb > 5:
@@ -6105,10 +6160,14 @@ async def auto_run_quality_check(
         "warnings": warnings,
         "errors": errors,
         "breakdown": {
-            "narration": 20 if score >= 20 else 0,
-            "visual_match": 25,
-            "subtitle": 15 if (ass_path.exists() or srt_path.exists()) else 5,
+            "narration": 20 if mp3_path.exists() and mp3_path.stat().st_size > 1024 else 0,
+            "visual_match": int((sum(1 for st in scene_timings if st.get("narration_end",0) > st.get("narration_start",0)) / max(len(scene_timings),1)) * 25) if scene_timings else 12,
+            "subtitle": 15 if _sub_found else 5,
             "audio_bgm": 10 if (longform_path and Path(longform_path).exists()) else 0,
+            "video_quality": 10 if (longform_path and Path(longform_path).exists() and Path(longform_path).stat().st_size / 1024 / 1024 > 5) else 0,
+            "asset_unique": 5 if unique_ratio >= 0.7 else 0,
+            "no_errors": 10 if not errors else 0,
+            "thumbnail": 5 if (output_files.get("thumbnail") and Path(output_files["thumbnail"]).exists()) else 0,
         },
         "upload_decision": (
             "auto_upload" if score >= 90 else
@@ -6120,8 +6179,6 @@ async def auto_run_quality_check(
     }
     logger.info(f"[AUTO] 품질 검사: {score}점, {result['upload_decision']}")
     return result
-
-
 async def auto_generate_youtube_metadata(
     topic: str,
     script: Dict,
@@ -6479,7 +6536,7 @@ async def create_auto_topic_job(
     _: str = Depends(verify_api_key),
 ):
     """
-    [v15.65.0] 주제 기반 완전 자동 영상 생성 + YouTube private 업로드.
+    [v15.66.0] 주제 기반 완전 자동 영상 생성 + YouTube private 업로드.
     주제·톤·길이만 입력하면 원고→씬→TTS→렌더링→업로드까지 자동 처리.
     """
     import uuid
@@ -6535,7 +6592,7 @@ async def get_auto_job_status(
     job_id: str,
     _: str = Depends(verify_api_key),
 ):
-    """[v15.65.0] 자동 생성 작업 상태 조회"""
+    """[v15.66.0] 자동 생성 작업 상태 조회"""
     job = _AUTO_JOB_STORE.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"auto job '{job_id}' not found")
@@ -6567,7 +6624,7 @@ async def get_auto_job_status(
 
 @app.get("/api/auto/jobs", tags=["Auto"])
 async def list_auto_jobs(_: str = Depends(verify_api_key)):
-    """[v15.65.0] 자동 생성 작업 목록"""
+    """[v15.66.0] 자동 생성 작업 목록"""
     jobs = []
     for jid, job in sorted(_AUTO_JOB_STORE.items(),
                             key=lambda x: x[1].get("created_at", ""), reverse=True):

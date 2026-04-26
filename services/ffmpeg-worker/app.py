@@ -828,7 +828,7 @@ PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY", "")
 LF_API_KEY = os.getenv("LF_API_KEY", "")
 
-# [v15.61.0] 공통 API Key 검증 Depends 함수
+# [v15.65.0] 공통 API Key 검증 Depends 함수
 def verify_api_key(x_lf_api_key: str = Header(None, alias="X-LF-API-Key")):
     """X-LF-API-Key 헤더 검증. 키 미설정 환경에서는 통과."""
     if LF_API_KEY and x_lf_api_key != LF_API_KEY:
@@ -861,7 +861,7 @@ logger.info(f"데이터 디렉토리 초기화 완료: {BASE_DATA_DIR}")
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
     description="롱폼/숏폼 자동화 영상 제작 서비스",
-    version="15.0.0"
+    version="15.65.0"
 )
 
 
@@ -1840,12 +1840,11 @@ def mix_audio(
         # 명시적 bgm_volume 지정 시 (기본 0.3 아닌 경우) 반영
         if bgm_volume not in (0.3, 0.8):
             actual_bgm_vol = min(bgm_volume * 0.15, BGM_VOLUME_DEFAULT)
+        # [v15.65.0] sidechaincompress -> volume+amix (ffmpeg 7.x compat)
         filter_complex = (
-            f"[1:a]loudnorm=I=-16:TP=-1.5:LRA=11[tts_norm];"
-            f"[2:a]volume={BGM_VOLUME_DEFAULT}[bgm_full];"
-            f"[bgm_full][tts_norm]sidechaincompress="
-            f"threshold=0.02:ratio=4:attack=200:release=1000:level_sc=0.8[bgm_duck];"
-            f"[tts_norm][bgm_duck]amix=inputs=2:duration=longest:dropout_transition=3[aout]"
+            f"[1:a]loudnorm=I=-16:TP=-1.5:LRA=11,aformat=sample_rates=48000:channel_layouts=stereo[tts_norm];"
+            f"[2:a]volume={BGM_VOLUME_DURING_VOICE},aformat=sample_rates=48000:channel_layouts=stereo[bgm_duck];"
+            f"[tts_norm][bgm_duck]amix=inputs=2:duration=longest:dropout_transition=2[aout]"
         )
         command = [
             "ffmpeg",
@@ -2440,7 +2439,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.61.0",
+        "job_id": job_id, "version": "15.65.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -4930,7 +4929,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.61.0",
+        "version": "15.65.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -4961,7 +4960,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.61.0",
+        "version": "15.65.0",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -5293,7 +5292,7 @@ if __name__ == "__main__":
 
 
 # ============================================================================
-# [v15.61.0] Auto Topic Production Engine
+# [v15.65.0] Auto Topic Production Engine
 # POST /api/auto/topic-job  →  주제 입력 하나로 YouTube private 업로드까지 자동화
 # ============================================================================
 
@@ -6480,7 +6479,7 @@ async def create_auto_topic_job(
     _: str = Depends(verify_api_key),
 ):
     """
-    [v15.61.0] 주제 기반 완전 자동 영상 생성 + YouTube private 업로드.
+    [v15.65.0] 주제 기반 완전 자동 영상 생성 + YouTube private 업로드.
     주제·톤·길이만 입력하면 원고→씬→TTS→렌더링→업로드까지 자동 처리.
     """
     import uuid
@@ -6536,7 +6535,7 @@ async def get_auto_job_status(
     job_id: str,
     _: str = Depends(verify_api_key),
 ):
-    """[v15.61.0] 자동 생성 작업 상태 조회"""
+    """[v15.65.0] 자동 생성 작업 상태 조회"""
     job = _AUTO_JOB_STORE.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"auto job '{job_id}' not found")
@@ -6568,7 +6567,7 @@ async def get_auto_job_status(
 
 @app.get("/api/auto/jobs", tags=["Auto"])
 async def list_auto_jobs(_: str = Depends(verify_api_key)):
-    """[v15.61.0] 자동 생성 작업 목록"""
+    """[v15.65.0] 자동 생성 작업 목록"""
     jobs = []
     for jid, job in sorted(_AUTO_JOB_STORE.items(),
                             key=lambda x: x[1].get("created_at", ""), reverse=True):
@@ -6582,5 +6581,3 @@ async def list_auto_jobs(_: str = Depends(verify_api_key)):
             "created_at": job.get("created_at"),
         })
     return {"jobs": jobs[:50], "total": len(jobs)}
-
-

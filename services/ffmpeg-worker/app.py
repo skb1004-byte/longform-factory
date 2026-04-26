@@ -1377,7 +1377,7 @@ def _sanitize_keyword_for_search(kw: str, narration: str = "", fallback: str = "
 # ========== END sanitizer ====================================================
 
 def _get_topic_fallback(keyword: str, topic_hint: str = "") -> str:
-    """[v15.74.0] 토픽 카테고리 기반 폴백 쿼리."""
+    """[v15.74.1] 토픽 카테고리 기반 폴백 쿼리."""
     c = (keyword + " " + topic_hint).lower()
     if any(t in c for t in ["economy","finance","stock","bank","market","money","gdp"]):
         return "business finance city"
@@ -2848,7 +2848,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.74.0",
+        "job_id": job_id, "version": "15.74.1",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -5340,7 +5340,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.74.0",
+        "version": "15.74.1",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -5371,7 +5371,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.74.0",
+        "version": "15.74.1",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -6791,12 +6791,14 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
             _narr_pool = ([_hook_txt] if _hook_txt else []) + _sec_narrs + ([_closing_txt] if _closing_txt else [])
             # 씬별로 스크립트 섹션 순서대로 매핑 (전체 교체)
             _pool_len = len(_narr_pool)
-            for _si, _scene in enumerate(scenes_data):
-                _pool_idx = min(_si, _pool_len - 1)
-                _pool_narr = _narr_pool[_pool_idx]
-                # 풀 나레이션이 씬 나레이션보다 길면 교체
-                if len(_pool_narr) > len(_scene.get("narration", "")):
-                    _scene["narration"] = _pool_narr
+            # [v15.74] pool 1:1 매핑 (씬>pool 초과분 skip) + 기존 2배 이내 제한
+            for _si in range(min(_pool_len, len(scenes_data))):
+                _pool_narr = _narr_pool[_si]
+                _cur_len = len(scenes_data[_si].get("narration", ""))
+                _max_inject = max(_cur_len * 2, 70)  # 최소 70자 확보
+                _inject_txt = _pool_narr[:_max_inject]
+                if len(_inject_txt) > _cur_len:
+                    scenes_data[_si]["narration"] = _inject_txt
             _new_total = sum(len(s.get("narration", "")) for s in scenes_data)
             logger.info(f"[v15.72] 주입 완료: {_total_narr_chars}자 → {_new_total}자")
 

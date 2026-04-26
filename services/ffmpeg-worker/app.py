@@ -562,6 +562,121 @@ SCENE_LAYOUTS = [
 SCENE_ACCENT_COLORS = ["#FFE27A", "#B6EDF2", "#FFB4A2", "#C6B6FF", "#8CE6B1"]
 
 
+# [v15.77] ══════════════════════════════════════════════════════
+# 로워서드(Lower-Third) 방송 그래픽 — KBS 시사기획 스타일
+# 숫자/통계/[하이라이트:] 마커 → 하단 ASS 오버레이
+# ══════════════════════════════════════════════════════════════
+
+def _extract_lower_third_events_from_narration(
+    scenes: list,
+    whisper_path=None,
+    video_duration: float = 300.0,
+) -> list:
+    """
+    나레이션에서 로워서드 이벤트 추출.
+    우선순위: [하이라이트: TEXT] 마커 > 숫자+단위 패턴
+    Returns: [{"start": float, "end": float, "text": str, "style": str}]
+    """
+    import re as _re77
+    events = []
+    cumulative = 0.0
+
+    for scene in scenes:
+        narr = scene.narration or scene.description or ""
+        dur = max(scene.duration_seconds or 5.0, 1.0)
+
+        # 1) [하이라이트: TEXT] 마커 우선 추출
+        for m in _re77.finditer(r"\[하이라이트:\s*([^\]]{2,30})\]", narr):
+            ratio = m.start() / max(len(narr), 1)
+            t_start = cumulative + ratio * dur
+            events.append({
+                "start": round(max(t_start - 0.2, 0.0), 2),
+                "end":   round(t_start + 2.8, 2),
+                "text":  m.group(1).strip(),
+                "style": "Stat",
+            })
+
+        # 2) 마커 없는 씬: 숫자+단위 패턴 자동 감지
+        scene_has_marker = any(
+            cumulative <= e["start"] < cumulative + dur for e in events
+        )
+        if not scene_has_marker:
+            num_re = r"\d+[\.,]?\d*\s*(?:조|억|만|천|%|배|명|개|위|년|월|일|km|달러|원|번|회|개국|곳)"
+            for m in _re77.finditer(num_re, narr):
+                ctx_s = max(0, m.start() - 4)
+                ctx_e = min(len(narr), m.end() + 10)
+                display = narr[ctx_s:ctx_e].strip()
+                display = _re77.sub(r"\[하이라이트:[^\]]*\]", "", display).strip()[:22]
+                if not display:
+                    display = m.group(0)
+                ratio = m.start() / max(len(narr), 1)
+                t_start = cumulative + ratio * dur + 0.3
+                events.append({
+                    "start": round(max(t_start, 0.0), 2),
+                    "end":   round(t_start + 2.5, 2),
+                    "text":  display,
+                    "style": "Stat",
+                })
+
+        cumulative += dur
+
+    # 정렬 + 최소 2초 간격 필터
+    events.sort(key=lambda e: e["start"])
+    filtered, last_end = [], -3.0
+    for ev in events:
+        if ev["start"] >= last_end + 1.2 and ev["end"] <= video_duration + 1.0:
+            filtered.append(ev)
+            last_end = ev["end"]
+
+    return filtered[:18]  # 최대 18개
+
+
+def create_lower_third_ass(events: list, output_path: "Path") -> bool:
+    """KBS 스타일 로워서드 ASS 파일 생성 (Alignment=1: 좌하단, Layer=1)."""
+    if not events:
+        return False
+    try:
+        LOWER_FONT = "Noto Sans CJK KR"
+        lines_out = [
+            "[Script Info]",
+            "ScriptType: v4.00+",
+            "PlayResX: 1920",
+            "PlayResY: 1080",
+            "WrapStyle: 0",
+            "",
+            "[V4+ Styles]",
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+            # Stat: 노란 텍스트, 반투명 남색 박스, 좌하단
+            f"Style: Stat,{LOWER_FONT},48,&H0000FFFF,&H000000FF,&H00000000,&HAA001133,-1,0,0,0,100,100,1,0,3,0,0,1,80,80,185,1",
+            # Term: 청록 텍스트, 좌하단
+            f"Style: Term,{LOWER_FONT},44,&H00FFFF00,&H000000FF,&H00000000,&HAA001133,-1,0,0,0,100,100,1,0,3,0,0,1,80,80,185,1",
+            "",
+            "[Events]",
+            "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+        ]
+
+        def _fmt(secs: float) -> str:
+            h = int(secs // 3600)
+            m = int((secs % 3600) // 60)
+            s = secs % 60
+            return f"{h}:{m:02d}:{s:05.2f}"
+
+        for ev in events:
+            text = ev["text"].replace("\n", " ").replace(",", "，")
+            style = ev.get("style", "Stat")
+            lines_out.append(
+                f"Dialogue: 1,{_fmt(ev['start'])},{_fmt(ev['end'])},{style},,80,80,185,,{text}"
+            )
+
+        output_path.write_text("\n".join(lines_out), encoding="utf-8-sig")
+        logger.info(f"[v15.77] 로워서드 ASS 생성: {len(events)}개 이벤트 → {output_path.name}")
+        return True
+    except Exception as e:
+        logger.error(f"[v15.77] 로워서드 ASS 실패: {e}")
+        return False
+
+# ─────────────────────────────────────────────────────────────────
+
 def _escape_drawtext(txt: str) -> str:
     if not txt:
         return ""
@@ -1377,7 +1492,7 @@ def _sanitize_keyword_for_search(kw: str, narration: str = "", fallback: str = "
 # ========== END sanitizer ====================================================
 
 def _get_topic_fallback(keyword: str, topic_hint: str = "") -> str:
-    """[v15.76.0] 토픽 카테고리 기반 폴백 쿼리."""
+    """[v15.75.0] 토픽 카테고리 기반 폴백 쿼리."""
     c = (keyword + " " + topic_hint).lower()
     if any(t in c for t in ["economy","finance","stock","bank","market","money","gdp"]):
         return "business finance city"
@@ -2862,7 +2977,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.76.0",
+        "job_id": job_id, "version": "15.75.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -3836,35 +3951,12 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                             "description": phrase or orig.description,
                             "duration_seconds": round(sub_dur, 2),
                         }
-                        # [v15.76] phrase-level keyword diversity
-                        import re as _re76ph
-                        _en_ph76 = _re76ph.findall(r'[A-Za-z]{3,}', phrase)
-                        _ko_ph76 = [w for w in _re76ph.findall(r'[가-힣]{2,}', phrase) if w not in _KO_STOPWORDS]
-                        _phrase_kw76 = None
-                        if _en_ph76:
-                            _phrase_kw76 = ' '.join(_en_ph76[:3])
-                        elif _ko_ph76:
-                            _phrase_kw76 = _expand_domain_keyword(_ko_ph76[0])
-                            if not (_phrase_kw76 and _phrase_kw76.strip()):
-                                _phrase_kw76 = _get_topic_fallback(_ko_ph76[0], '')
                         seg_idx_1based = i + 1
                         if seg_idx_1based in seg_kw_map:
                             kws = seg_kw_map[seg_idx_1based]
                             if kws:
-                                # split phrase -> phrase-specific keyword for diversity
-                                if len(phrases) > 1 and j > 0 and _phrase_kw76 and _phrase_kw76.strip():
-                                    update["keyword"] = _phrase_kw76
-                                else:
-                                    update["keyword"] = kws[0]
-                                # alt_keywords: phrase-derived for sub-scene diversity
-                                _alt76 = [_phrase_kw76] if (_phrase_kw76 and _phrase_kw76 != update["keyword"]) else []
-                                update["alt_keywords"] = _alt76 + list(orig.alt_keywords or [])[:2]
+                                update["keyword"] = kws[0]
                                 update["asset_url"] = None
-                        elif _phrase_kw76 and _phrase_kw76.strip():
-                            # no segment keyword -> derive from phrase text
-                            update["keyword"] = _phrase_kw76
-                            update["alt_keywords"] = list(orig.alt_keywords or [])[:2]
-                            update["asset_url"] = None
                         aligned_scenes.append(orig.model_copy(update=update))
                 total = sum(s.duration_seconds for s in aligned_scenes)
                 logger.info(
@@ -5212,6 +5304,36 @@ async def process_video_creation(
                 except Exception as e:
                     logger.error(f"자막 오류: {e}")
 
+            # [v15.77] 로워서드 그래픽 오버레이 (방송 스타일 통계/키워드)
+            try:
+                _lt_events = _extract_lower_third_events_from_narration(
+                    scenes, tts_timestamps if "tts_timestamps" in dir() else None,
+                    duration or 300.0,
+                )
+                if _lt_events:
+                    _lt_ass = job_temp_dir / f"{job_id}_lower.ass"
+                    if create_lower_third_ass(_lt_events, _lt_ass) and _lt_ass.exists():
+                        _lt_out = output_video.with_name(output_video.stem + "_lt.mp4")
+                        _lt_esc = str(_lt_ass).replace("\\", "/").replace(":", "\\:")
+                        _lt_cmd = [
+                            "ffmpeg", "-y",
+                            "-i", str(output_video),
+                            "-vf", f"ass=\'{_lt_esc}\'",
+                            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                            "-c:a", "copy",
+                            str(_lt_out),
+                        ]
+                        if (run_ffmpeg_command(_lt_cmd, timeout=300.0)
+                                and _lt_out.exists()
+                                and _lt_out.stat().st_size > 4096):
+                            shutil.move(str(_lt_out), str(output_video))
+                            output_files["longform"] = str(output_video)
+                            logger.info(f"[v15.77] 로워서드 완료: {len(_lt_events)}개")
+                        else:
+                            logger.warning("[v15.77] 로워서드 렌더 실패 — 원본 유지")
+            except Exception as _lt_err:
+                logger.warning(f"[v15.77] 로워서드 스킵: {_lt_err}")
+
             # 숏폼 생성
             if request.generate_shorts:
                 shorts_output = SHORTS_DIR / f"{job_id}_short.mp4"
@@ -5377,7 +5499,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.76.0",
+        "version": "15.75.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -5408,7 +5530,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.76.0",
+        "version": "15.75.0",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -6237,8 +6359,8 @@ async def auto_generate_script(
     facts_text = "\n".join(f"- {f}" for f in research.get("facts", []))
     msgs_text  = "\n".join(f"- {m}" for m in research.get("key_messages", []))
 
-    prompt = f"""당신은 구독자 100만명 유튜브 채널의 수석 스크립터입니다.
-시청 유지율 70%+ 달성을 위한 프로 수준 원고를 작성하세요.
+    prompt = f"""당신은 KBS 시사기획 창 수석 방송작가입니다.
+심층 다큐멘터리 원고를 작성하세요. 시청자가 끝까지 보도록 긴장감과 정보를 교차합니다.
 
 주제: {topic}
 톤: {tone}
@@ -6253,24 +6375,38 @@ async def auto_generate_script(
 
 섹션 구성: {', '.join(sections)}
 
-목표 나레이션 길이: 총 {target_total_chars}자 이상 (각 섹션 {min_section_chars}자 이상 필수)\n\n## HOOK (첫 3~5초): 충격적 사실/반직관 질문. "안녕하세요" 금지
-## PATTERN INTERRUPT: 20~30초마다 새 질문/충격 포인트
-## CTA 3회: 40%/70%/마지막 지점
-## 나레이션: 한 문장=15~25자, 숫자/통계 활용
+목표 나레이션 길이: 총 {target_total_chars}자 이상 (각 섹션 {min_section_chars}자 이상 필수)
+
+## 방송 다큐 3막 구조 필수
+  - 1막(오프닝/도발): 충격적 사실로 시작, "지금 이 순간~", "당신이 모르는~" 형식. 안녕하세요 금지.
+  - 2막(심층분석): 전문가 인용, 통계, 사례, 반전 포인트. 매 60초 새 긴장 요소.
+  - 3막(해법/전망): 구체적 결론 + 시청자 행동 촉구
+
+## 나레이션 규칙
+  - 한 문장 15~25자. 짧고 힘있게.
+  - 숫자/통계 사용 시 반드시 [하이라이트: 수치 또는 핵심어] 마커 삽입
+    예시: "전 세계 [하이라이트: 470조원] 규모의 시장이 열리고 있습니다."
+    예시: "이미 [하이라이트: 34개국 기업]이 도입을 완료했습니다."
+  - 중요 전문용어: [하이라이트: 용어명] 마커 삽입
+  - 패턴 인터럽트: 30초마다 반전 질문/충격 포인트
+
+## 금지 사항
+  - "안녕하세요", "오늘은", "~에 대해 알아보겠습니다" 금지
+  - 추상적 표현 금지 → 구체적 수치/사례로 대체
 
 JSON:
 {{
-  "title": "클릭유발 제목 (파워워드, 30자 이내)",
-  "hook": "충격 훅 (20~40자)",
+  "title": "클릭유발 제목 (파워워드+숫자, 30자 이내)",
+  "hook": "충격 오프닝 (30~50자, 방송 어체)",
   "sections": [
     {{
       "section_title": "제목",
-      "section_type": "hook/problem/agitation/stats/solution/cta/closing",
-      "narration": "나레이션 (최소 {min_section_chars}자 이상 상세하게 작성, 예시 문장 5개 이상)",
-      "pattern_interrupt": "패턴 인터럽트 (선택)"
+      "section_type": "opening/problem/analysis/expert/stats/turning_point/solution/cta/closing",
+      "narration": "나레이션 (최소 {min_section_chars}자, [하이라이트: 수치] 마커 포함, 방송 어체)",
+      "pattern_interrupt": "반전/충격 포인트 (선택)"
     }}
   ],
-  "closing": "강력한 CTA 마무리",
+  "closing": "강력한 CTA 마무리 (구독/공유 + 핵심 메시지 재강조)",
   "total_estimated_duration_sec": {target_duration_sec}
 }}"""
     result = await _call_llm_json(prompt, max_tokens=6000, temperature=0.6, quality_first=True)  # [v15.71]
@@ -6852,36 +6988,6 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
                         scenes_data[_si2]["narration"] = _inj2
             _new_total = sum(len(s.get("narration", "")) for s in scenes_data)
             logger.info(f"[v15.72] 주입 완료: {_total_narr_chars}자 → {_new_total}자")
-        # [v15.76] 나레이션 기반 visual_keywords 재도출 (단어/음절 매핑 최대화)
-        import re as _re76
-        for _sd76 in scenes_data:
-            _narr76 = _sd76.get("narration", "")
-            if not _narr76:
-                continue
-            # 영어 단어 추출 (3자 이상)
-            _en76 = _re76.findall(r'[A-Za-z]{3,}', _narr76)
-            # 한국어 2자 이상 단어 추출 (stopwords 제외)
-            _ko76 = [w for w in _re76.findall(r'[가-힣]{2,}', _narr76) if w not in _KO_STOPWORDS]
-            _new_vkws = []
-            # 1) 영어 단어 → 직접 사용
-            if _en76:
-                _new_vkws.append(" ".join(_en76[:3]))
-            # 2) 한국어 핵심어 → _expand_domain_keyword로 영어 변환
-            for _kw76 in _ko76[:4]:
-                _exp76 = _expand_domain_keyword(_kw76)
-                if _exp76 and _exp76.strip() and _exp76 not in _new_vkws:
-                    _new_vkws.append(_exp76)
-                    if len(_new_vkws) >= 4:
-                        break
-            # 3) 변환 결과가 없으면 topic fallback
-            if not _new_vkws:
-                _new_vkws = [_get_topic_fallback(" ".join(_ko76[:3]), "")]
-            # 4) 기존 visual_keywords와 merge (앞에 narration 기반 키워드 배치)
-            _old_vkws = [v for v in (_sd76.get("visual_keywords", []) or []) if v and v.strip()]
-            _merged = list(dict.fromkeys(_new_vkws + _old_vkws))[:4]
-            _sd76["visual_keywords"] = _merged
-            _sd76["backup_keywords"] = list(dict.fromkeys((_sd76.get("backup_keywords", []) or []) + _old_vkws))[:3]
-        logger.info(f"[v15.76] visual_keywords 재도출 완료: {len(scenes_data)}개 씬")
 
         # ── 5. 나레이션 톤 설정 ──────────────────────────
         _auto_set_status(job_id, "voice_planning", 30, "나레이션 톤 설정 중")

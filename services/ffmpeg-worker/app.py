@@ -9,7 +9,7 @@
 # [AJ] MARKER v1
 # [AI-pack2] MARKER v1
 """
-LongForm Factory - FFmpeg Worker v15.68.0 (안정화·운영개선)
+LongForm Factory - FFmpeg Worker v15.69.0 (안정화·운영개선)
 롱폼/숏폼 자동화 영상 제작 서비스
 
 주요 기능:
@@ -764,6 +764,7 @@ class Scene(BaseModel):
     timing: Optional[Dict[str, float]] = Field(None, description="타임라인 타이밍")
     alt_asset_url: Optional[str] = Field(None, description="[v15.68] 2번째 소스 영상 경로 (서브클립 다양화)")
     alt_keywords: List[str] = Field(default_factory=list, description="[v15.68] 대체 검색 키워드")
+    narration_en: Optional[str] = Field(None, description="[v15.69] Kling T2V용 영어 비주얼 프롬프트")
 
 
 class AssetsSearchRequest(BaseModel):
@@ -1328,8 +1329,55 @@ async def download_video(video_url: str, output_path: Path, timeout: float = 120
         return False
 
 
+# ========== [v15.69] 키워드 Sanitizer =========================================
+_CAMERA_DIRECTIVES = {
+    "wide shot","close up","close-up","side angle","panning","zoom in","zoom out",
+    "aerial shot","tracking shot","dolly shot","tilt","crane shot","establishing shot",
+    "cutaway","overhead","bird eye","bird's eye","bird's-eye","low angle","high angle",
+    "slow zoom","fast cut","handheld","steadicam","bokeh","depth of field",
+    "wide angle","tight shot","medium shot","long shot","extreme close up","two shot",
+    "wide","angle","shot","aerial","zoom","pan","cutaway","handheld",
+}
+
+_KO_STOPWORDS = {
+    "이","그","저","의","가","은","는","을","를","에","에서","로","으로",
+    "와","과","도","만","이다","있다","하다","되다","않다","때","후","전","중",
+    "또한","따라서","그리고","하지만","그러나","그래서","즉","곧","이후",
+}
+
+def _is_camera_directive(kw: str) -> bool:
+    """카메라 방향/기법 키워드 판별"""
+    if not kw or not kw.strip():
+        return True
+    lower = kw.lower().strip()
+    if lower in _CAMERA_DIRECTIVES:
+        return True
+    words = lower.split()
+    if len(words) <= 2 and all(w in _CAMERA_DIRECTIVES for w in words):
+        return True
+    return False
+
+
+def _sanitize_keyword_for_search(kw: str, narration: str = "", fallback: str = "") -> str:
+    """[v15.69] 카메라 디렉티브/빈 키워드를 나레이션 기반 키워드로 복구"""
+    if not _is_camera_directive(kw):
+        return kw
+    if narration:
+        import re as _re
+        ko_words = _re.findall(r'[가-힣]{2,}', narration)
+        en_words = _re.findall(r'[A-Za-z]{3,}', narration)
+        useful = [w for w in ko_words if w not in _KO_STOPWORDS][:3]
+        if en_words:
+            useful = en_words[:3] + useful[:1]
+        if useful:
+            return " ".join(useful[:3]) + " footage"
+    return fallback if fallback else "business technology people"
+
+
+# ========== END sanitizer ====================================================
+
 def _get_topic_fallback(keyword: str, topic_hint: str = "") -> str:
-    """[v15.68.0] 토픽 카테고리 기반 폴백 쿼리."""
+    """[v15.73.0] 토픽 카테고리 기반 폴백 쿼리."""
     c = (keyword + " " + topic_hint).lower()
     if any(t in c for t in ["economy","finance","stock","bank","market","money","gdp"]):
         return "business finance city"
@@ -1349,6 +1397,106 @@ def _get_topic_fallback(keyword: str, topic_hint: str = "") -> str:
         return "asian city urban street"
     return "city street people"
 
+# ============================================================
+# [v15.69] Kling T2V 통합
+# ============================================================
+_KLING_ACCESS_KEY = os.getenv("KLING_ACCESS_KEY", "")
+_KLING_SECRET_KEY = os.getenv("KLING_SECRET_KEY", "")
+_KLING_BASE_URL = "https://api.klingai.com"
+_AI_VIDEO_ENABLED = os.getenv("AI_VIDEO_ENABLED", "false").lower() in ("1","true","yes")
+_AI_VIDEO_PROVIDER = os.getenv("AI_VIDEO_PROVIDER", "").lower()
+
+def _kling_jwt() -> str:
+    """HS256 JWT 생성 (30분 유효)"""
+    try:
+        import jwt as _jwt
+        now = int(time.time())
+        payload = {"iss": _KLING_ACCESS_KEY, "exp": now + 1800, "nbf": now - 5}
+        token = _jwt.encode(payload, _KLING_SECRET_KEY, algorithm="HS256")
+        return token if isinstance(token, str) else token.decode("utf-8")
+    except Exception as e:
+        logger.warning(f"[Kling] JWT 생성 실패: {e}")
+        return ""
+
+
+async def generate_kling_video(
+    prompt_en: str,
+    duration: int,
+    scene_id: str,
+    output_path: Path,
+    aspect_ratio: str = "16:9",
+    model: str = "kling-v2.0-std",
+    max_wait_sec: float = 300.0,
+) -> bool:
+    """[v15.69] Kling T2V API로 씬 영상 생성 → output_path에 저장"""
+    if not _KLING_ACCESS_KEY or not _KLING_SECRET_KEY:
+        logger.warning("[Kling] API 키 미설정 — 스킵")
+        return False
+    token = _kling_jwt()
+    if not token:
+        return False
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    body = {
+        "model": model,
+        "prompt": prompt_en[:2500],
+        "negative_prompt": "text, watermark, subtitle, logo, cartoon, blurry, low quality",
+        "duration": min(max(duration, 5), 10),
+        "aspect_ratio": aspect_ratio,
+        "mode": "standard",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(f"{_KLING_BASE_URL}/v1/videos/text2video", json=body, headers=headers)
+            if resp.status_code not in (200, 201):
+                logger.warning(f"[Kling] 생성 실패 {resp.status_code}: {resp.text[:200]}")
+                return False
+            data = resp.json()
+        task_id = (data.get("data") or {}).get("task_id", "") or data.get("task_id", "")
+        if not task_id:
+            logger.warning(f"[Kling] task_id 없음: {data}")
+            return False
+        logger.info(f"[Kling] task_id={task_id} scene={scene_id}")
+        waited, poll_interval, video_url = 0.0, 10.0, ""
+        while waited < max_wait_sec:
+            await asyncio.sleep(poll_interval)
+            waited += poll_interval
+            try:
+                token2 = _kling_jwt()
+                async with httpx.AsyncClient(timeout=30.0) as c2:
+                    pr = await c2.get(f"{_KLING_BASE_URL}/v1/videos/{task_id}",
+                                     headers={"Authorization": f"Bearer {token2}"})
+                    pd = pr.json()
+                td = pd.get("data") or pd
+                status = td.get("task_status", "")
+                logger.info(f"[Kling] {task_id} status={status} waited={waited:.0f}s")
+                if status == "succeed":
+                    vids = ((td.get("task_result") or {}).get("videos") or [])
+                    if vids:
+                        video_url = vids[0].get("url", "")
+                    break
+                elif status in ("failed", "cancelled"):
+                    logger.warning(f"[Kling] 실패: {td}")
+                    return False
+            except Exception as pe:
+                logger.warning(f"[Kling] 폴링 오류: {pe}")
+        if not video_url:
+            logger.warning(f"[Kling] video_url 없음 (waited={waited:.0f}s)")
+            return False
+        logger.info(f"[Kling] 다운로드: {video_url[:80]}")
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as dl:
+            r = await dl.get(video_url)
+            if r.status_code == 200:
+                output_path.write_bytes(r.content)
+                sz = output_path.stat().st_size
+                logger.info(f"[Kling] ✅ 저장: {output_path} ({sz//1024}KB)")
+                return sz > 4096
+            logger.warning(f"[Kling] 다운로드 실패 {r.status_code}")
+            return False
+    except Exception as e:
+        logger.warning(f"[Kling] 예외: {e}", exc_info=True)
+        return False
+
+
 async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[Scene]:
     """각 장면에 대해 자산 검색 및 다운로드 ([AF-14] 영상 중복 제거)."""
     seen_urls: set = set()
@@ -1366,6 +1514,39 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
             
             logger.info(f"[{idx+1}/{total_scenes}] 장면 '{scene.scene_id}' 검색 중...")
             
+            # [v15.69] 키워드 sanitize — 카메라 디렉티브/빈 키워드 복구
+            _raw_kw = scene.keyword or ""
+            _narr_hint = scene.narration or scene.description or ""
+            _fallback_kw = _get_topic_fallback(_raw_kw, "")
+            _sanitized_kw = _sanitize_keyword_for_search(_raw_kw, _narr_hint, _fallback_kw)
+            if _sanitized_kw != _raw_kw:
+                logger.info(f"[v15.69 SANITIZE] '{_raw_kw}' → '{_sanitized_kw}'")
+                scene.keyword = _sanitized_kw
+
+            # [v15.69] Kling T2V 우선 시도
+            _kling_ok = False
+            _is_hook_or_close = (scene.tone_profile or "").lower() in ("hook","closing","cta") or idx == 0 or idx == total_scenes - 1
+            _ai_vid_selective = os.getenv("AI_VIDEO_SELECTIVE","true").lower() in ("1","true","yes")
+            # [v15.70 Hybrid] hook/closing 필수 + selective mode 기반
+            _should_kling = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and _AI_VIDEO_PROVIDER in ("kling", "")
+            if _should_kling:
+                _kp = (
+                    scene.narration_en or
+                    (scene.visual_intent or "") + ", " +
+                    ", ".join((scene.visual_keywords or [])[:2]) +
+                    ", cinematic footage, 4K, professional"
+                ).strip(", ")
+                if _kp and len(_kp) > 10:
+                    _ko = job_assets_dir / f"{scene.scene_id}_kling.mp4"
+                    _kd = max(int(scene.duration_seconds or 5), 5)
+                    logger.info(f"[Kling] {scene.scene_id} dur={_kd}s")
+                    _kling_ok = await generate_kling_video(_kp, _kd, scene.scene_id, _ko)
+                    if _kling_ok:
+                        scene.asset_url = str(_ko)
+                        updated_scenes.append(scene)
+                        logger.info(f"[Kling] ✅ {scene.scene_id} 완료 — 스톡 스킵")
+                        continue
+
             # 병렬로 Pexels와 Pixabay 검색
             expanded_kw = _expand_domain_keyword(scene.keyword)
             if expanded_kw != scene.keyword:
@@ -2667,7 +2848,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.68.0",
+        "job_id": job_id, "version": "15.73.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -5159,7 +5340,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.68.0",
+        "version": "15.73.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -5190,7 +5371,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.68.0",
+        "version": "15.73.0",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -5858,6 +6039,10 @@ async def auto_analyze_topic(
     language: str,
 ) -> Dict:
     """[AUTO 1/12] 주제 분석 → 시청자·목적·자료조사 필요성 판단"""
+    # [v15.71] 동적 섹션 수 계산
+    _n_sections = max(4, min(12, round(target_duration_sec / 35)))
+    _section_names = [f"섹션{k+1}" for k in range(_n_sections)]
+    _sections_example = str(_section_names).replace("'", chr(34))
     prompt = f"""다음 영상 주제를 분석하세요.
 
 주제: {topic}
@@ -5879,7 +6064,7 @@ JSON으로 반환:
   "needs_research": true,
   "key_points": ["포인트1", "포인트2", "포인트3"],
   "risk_level": "low/medium/high",
-  "suggested_sections": ["섹션1", "섹션2", "섹션3", "섹션4"]
+  "suggested_sections": {_sections_example}
 }}"""
     result = await _call_llm_json(prompt, max_tokens=1500, quality_first=True)
     if not result:
@@ -5894,21 +6079,72 @@ JSON으로 반환:
             "needs_research": True,
             "key_points": [topic],
             "risk_level": "medium",
-            "suggested_sections": ["서론", "본론 1", "본론 2", "결론"],
+            "suggested_sections": ["서론", "문제제기", "현황분석", "심층배경", "본론 핵심", "통계와증거", "미래전망", "결론"],
         }
     logger.info(f"[AUTO] 주제 분석 완료: {result.get('main_topic')}")
     return result
+
+
+# ============================================================
+# [v15.70] 웹서치 Pre-Injection — Google News RSS
+# ============================================================
+async def _fetch_topic_news(topic: str, max_articles: int = 5, timeout: float = 8.0) -> str:
+    """[v15.70] Google News RSS로 최신 뉴스 제목+요약 수집 → LLM 프롬프트 주입용 텍스트 반환"""
+    import urllib.parse as _urlparse
+    import xml.etree.ElementTree as _ET
+    try:
+        q = _urlparse.quote(topic)
+        urls = [
+            f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko",
+            f"https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en",
+        ]
+        articles = []
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as c:
+            for url in urls:
+                if len(articles) >= max_articles:
+                    break
+                try:
+                    r = await c.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                    if r.status_code != 200:
+                        continue
+                    root = _ET.fromstring(r.text)
+                    for item in root.findall(".//item"):
+                        title = (item.findtext("title") or "").strip()
+                        desc  = (item.findtext("description") or "").strip()
+                        pub   = (item.findtext("pubDate") or "").strip()[:16]
+                        if title:
+                            # HTML 태그 제거
+                            import re as _re
+                            clean = _re.sub(r"<[^>]+>", "", desc)[:120]
+                            articles.append(f"[{pub}] {title}: {clean}")
+                            if len(articles) >= max_articles:
+                                break
+                except Exception:
+                    pass
+        if articles:
+            text = "\n".join(f"- {a}" for a in articles[:max_articles])
+            logger.info(f"[v15.70 NEWS] {len(articles)}개 기사 수집 완료")
+            return text
+    except Exception as e:
+        logger.warning(f"[v15.70 NEWS] 뉴스 수집 실패: {e}")
+    return ""
 
 
 async def auto_collect_research(topic: str, analysis: Dict) -> Dict:
     """[AUTO 2/12] 자료 조사 → 핵심 팩트 + 출처 요약"""
     key_points = analysis.get("key_points", [topic])
     sections = analysis.get("suggested_sections", [])
+    # [v15.70] 실시간 뉴스 수집 → 팩트 보강
+    _live_news = await _fetch_topic_news(topic, max_articles=5)
+    _news_section = f"\n\n## 실시간 최신 뉴스 (반드시 반영):\n{_live_news}" if _live_news else ""
+
     prompt = f"""다음 주제에 대해 영상 제작용 핵심 자료를 조사하세요.
 
 주제: {topic}
 핵심 포인트: {', '.join(key_points)}
 섹션 구성안: {', '.join(sections)}
+
+{_news_section}
 
 실제 알고 있는 사실과 일반적으로 알려진 정보를 바탕으로 JSON 반환:
 {{
@@ -5955,9 +6191,11 @@ async def auto_generate_script(
 ) -> Dict:
     """[AUTO 3/12] 영상 원고 자동 작성"""
     # 섹션당 예상 나레이션 길이 계산 (한국어 약 4음절/초)
-    words_per_sec = 3.5  # 약간 여유있게
+    words_per_sec = 5.5  # [v15.71] KO TTS 5-6char/sec  # 약간 여유있게
     total_words = int(target_duration_sec * words_per_sec)
     section_words = max(total_words // max(len(sections), 1), 80)
+    min_section_chars = max(section_words, 200)  # [v15.71]
+    target_total_chars = int(target_duration_sec * words_per_sec)  # [v15.71] total target chars
 
     facts_text = "\n".join(f"- {f}" for f in research.get("facts", []))
     msgs_text  = "\n".join(f"- {m}" for m in research.get("key_messages", []))
@@ -5978,7 +6216,7 @@ async def auto_generate_script(
 
 섹션 구성: {', '.join(sections)}
 
-## HOOK (첫 3~5초): 충격적 사실/반직관 질문. "안녕하세요" 금지
+목표 나레이션 길이: 총 {target_total_chars}자 이상 (각 섹션 {min_section_chars}자 이상 필수)\n\n## HOOK (첫 3~5초): 충격적 사실/반직관 질문. "안녕하세요" 금지
 ## PATTERN INTERRUPT: 20~30초마다 새 질문/충격 포인트
 ## CTA 3회: 40%/70%/마지막 지점
 ## 나레이션: 한 문장=15~25자, 숫자/통계 활용
@@ -5991,14 +6229,14 @@ JSON:
     {{
       "section_title": "제목",
       "section_type": "hook/problem/agitation/stats/solution/cta/closing",
-      "narration": "나레이션 (~{section_words}자)",
+      "narration": "나레이션 (최소 {min_section_chars}자 이상 상세하게 작성, 예시 문장 5개 이상)",
       "pattern_interrupt": "패턴 인터럽트 (선택)"
     }}
   ],
   "closing": "강력한 CTA 마무리",
   "total_estimated_duration_sec": {target_duration_sec}
 }}"""
-    result = await _call_llm_json(prompt, max_tokens=4000, temperature=0.6, quality_first=True)
+    result = await _call_llm_json(prompt, max_tokens=6000, temperature=0.6, quality_first=True)  # [v15.71]
     if not result:
         result = {
             "title": topic,
@@ -6017,7 +6255,14 @@ async def auto_build_scenes(
     target_duration_sec: int,
     tone: str,
 ) -> List[Dict]:
-    """[AUTO 4/12] 원고 → 6~12초 씬 자동 분할"""
+    """[AUTO 4/12] 원고 → 씬 자동 분할 (target_duration 비례)"""
+    # [v15.70] target_duration 기반 동적 씬 수 계산
+    _target_dur = max(target_duration_sec, 60)
+    _avg_scene_sec = 5.5  # 씬당 평균 5.5초
+    _min_scenes = max(8, int(_target_dur / 7))
+    _max_scenes = max(15, int(_target_dur / 4))
+    _rec_scenes = max(10, int(_target_dur / _avg_scene_sec))
+    logger.info(f"[v15.70] 씬 수 계산: target={_target_dur}s → {_min_scenes}~{_max_scenes}개 (권장 {_rec_scenes}개)")
     sections_text = _json_auto.dumps(script.get("sections", []), ensure_ascii=False)
     hook = script.get("hook", "")
     closing = script.get("closing", "")
@@ -6031,7 +6276,7 @@ async def auto_build_scenes(
 톤: {tone}
 
 ## 씬 규칙 (프로):
-- 한 씬 = 4~8초 (나레이션 15~35자)
+- 총 씬 수: {_min_scenes}~{_max_scenes}개 (권장 {_rec_scenes}개, target_duration={_target_dur}초 기준)
 - B-roll 교체: 최대 5초 (시청유지율 핵심)
 - visual_keywords: 씬마다 완전히 다른 키워드 (반복 금지!)
 - 나레이션 내용과 영상 일치: economy → stock market trading floor
@@ -6043,11 +6288,20 @@ async def auto_build_scenes(
 - 추상→시각화: "economy" → "GDP growth chart", "stock market trading"
 - preferred_motion: slow_zoom_in/out, pan_left/right, fast_cut, aerial_shot
 
+## [v15.69] 단어·문맥·음절 기반 영상 매핑 규칙 (필수):
+- visual_keywords 금지: "wide shot","close up","side angle","aerial","zoom","panning","tilt","cutaway","overhead","angle","shot","zoom"
+- visual_keywords 형식: 반드시 "명사+명사" → "semiconductor factory worker", "CPU chip extreme closeup"
+    - narration: 반드시 해당 섹션 sections_text의 narration 원문 전체 복사. 절대 제목/placeholder 금지. 최소 100자 이상\n- narration_en: 나레이션을 20~30단어 영어 시각 묘사로 변환 (Kling T2V 프롬프트)
+  예: "semiconductor chips manufacturing process, engineers inspecting circuit boards, high-tech facility, cinematic 4K"
+- 단어 매핑: 나레이션 핵심 명사→구체적 시각 장면 (반도체→semiconductor chip, 수출규제→trade sanctions document)
+- 음절 기반 타이밍: expected_duration = max(len(narration_text.replace(" ","")) / 4.0, 4.0)
+
 JSON:
 [
   {{
     "scene_id": "scene_001",
-    "narration": "텍스트",
+    "narration": "섹션 narration 원문 전체 (sections_text에서 복사, 최소 100자)",
+    "narration_en": "cinematic description 20-30 words for AI video generation",
     "section_type": "hook",
     "visual_intent": "dramatic opening conveying urgency",
     "visual_keywords": ["dramatic skyline sunrise", "city aerial dawn"],
@@ -6265,14 +6519,23 @@ def auto_merge_voice_into_scenes(scenes_data: List[Dict], voice_plan: List[Dict]
         char_count = len(narration.replace(" ", ""))
         est_dur = max(char_count / 4.0, s.get("expected_duration", 7.0))
 
+        _vkws = s.get("visual_keywords", []) or []
+        _bkws = s.get("backup_keywords", []) or []
+        _primary_kw = _vkws[0] if _vkws else " ".join(s.get("visual_intent","business economy").split()[:3])
+        _alt_kws = _vkws[1:] + _bkws  # [v15.69] alt_keywords 풀 채우기
+        _narration_en = s.get("narration_en", "") or ""
+        if not _narration_en and s.get("visual_intent"):
+            _narration_en = s.get("visual_intent","") + ", " + ", ".join(_vkws[:2]) + ", cinematic footage, professional"
         scene = Scene(
             scene_id=sid,
-            keyword=( s.get("visual_keywords", []) or [" ".join(s.get("visual_intent","business economy").split()[:2])] )[0],
+            keyword=_primary_kw,
             duration_seconds=round(est_dur, 1),
             description=s.get("visual_intent", ""),
             narration=narration,
             visual_intent=s.get("visual_intent", ""),
-            visual_keywords=s.get("visual_keywords", []),
+            visual_keywords=_vkws,
+            alt_keywords=_alt_kws,          # [v15.69] 이제 실제로 채워짐
+            narration_en=_narration_en,     # [v15.69] Kling T2V 프롬프트
             tone_profile=s.get("tone_profile", "main"),
             visual_pacing=s.get("preferred_motion", "slow_zoom_in"),
         )
@@ -6516,6 +6779,26 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         _auto_set_status(job_id, "scene_building", 25, "씬 분할 중")
         scenes_data = await auto_build_scenes(script, request.target_duration_sec, request.tone)
         _save_project_file(project_dir, "scenes_raw.json", scenes_data)
+        # [v15.72] 나레이션 품질 검증 — 짧으면 스크립트 섹션 직접 주입
+        _total_narr_chars = sum(len(s.get("narration", "")) for s in scenes_data)
+        _min_target_chars = int(request.target_duration_sec * 3.5)
+        logger.info(f"[v15.72] 나레이션 검증: {_total_narr_chars}자 (목표 {_min_target_chars}자 이상)")
+        if _total_narr_chars < _min_target_chars:
+            logger.warning(f"[v15.72] 나레이션 부족 → 섹션 직접 주입")
+            _hook_txt = script.get("hook", "")
+            _closing_txt = script.get("closing", "")
+            _sec_narrs = [s.get("narration", "") for s in script.get("sections", []) if s.get("narration", "")]
+            _narr_pool = ([_hook_txt] if _hook_txt else []) + _sec_narrs + ([_closing_txt] if _closing_txt else [])
+            # 씬별로 스크립트 섹션 순서대로 매핑 (전체 교체)
+            _pool_len = len(_narr_pool)
+            for _si, _scene in enumerate(scenes_data):
+                _pool_idx = min(_si, _pool_len - 1)
+                _pool_narr = _narr_pool[_pool_idx]
+                # 풀 나레이션이 씬 나레이션보다 길면 교체
+                if len(_pool_narr) > len(_scene.get("narration", "")):
+                    _scene["narration"] = _pool_narr
+            _new_total = sum(len(s.get("narration", "")) for s in scenes_data)
+            logger.info(f"[v15.72] 주입 완료: {_total_narr_chars}자 → {_new_total}자")
 
         # ── 5. 나레이션 톤 설정 ──────────────────────────
         _auto_set_status(job_id, "voice_planning", 30, "나레이션 톤 설정 중")

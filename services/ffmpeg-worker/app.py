@@ -1377,7 +1377,7 @@ def _sanitize_keyword_for_search(kw: str, narration: str = "", fallback: str = "
 # ========== END sanitizer ====================================================
 
 def _get_topic_fallback(keyword: str, topic_hint: str = "") -> str:
-    """[v15.73.0] 토픽 카테고리 기반 폴백 쿼리."""
+    """[v15.74.0] 토픽 카테고리 기반 폴백 쿼리."""
     c = (keyword + " " + topic_hint).lower()
     if any(t in c for t in ["economy","finance","stock","bank","market","money","gdp"]):
         return "business finance city"
@@ -2848,7 +2848,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.73.0",
+        "job_id": job_id, "version": "15.74.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -5340,7 +5340,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.73.0",
+        "version": "15.74.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -5371,7 +5371,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.73.0",
+        "version": "15.74.0",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -6300,7 +6300,7 @@ JSON:
 [
   {{
     "scene_id": "scene_001",
-    "narration": "섹션 narration 원문 전체 (sections_text에서 복사, 최소 100자)",
+    "narration": "섹션 narration 원문 전체 (sections_text에서 복사, 반드시 최소 80자 이상, 씬 내용을 상세히)",
     "narration_en": "cinematic description 20-30 words for AI video generation",
     "section_type": "hook",
     "visual_intent": "dramatic opening conveying urgency",
@@ -6312,7 +6312,7 @@ JSON:
     "expected_duration": 5.0
   }}
 ]"""
-    result = await _call_llm_json(prompt, max_tokens=5000, temperature=0.5, quality_first=True)
+    result = await _call_llm_json(prompt, max_tokens=8000  # [v15.74], temperature=0.5, quality_first=True)
 
     if not isinstance(result, list) or not result:
         # fallback: 섹션별로 단순 씬 생성
@@ -6781,7 +6781,7 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         _save_project_file(project_dir, "scenes_raw.json", scenes_data)
         # [v15.72] 나레이션 품질 검증 — 짧으면 스크립트 섹션 직접 주입
         _total_narr_chars = sum(len(s.get("narration", "")) for s in scenes_data)
-        _min_target_chars = int(request.target_duration_sec * 3.5)
+        _min_target_chars = int(request.target_duration_sec * 5.0  # [v15.74] TTS 5.5자/초 기준)
         logger.info(f"[v15.72] 나레이션 검증: {_total_narr_chars}자 (목표 {_min_target_chars}자 이상)")
         if _total_narr_chars < _min_target_chars:
             logger.warning(f"[v15.72] 나레이션 부족 → 섹션 직접 주입")

@@ -1,4 +1,4 @@
-#[BC] MARKER v1
+# [BC] MARKER v1
 # [BB] MARKER v1
 # [AY] MARKER v1
 # [AZ] MARKER v1
@@ -86,6 +86,90 @@ def _pick_xfade_transition(idx: int = 0) -> str:
         import random
         return random.choice(TRANSITION_POOL)
     return TRANSITION_POOL[idx % len(TRANSITION_POOL)]
+
+
+# [v15.78] KOREAN_GENERAL_MAP
+KOREAN_GENERAL_MAP = {
+    "인공지능": "artificial intelligence AI robot technology",
+    "기계학습": "machine learning AI neural network",
+    "머신러닝": "machine learning AI neural network",
+    "딥러닝":   "deep learning AI neural network server",
+    "자동화":   "automation robot factory industrial",
+    "알고리즘": "algorithm computer code programming",
+    "데이터":   "data analytics computer chart server",
+    "빅데이터": "big data server analytics dashboard",
+    "디지털":   "digital technology computer modern",
+    "소프트웨어": "software code programming computer",
+    "하드웨어": "hardware electronic circuit board",
+    "반도체":   "semiconductor chip manufacturing",
+    "로봇":     "robot automation industrial arm factory",
+    "드론":     "drone aerial sky technology",
+    "플랫폼":   "platform app technology mobile",
+    "네트워크": "network server data center cables",
+    "클라우드": "cloud computing server technology",
+    "메타버스": "virtual reality digital immersive",
+    "블록체인": "blockchain cryptocurrency digital",
+    "경제":     "economy business finance stock market",
+    "금융":     "finance banking stock market money",
+    "투자":     "investment stock market business",
+    "시장":     "market stock exchange business",
+    "산업":     "industry factory manufacturing",
+    "기업":     "company business office corporate",
+    "스타트업": "startup office technology entrepreneur",
+    "혁신":     "innovation technology startup modern",
+    "성장":     "growth chart business success",
+    "무역":     "trade business international shipping",
+    "사회":     "society people urban city community",
+    "정치":     "politics government parliament",
+    "정부":     "government capitol building official",
+    "정책":     "policy government document official",
+    "교육":     "education school classroom students",
+    "의료":     "medical hospital doctor healthcare",
+    "환경":     "environment nature green ecology",
+    "기후":     "climate change environment weather",
+    "에너지":   "energy solar wind power renewable",
+    "태양광":   "solar panel renewable energy green",
+    "전기차":   "electric vehicle car charging",
+    "오염":     "pollution smog city environment",
+    "미래":     "future technology smart city innovation",
+    "변화":     "change transformation progress",
+    "혁명":     "revolution transformation innovation",
+    "위기":     "crisis emergency warning problem",
+    "도전":     "challenge competition achievement",
+    "기회":     "opportunity success business growth",
+    "일자리":   "employment job work office career",
+    "노동":     "labor work factory employee",
+    "도시":     "city urban skyline buildings modern",
+    "서울":     "Seoul South Korea city modern",
+    "한국":     "South Korea Seoul city modern",
+    "연구":     "research laboratory scientist",
+    "과학":     "science laboratory research experiment",
+    "기술":     "technology innovation research lab",
+    "발전":     "development progress technology",
+    "글로벌":   "global world international business",
+    "세계":     "world global earth international",
+    "이후":     "future forward progress timeline",
+    "현재":     "present current now modern",
+    "미디어":   "media news broadcast journalism",
+    "문화":     "culture art creative performance",
+    "인구":     "population people crowd demographic",
+    "사람":     "people crowd urban street",
+    "국민":     "people community society crowd",
+}
+
+def _strip_korean_particles(kw: str) -> str:
+    _PARTICLES = [
+        "이후에는","이후에도","에서는","에서도","으로는","으로도","으로서",
+        "에게는","에게도","에서","부터는","까지는","에는","에도","로는",
+        "이고","이며","이나","이지","이야","이다","이라","의해",
+        "에서","에","로","을","를","은","는","이","가","와","과","도","만","의",
+    ]
+    result = kw.strip()
+    for p in _PARTICLES:
+        if result.endswith(p) and len(result) > len(p) + 1:
+            result = result[:-len(p)].strip()
+            break
+    return result
 
 # ==================== [Y2] 도메인 키워드 치환 + 부정 필터 ====================
 # 전문용어는 Pexels 가 이해하는 표현으로 자동 치환
@@ -314,7 +398,14 @@ def _expand_domain_keyword(kw: str) -> str:
         ascii_only = ascii_only.strip()
         if len(ascii_only.split()) >= 2:
             return ascii_only
-        return ""  # 영어 토큰 1개 이하면 호출측 fallback
+        # [v15.78] KOREAN_GENERAL_MAP 재조회
+        _base = _strip_korean_particles(kw.lower().strip())
+        if _base in KOREAN_GENERAL_MAP:
+            return KOREAN_GENERAL_MAP[_base]
+        for _k, _v in KOREAN_GENERAL_MAP.items():
+            if _k in _base or _base in _k:
+                return _v
+        return _base if _base else ""
     return kw
 
 
@@ -675,6 +766,67 @@ def create_lower_third_ass(events: list, output_path: "Path") -> bool:
         logger.error(f"[v15.77] 로워서드 ASS 실패: {e}")
         return False
 
+
+# [v15.78] 중앙 키워드 배너 (지식인사이드 스타일)
+def _extract_center_banner_events(scenes: list, video_duration: float = 300.0) -> list:
+    import re as _re78
+    candidates = []
+    cumulative = 0.0
+    for scene in scenes:
+        narr = scene.narration or scene.description or ""
+        dur = max(scene.duration_seconds or 5.0, 1.0)
+        for m in _re78.finditer(r"\[하이라이트:\s*([^\]]{2,30})\]", narr):
+            text = m.group(1).strip()
+            has_num = bool(_re78.search(r"\d", text))
+            has_unit = bool(_re78.search(r"[%억조만명위]", text))
+            weight = 3 if (has_num and has_unit) else (2 if has_num else 1)
+            ratio = m.start() / max(len(narr), 1)
+            t_start = cumulative + ratio * dur
+            candidates.append({"start": round(max(t_start+0.3,0),2),
+                                "end": round(t_start+2.2,2),
+                                "text": text, "weight": weight})
+        cumulative += dur
+    candidates.sort(key=lambda x: -x["weight"])
+    selected, used_times = [], []
+    for c in candidates:
+        if not any(abs(c["start"]-t) < 15.0 for t in used_times) and c["end"] <= video_duration+1:
+            selected.append(c)
+            used_times.append(c["start"])
+        if len(selected) >= 5:
+            break
+    selected.sort(key=lambda x: x["start"])
+    return selected
+
+def create_center_banner_ass(events: list, output_path) -> bool:
+    if not events:
+        return False
+    try:
+        F = "Noto Sans CJK KR"
+        lines = [
+            "[Script Info]", "ScriptType: v4.00+",
+            "PlayResX: 1920", "PlayResY: 1080", "WrapStyle: 0", "",
+            "[V4+ Styles]",
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+            f"Style: Banner,{F},82,&H00FFFFFF,&H000000FF,&H00000000,&HBB000000,-1,0,0,0,100,100,3,0,3,0,0,5,80,80,0,1",
+            f"Style: Accent,{F},88,&H0000FFFF,&H000000FF,&H00000000,&HBB000000,-1,0,0,0,100,100,2,0,3,0,0,5,80,80,0,1",
+            "", "[Events]",
+            "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+        ]
+        import re as _r
+        def _fmt(s):
+            h=int(s//3600); m=int((s%3600)//60); sec=s%60
+            return f"{h}:{m:02d}:{sec:05.2f}"
+        for ev in events:
+            text = ev["text"].replace("\n"," ").replace(",","，")
+            style = "Accent" if _r.search(r"\d+.*[%억조만명위]|[%억조만명위].*\d+", text) else "Banner"
+            lines.append(f"Dialogue: 2,{_fmt(ev['start'])},{_fmt(ev['end'])},{style},,80,80,0,,{text}")
+        output_path.write_text("\n".join(lines), encoding="utf-8-sig")
+        logger.info(f"[v15.78] 중앙배너 ASS: {len(events)}개")
+        return True
+    except Exception as e:
+        logger.error(f"[v15.78] 중앙배너 실패: {e}")
+        return False
+
 # ─────────────────────────────────────────────────────────────────
 
 def _escape_drawtext(txt: str) -> str:
@@ -946,6 +1098,9 @@ PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY", "")
 LF_API_KEY = os.getenv("LF_API_KEY", "")
 
+STORYBLOCKS_PRIVATE_KEY = os.getenv("STORYBLOCKS_PRIVATE_KEY", "")
+STORYBLOCKS_PUBLIC_KEY  = os.getenv("STORYBLOCKS_PUBLIC_KEY", "")
+_ASSET_CACHE_DB = Path("/data/jobs/asset_cache.db")
 # [v15.66.0] 공통 API Key 검증 Depends 함수
 def verify_api_key(x_lf_api_key: str = Header(None, alias="X-LF-API-Key")):
     """X-LF-API-Key 헤더 검증. 키 미설정 환경에서는 통과."""
@@ -1267,6 +1422,97 @@ async def get_pixabay_videos(keyword: str, per_page: int = 5) -> List[Dict[str, 
         logger.error(f"Pixabay 검색 오류 ({keyword}): {e}")
         return []
 
+
+# ─────────────────────────────────────────────
+# [PATCH J / v15.83] Storyblocks + SQLite 캐시
+# ─────────────────────────────────────────────
+import hmac as _hmac, hashlib as _hashlib, sqlite3 as _sqlite3, time as _time_j
+
+def _init_asset_cache():
+    """SQLite 자산 캐시 초기화."""
+    try:
+        _ASSET_CACHE_DB.parent.mkdir(parents=True, exist_ok=True)
+        conn = _sqlite3.connect(str(_ASSET_CACHE_DB))
+        conn.execute("""CREATE TABLE IF NOT EXISTS asset_cache (
+            keyword TEXT, url TEXT PRIMARY KEY,
+            local_path TEXT, ts INTEGER
+        )""")
+        conn.commit(); conn.close()
+    except Exception as _e:
+        logger.warning(f"[J] SQLite 초기화 실패: {_e}")
+
+def _cache_lookup(keyword: str) -> Optional[str]:
+    """캐시에서 로컬 경로 반환 (파일 존재 시만)."""
+    try:
+        conn = _sqlite3.connect(str(_ASSET_CACHE_DB))
+        cur = conn.execute(
+            "SELECT local_path FROM asset_cache WHERE keyword=? ORDER BY ts DESC LIMIT 5",
+            (keyword.lower().strip(),))
+        rows = cur.fetchall(); conn.close()
+        for (lp,) in rows:
+            if lp and Path(lp).exists() and Path(lp).stat().st_size > 4096:
+                return lp
+    except Exception:
+        pass
+    return None
+
+def _cache_write(keyword: str, url: str, local_path: str):
+    """자산 캐시에 기록."""
+    try:
+        conn = _sqlite3.connect(str(_ASSET_CACHE_DB))
+        conn.execute(
+            "INSERT OR REPLACE INTO asset_cache (keyword,url,local_path,ts) VALUES (?,?,?,?)",
+            (keyword.lower().strip(), url, local_path, int(_time_j.time())))
+        conn.commit(); conn.close()
+    except Exception:
+        pass
+
+async def get_storyblocks_videos(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
+    """[PATCH J] Storyblocks API 검색 (HMAC 인증 또는 API Key 방식)."""
+    if not STORYBLOCKS_PRIVATE_KEY or not STORYBLOCKS_PUBLIC_KEY:
+        return []
+    try:
+        import time as _t
+        expires = str(int(_t.time()) + 30)
+        msg = (STORYBLOCKS_PRIVATE_KEY + STORYBLOCKS_PUBLIC_KEY + expires).encode()
+        sig = _hmac.new(STORYBLOCKS_PRIVATE_KEY.encode(), msg, _hashlib.sha256).hexdigest()
+        params = {
+            "project_id": STORYBLOCKS_PUBLIC_KEY,
+            "user_id": "longform_factory",
+            "username": "longform_factory",
+            "expires": expires,
+            "hmac": sig,
+            "keywords": keyword,
+            "results_per_page": per_page,
+            "content_type": "footage",
+        }
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(
+                "https://api.storyblocks.com/api/v2/videos/search", params=params)
+            if resp.status_code != 200:
+                logger.warning(f"[Storyblocks] HTTP {resp.status_code}: {resp.text[:100]}")
+                return []
+            data = resp.json()
+            results = data.get("results", [])
+            videos = []
+            for item in results[:per_page]:
+                preview = item.get("preview_url") or item.get("thumbnail_url") or ""
+                dl_url  = item.get("download_url") or preview
+                if dl_url:
+                    videos.append({
+                        "source": "storyblocks",
+                        "url": dl_url,
+                        "width": item.get("frame_width", 1920),
+                        "height": item.get("frame_height", 1080),
+                        "duration": item.get("duration", 10),
+                    })
+            logger.info(f"[Storyblocks] '{keyword}': {len(videos)}개")
+            return videos
+    except Exception as e:
+        logger.warning(f"[Storyblocks] 오류: {e}")
+        return []
+
+_init_asset_cache()
 
 def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict],
                        scene_index: int = 0,
@@ -1612,6 +1858,351 @@ async def generate_kling_video(
         return False
 
 
+# ─────────────────────────────────────────────
+# [PATCH K / v15.83] WAN 2.6 T2V via PiAPI
+# 스톡 실패 시 \.08/sec 무워터마크 B-roll 생성
+# ─────────────────────────────────────────────
+_WAN_API_KEY = os.getenv("PIAPI_KEY", "")  # https://piapi.ai
+_AIML_API_KEY = os.getenv("AIMLAPI_KEY", "")  # https://aimlapi.com — WAN 2.6 T2V 대안
+_REPLICATE_API_KEY = os.getenv("REPLICATE_API_TOKEN", "")  # https://replicate.com — WAN 2.1 @$0.20/영상
+_WAVESPEED_API_KEY = os.getenv("WAVESPEED_API_KEY", "")  # https://wavespeed.ai — $0.01/sec (신규 $1 무료)
+
+async def generate_wan_video(
+    prompt_en: str,
+    duration: int,
+    scene_id: str,
+    output_path: Path,
+    max_wait_sec: float = 180.0,
+) -> bool:
+    "'''[PATCH K] WAN 2.6 T2V (PiAPI) — 무워터마크 B-roll 생성.'''"
+    if not _WAN_API_KEY:
+        return False
+    try:
+        dur_sec = min(max(int(duration), 3), 15)
+        payload = {
+            "model": "Wan",
+            "task_type": "wan26-txt2video",
+            "input": {
+                "prompt": prompt_en[:800],
+                "negative_prompt": "text, watermark, subtitle, logo, blurry, shaky, low quality",
+                "duration": dur_sec,
+                "resolution": "720p",
+            }
+        }
+        headers = {"x-api-key": _WAN_API_KEY, "Content-Type": "application/json"}
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post("https://api.piapi.ai/api/v1/task",
+                                     json=payload, headers=headers)
+            if resp.status_code not in (200, 201):
+                logger.warning(f"[WAN] 생성 요청 실패 {resp.status_code}: {resp.text[:150]}")
+                return False
+            data = resp.json()
+        task_id = (data.get("data") or {}).get("task_id") or data.get("task_id", "")
+        if not task_id:
+            logger.warning(f"[WAN] task_id 없음: {data}")
+            return False
+        logger.info(f"[WAN] task_id={task_id} scene={scene_id}")
+        waited, poll_interval, video_url = 0.0, 8.0, ""
+        while waited < max_wait_sec:
+            await asyncio.sleep(poll_interval)
+            waited += poll_interval
+            try:
+                async with httpx.AsyncClient(timeout=20.0) as pc:
+                    pr = await pc.get(f"https://api.piapi.ai/api/v1/task/{task_id}",
+                                      headers={"x-api-key": _WAN_API_KEY})
+                    pd = pr.json()
+                st = (pd.get("data") or pd).get("status", "")
+                logger.info(f"[WAN] {task_id} status={st} waited={waited:.0f}s")
+                if st in ("completed", "succeed", "success"):
+                    out = (pd.get("data") or pd).get("output") or {}
+                    video_url = (out.get("video_url") or out.get("url") or
+                                 out.get("videos", [{}])[0].get("url", "") if isinstance(out.get("videos"), list) else "")
+                    break
+                elif st in ("failed", "cancelled", "error"):
+                    logger.warning(f"[WAN] 실패: {pd}")
+                    return False
+            except Exception as pe:
+                logger.warning(f"[WAN] 폴링 오류: {pe}")
+        if not video_url:
+            logger.warning(f"[WAN] video_url 없음 (waited={waited:.0f}s)")
+            return False
+        logger.info(f"[WAN] 다운로드: {video_url[:80]}")
+        async with httpx.AsyncClient(timeout=90.0, follow_redirects=True) as dl:
+            r = await dl.get(video_url)
+            if r.status_code == 200:
+                output_path.write_bytes(r.content)
+                sz = output_path.stat().st_size
+                logger.info(f"[WAN] ✅ 저장: {output_path} ({sz//1024}KB)")
+                return sz > 4096
+            logger.warning(f"[WAN] 다운로드 실패 {r.status_code}")
+            return False
+    except Exception as e:
+        logger.warning(f"[WAN] 예외: {e}")
+        return False
+
+# ─────────────────────────────────────────────
+# [PATCH L / v15.83] Replicate API — WAN 2.1 T2V
+# WAN 2.1 1.3B = .20/영상 (최저가 유료 AI B-roll)
+# 무료 Try-for-free 컬렉션으로 초기 무과금 가능
+# ─────────────────────────────────────────────
+async def generate_replicate_video(
+    prompt_en: str,
+    duration: int,
+    scene_id: str,
+    output_path: Path,
+    model: str = "wavespeedai/wan-2.1-t2v-480p",
+    max_wait_sec: float = 180.0,
+) -> bool:
+    "'''[PATCH L] Replicate T2V — WAN 2.1 1.3B 기본 (.20/영상).'''"
+    if not _REPLICATE_API_KEY:
+        return False
+    try:
+        headers = {
+            "Authorization": f"Token {_REPLICATE_API_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "wait"
+        }
+        fps, frames = 16, max(int(duration) * 16, 48)
+        payload = {
+            "input": {
+                "prompt": prompt_en[:500],
+                "negative_prompt": "text, watermark, logo, blurry, shaky",
+                "num_frames": frames,
+                "fps": fps,
+                "width": 854, "height": 480,
+            }
+        }
+        url = f"https://api.replicate.com/v1/models/{model}/predictions"
+        async with httpx.AsyncClient(timeout=40.0) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+            if resp.status_code not in (200, 201):
+                logger.warning(f"[Replicate] {resp.status_code}: {resp.text[:150]}")
+                return False
+            data = resp.json()
+        pred_id  = data.get("id", "")
+        if not pred_id:
+            logger.warning(f"[Replicate] prediction id 없음: {data}")
+            return False
+        logger.info(f"[Replicate] pred_id={pred_id} scene={scene_id}")
+        # Prefer:wait 로 즉시 완료되면 output 있음
+        output_url = ""
+        if data.get("status") in ("succeeded",):
+            out = data.get("output")
+            output_url = out if isinstance(out, str) else (out[0] if isinstance(out, list) and out else "")
+        # 폴링
+        waited = 0.0
+        while not output_url and waited < max_wait_sec:
+            await asyncio.sleep(8.0); waited += 8.0
+            try:
+                async with httpx.AsyncClient(timeout=20.0) as pc:
+                    pr = await pc.get(f"https://api.replicate.com/v1/predictions/{pred_id}",
+                                      headers={"Authorization": f"Token {_REPLICATE_API_KEY}"})
+                    pd = pr.json()
+                st = pd.get("status", "")
+                logger.info(f"[Replicate] {pred_id} status={st} waited={waited:.0f}s")
+                if st == "succeeded":
+                    out = pd.get("output")
+                    output_url = out if isinstance(out, str) else (out[0] if isinstance(out, list) and out else "")
+                    break
+                elif st in ("failed", "canceled"):
+                    logger.warning(f"[Replicate] 실패: {pd.get('error')}")
+                    return False
+            except Exception as pe:
+                logger.warning(f"[Replicate] 폴링 오류: {pe}")
+        if not output_url:
+            logger.warning(f"[Replicate] output_url 없음 (waited={waited:.0f}s)")
+            return False
+        logger.info(f"[Replicate] 다운로드: {output_url[:80]}")
+        async with httpx.AsyncClient(timeout=90.0, follow_redirects=True) as dl:
+            r = await dl.get(output_url)
+            if r.status_code == 200:
+                output_path.write_bytes(r.content)
+                sz = output_path.stat().st_size
+                logger.info(f"[Replicate] ✅ {output_path} ({sz//1024}KB)")
+                return sz > 4096
+        return False
+    except Exception as e:
+        logger.warning(f"[Replicate] 예외: {e}")
+        return False
+
+# ─────────────────────────────────────────────
+# [PATCH O / v15.83] WaveSpeedAI API
+# WAN 2.2 Ultra Fast: .01/sec | 신규  무료크레딧(=20클립)
+# ─────────────────────────────────────────────
+async def generate_wavespeed_video(
+    prompt_en: str,
+    duration: int,
+    scene_id: str,
+    output_path: Path,
+    model: str = "wavespeed-ai/wan-2.2-ultra-fast",
+    max_wait_sec: float = 120.0,
+) -> bool:
+    if not _WAVESPEED_API_KEY:
+        return False
+    try:
+        dur_sec = min(max(int(duration), 3), 10)
+        payload = {
+            "prompt": prompt_en[:600],
+            "negative_prompt": "text, watermark, subtitle, logo, blurry, shaky, nsfw",
+            "duration": dur_sec,
+            "resolution": "720p",
+            "seed": -1,
+        }
+        headers = {"Authorization": f"Bearer {_WAVESPEED_API_KEY}", "Content-Type": "application/json"}
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(f"https://api.wavespeed.ai/api/v3/{model}", json=payload, headers=headers)
+            if resp.status_code not in (200, 201):
+                logger.warning(f"[WaveSpeed] {resp.status_code}: {resp.text[:150]}")
+                return False
+            data = resp.json()
+        req_id = (data.get("data") or {}).get("id") or data.get("id") or data.get("request_id", "")
+        if not req_id:
+            logger.warning(f"[WaveSpeed] request_id 없음: {data}")
+            return False
+        logger.info(f"[WaveSpeed] req_id={req_id} scene={scene_id}")
+        waited, poll_interval, video_url = 0.0, 5.0, ""
+        while waited < max_wait_sec:
+            await asyncio.sleep(poll_interval); waited += poll_interval
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as pc:
+                    pr = await pc.get(f"https://api.wavespeed.ai/api/v3/predictions/{req_id}/result",
+                                      headers={"Authorization": f"Bearer {_WAVESPEED_API_KEY}"})
+                    pd = pr.json()
+                st = (pd.get("data") or pd).get("status", "")
+                logger.info(f"[WaveSpeed] {req_id} status={st} waited={waited:.0f}s")
+                if st in ("completed", "succeeded", "success"):
+                    out = (pd.get("data") or pd).get("outputs") or (pd.get("data") or pd).get("output") or {}
+                    if isinstance(out, list): video_url = out[0] if out else ""
+                    elif isinstance(out, dict): video_url = out.get("video_url") or out.get("url", "")
+                    elif isinstance(out, str): video_url = out
+                    break
+                elif st in ("failed", "canceled"):
+                    logger.warning(f"[WaveSpeed] 실패: {pd}"); return False
+            except Exception as pe:
+                logger.warning(f"[WaveSpeed] 폴링: {pe}")
+        if not video_url:
+            logger.warning(f"[WaveSpeed] video_url 없음 ({waited:.0f}s)"); return False
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as dl:
+            r = await dl.get(video_url)
+            if r.status_code == 200:
+                output_path.write_bytes(r.content); sz = output_path.stat().st_size
+                logger.info(f"[WaveSpeed] OK {output_path} ({sz//1024}KB)"); return sz > 4096
+        return False
+    except Exception as e:
+        logger.warning(f"[WaveSpeed] 예외: {e}"); return False
+
+
+
+
+# [PATCH P / v15.84] Google Gemini Veo 2 API — $0.12/sec (무료 티어: 월 5 videos)
+_GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # generativelanguage.googleapis.com
+
+async def generate_veo_video(
+    prompt_en: str,
+    duration: int,
+    scene_id: str,
+    output_path: Path,
+    model: str = "veo-2.0-generate-001",
+    max_wait_sec: float = 300.0,
+) -> bool:
+    """Google Gemini Veo 2 T2V — predictLongRunning + polling."""
+    if not _GEMINI_API_KEY:
+        return False
+    try:
+        dur = min(max(int(duration), 5), 8)  # Veo 2: 5~8초
+        base_url = "https://generativelanguage.googleapis.com/v1beta"
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": _GEMINI_API_KEY,
+        }
+        payload = {
+            "instances": [{"prompt": prompt_en[:480]}],
+            "parameters": {
+                "sampleCount": 1,
+                "durationSeconds": dur,
+                "aspectRatio": "16:9",
+                "outputOptions": {"mimeType": "video/mp4"},
+            },
+        }
+        async with httpx.AsyncClient(timeout=60.0) as cli:
+            r = await cli.post(
+                f"{base_url}/models/{model}:predictLongRunning",
+                headers=headers, json=payload,
+            )
+        if r.status_code not in (200, 202):
+            logger.warning(f"[Veo2] submit fail {r.status_code}: {r.text[:200]}")
+            return False
+        op = r.json()
+        op_name = op.get("name", "")
+        if not op_name:
+            logger.warning("[Veo2] operation name 없음")
+            return False
+        logger.info(f"[Veo2] operation: {op_name}")
+
+        # polling
+        waited = 0.0
+        poll_interval = 8.0
+        async with httpx.AsyncClient(timeout=30.0) as cli:
+            while waited < max_wait_sec:
+                await asyncio.sleep(poll_interval)
+                waited += poll_interval
+                pr = await cli.get(
+                    f"{base_url}/{op_name}",
+                    headers={"x-goog-api-key": _GEMINI_API_KEY},
+                )
+                if pr.status_code != 200:
+                    continue
+                pd = pr.json()
+                if not pd.get("done"):
+                    logger.debug(f"[Veo2] waiting... ({waited:.0f}s)")
+                    continue
+                # 완료
+                err = pd.get("error")
+                if err:
+                    logger.warning(f"[Veo2] error: {err}")
+                    return False
+                resp = pd.get("response", {})
+                samples = resp.get("generatedSamples", [])
+                if not samples:
+                    # fallback: videoBytes
+                    vb = resp.get("videos", [{}])[0].get("videoBytes", "")
+                    if vb:
+                        import base64 as _b64
+                        output_path.write_bytes(_b64.b64decode(vb))
+                        ok = output_path.exists() and output_path.stat().st_size > 4096
+                        if ok:
+                            logger.info(f"[Veo2] OK (bytes) {output_path} ({output_path.stat().st_size//1024}KB)")
+                        return ok
+                    logger.warning("[Veo2] generatedSamples 없음")
+                    return False
+                video_info = samples[0].get("video", {})
+                video_uri  = video_info.get("uri", "")
+                video_bytes = video_info.get("videoBytes", "")
+                if video_uri:
+                    async with httpx.AsyncClient(timeout=120.0) as dl:
+                        vr = await dl.get(video_uri)
+                    if vr.status_code == 200:
+                        output_path.write_bytes(vr.content)
+                        ok = output_path.exists() and output_path.stat().st_size > 4096
+                        if ok:
+                            logger.info(f"[Veo2] OK {output_path} ({output_path.stat().st_size//1024}KB)")
+                        return ok
+                elif video_bytes:
+                    import base64 as _b64
+                    output_path.write_bytes(_b64.b64decode(video_bytes))
+                    ok = output_path.exists() and output_path.stat().st_size > 4096
+                    if ok:
+                        logger.info(f"[Veo2] OK (bytes) {output_path} ({output_path.stat().st_size//1024}KB)")
+                    return ok
+                logger.warning("[Veo2] video_uri/videoBytes 없음")
+                return False
+        logger.warning(f"[Veo2] timeout {max_wait_sec}s 초과")
+        return False
+    except Exception as e:
+        logger.warning(f"[Veo2] 예외: {e}")
+        return False
+
+
 async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[Scene]:
     """각 장면에 대해 자산 검색 및 다운로드 ([AF-14] 영상 중복 제거)."""
     seen_urls: set = set()
@@ -1661,6 +2252,64 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                         updated_scenes.append(scene)
                         logger.info(f"[Kling] ✅ {scene.scene_id} 완료 — 스톡 스킵")
                         continue
+            # [PATCH K] WAN 2.6 T2V B-roll (hook/closing 또는 비선택 모드)
+            _should_wan = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and _AI_VIDEO_PROVIDER in ("wan", "") and bool(_WAN_API_KEY or _AIML_API_KEY)
+            if not _kling_ok and _should_wan:
+                _wp = (scene.narration_en or (scene.visual_intent or "") + ", " + ", ".join((scene.visual_keywords or [])[:2]) + ", cinematic B-roll 4K").strip(", ")
+                if _wp and len(_wp) > 10:
+                    _wo = job_assets_dir / f"{scene.scene_id}_wan.mp4"
+                    _wd = max(int(scene.duration_seconds or 5), 5)
+                    logger.info(f"[WAN] {scene.scene_id} dur={_wd}s")
+                    _wan_ok = await generate_wan_video(_wp, _wd, scene.scene_id, _wo)
+                    if _wan_ok:
+                        scene.asset_url = str(_wo)
+                        updated_scenes.append(scene)
+                        logger.info(f"[WAN] ✅ {scene.scene_id} 완료 — 스톡 스킵")
+                        continue
+            # [PATCH L] Replicate WAN 2.1 B-roll ($0.20/영상 — Kling/WAN API 미설정 시)
+            _should_replicate = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_REPLICATE_API_KEY)
+            if not _kling_ok and not _should_wan and _should_replicate:
+                _rp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage 4K").strip(", ")
+                if _rp and len(_rp) > 10:
+                    _ro = job_assets_dir / f"{scene.scene_id}_rep.mp4"
+                    _rd = max(int(scene.duration_seconds or 5), 5)
+                    logger.info(f"[Replicate] {scene.scene_id} dur={_rd}s")
+                    _rep_ok = await generate_replicate_video(_rp, _rd, scene.scene_id, _ro)
+                    if _rep_ok:
+                        scene.asset_url = str(_ro)
+                        updated_scenes.append(scene)
+                        logger.info(f"[Replicate] ✅ {scene.scene_id} 완료 — 스톡 스킵")
+                        continue
+
+            # [PATCH O] WaveSpeed API B-roll ($0.01/sec, 신규 $1 무료 — 최저가)
+            _should_ws = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_WAVESPEED_API_KEY)
+            if not _kling_ok and not _should_wan and not _should_replicate and _should_ws:
+                _wsp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic B-roll 4K").strip(", ")
+                if _wsp and len(_wsp) > 10:
+                    _wso = job_assets_dir / f"{scene.scene_id}_ws.mp4"
+                    _wsd = max(int(scene.duration_seconds or 5), 3)
+                    logger.info(f"[WaveSpeed] {scene.scene_id} dur={_wsd}s")
+                    _ws_ok = await generate_wavespeed_video(_wsp, _wsd, scene.scene_id, _wso)
+                    if _ws_ok:
+                        scene.asset_url = str(_wso)
+                        updated_scenes.append(scene)
+                        logger.info(f"[WaveSpeed] OK {scene.scene_id} — 스톡 스킵")
+                        continue
+
+            # [PATCH P / v15.84] Veo 2 — Google Gemini 유료키 활용
+            _should_veo = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_GEMINI_API_KEY) and _AI_VIDEO_PROVIDER in ("veo", "")
+            if not _kling_ok and not _should_wan and not _should_replicate and not _should_ws and _should_veo:
+                _vp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic 4K footage").strip(", ")
+                if _vp and len(_vp) > 10:
+                    _vd = max(int(scene.duration_seconds or 5), 5)
+                    _vo = job_assets_dir / f"{scene.scene_id}_veo.mp4"
+                    logger.info(f"[Veo2] {scene.scene_id} dur={_vd}s")
+                    _veo_ok = await generate_veo_video(_vp, _vd, scene.scene_id, _vo)
+                    if _veo_ok:
+                        scene.asset_url = str(_vo)
+                        updated_scenes.append(scene)
+                        logger.info(f"[Veo2] OK {scene.scene_id} — 스톡 스킵")
+                        continue
 
             # 병렬로 Pexels와 Pixabay 검색
             expanded_kw = _expand_domain_keyword(scene.keyword)
@@ -1679,7 +2328,21 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                 else:
                     expanded_kw = _get_topic_fallback(_raw_kw, '')
                 scene.keyword = expanded_kw
-                logger.info(f"[v15.75] empty kw fallback: '{_raw_kw}' -> '{expanded_kw}'")
+                # [v15.78] KGM 재조회
+                if not expanded_kw.strip():
+                    _base78 = _strip_korean_particles(_raw_kw.lower().strip()) if _raw_kw else ""
+                    _kgm_match = KOREAN_GENERAL_MAP.get(_base78) or next(
+                        (v for k,v in KOREAN_GENERAL_MAP.items() if k in _base78 or _base78 in k), None)
+                    if _kgm_match:
+                        expanded_kw = _kgm_match
+                logger.info(f"[v15.78] empty kw fallback: '{_raw_kw}' -> '{expanded_kw}'")
+            # [PATCH J / v15.83] SQLite 캐시 확인
+            _cached_path_j = _cache_lookup(expanded_kw)
+            if _cached_path_j:
+                scene.asset_url = _cached_path_j
+                logger.info(f"[J-CACHE] \"{expanded_kw}\" HIT: {_cached_path_j}")
+                updated_scenes.append(scene)
+                continue
             pexels_videos, pixabay_videos = await asyncio.gather(
                 get_pexels_videos(expanded_kw),
                 get_pixabay_videos(expanded_kw)
@@ -1711,13 +2374,33 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     logger.warning(f'[v15.68 CQ{_ci+1}] "{_cq}" 실패: {_ce}')
             
             
+            # [PATCH J] 무료 결과 부족 시 Storyblocks 병렬 (무료우선+유료병렬)
+            _j_free_total = len(pexels_videos) + len(pixabay_videos)
+            if _j_free_total < 3 and STORYBLOCKS_PRIVATE_KEY:
+                try:
+                    _sb_par = await get_storyblocks_videos(expanded_kw, per_page=5)
+                    if _sb_par:
+                        pixabay_videos += _sb_par
+                        logger.info(f"[J-SB parallel] {len(_sb_par)}개 추가 (free={_j_free_total})")
+                except Exception as _j_sb_e:
+                    logger.warning(f"[J-SB parallel] 오류: {_j_sb_e}")
             # 최고 품질의 영상 선택
             best_video_url = select_best_video(pexels_videos, pixabay_videos, scene_index=idx, exclude_urls=seen_urls, query_keyword=scene.keyword or "")
             
             if not best_video_url:
-                logger.warning(f"장면 '{scene.scene_id}' 검색 결과 없음")
-                updated_scenes.append(scene)
-                continue
+                # [PATCH J] Storyblocks 최후 폴백
+                if STORYBLOCKS_PRIVATE_KEY:
+                    try:
+                        _sb_fb = await get_storyblocks_videos(expanded_kw, per_page=3)
+                        if _sb_fb:
+                            best_video_url = _sb_fb[0].get("url")
+                            logger.info(f"[J-SB fallback] {expanded_kw}: {str(best_video_url)[:80]}")
+                    except Exception as _j_fb_e:
+                        logger.warning(f"[J-SB fallback] err: {_j_fb_e}")
+                if not best_video_url:
+                    logger.warning(f"scene {scene.scene_id} no asset (3-tier failed)")
+                    updated_scenes.append(scene)
+                    continue
             
             # 영상 다운로드
             asset_filename = f"{scene.scene_id}.mp4"
@@ -1756,6 +2439,8 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
             if success:
                 scene.asset_url = str(asset_path)
                 logger.info(f"장면 '{scene.scene_id}' 다운로드 완료: {asset_path}")
+                # [PATCH J] 캐시 기록
+                _cache_write(expanded_kw, best_video_url, str(asset_path))
                 # [v15.68] alt 소스 영상 다운로드 (서브클립 3-4번 다양화)
                 _scene_alt_kws = getattr(scene, 'alt_keywords', []) or []
                 if _scene_alt_kws and not getattr(scene, 'alt_asset_url', None):
@@ -2564,11 +3249,11 @@ def generate_pro_thumbnail(
                     except Exception: pass
             return ImageFont.load_default()
 
-        font_badge  = _load_font(26)
-        font_main   = _load_font(76)
-        font_impact = _load_font(80)
-        font_sub    = _load_font(44)
-        font_bar    = _load_font(30)
+        font_badge  = _load_font(28)    # [v15.81] badge
+        font_main   = _load_font(88)    # [v15.81] +12px (25-35% 영역)
+        font_impact = _load_font(96)    # [v15.81] +16px impact
+        font_sub    = _load_font(50)    # [v15.81] +6px sub
+        font_bar    = _load_font(34)    # [v15.81] +4px bar
 
         # ── 8. 제목 파싱 — "/" 기준 분할 ────────────────────────
         parts_raw = [p.strip() for p in title.split("/") if p.strip()]
@@ -4313,7 +4998,7 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
             "filename": job_id,
             "engine": "edge",
             "edge_voice": "ko-KR-SunHiNeural",
-            "edge_rate": "-5%",
+            "edge_rate": "+10%",    # [v15.81] 130 WPM 최적화 (이전: -5%)
             "preprocess": True,
         }
         async with _httpx.AsyncClient(timeout=300.0) as _cli:
@@ -5334,6 +6019,56 @@ async def process_video_creation(
             except Exception as _lt_err:
                 logger.warning(f"[v15.77] 로워서드 스킵: {_lt_err}")
 
+            # [v15.78] 중앙 키워드 배너 오버레이
+            try:
+                _cb_events = _extract_center_banner_events(scenes, duration or 300.0)
+                if _cb_events:
+                    _cb_ass = job_temp_dir / f"{job_id}_banner.ass"
+                    if create_center_banner_ass(_cb_events, _cb_ass) and _cb_ass.exists():
+                        _cb_out = output_video.with_name(output_video.stem + "_cb.mp4")
+                        _cb_esc = str(_cb_ass).replace("\\", "/").replace(":", "\\:")
+                        _cb_cmd = ["ffmpeg","-y","-i",str(output_video),"-vf",
+                                   f"ass=\'{_cb_esc}\'","-c:v","libx264","-preset","fast",
+                                   "-crf","20","-c:a","copy",str(_cb_out)]
+                        if (run_ffmpeg_command(_cb_cmd, timeout=300.0)
+                                and _cb_out.exists() and _cb_out.stat().st_size > 4096):
+                            shutil.move(str(_cb_out), str(output_video))
+                            output_files["longform"] = str(output_video)
+                            logger.info(f"[v15.78] 중앙배너 완료: {len(_cb_events)}개")
+                        else:
+                            logger.warning("[v15.78] 중앙배너 렌더 실패")
+            except Exception as _cb_err:
+                logger.warning(f"[v15.78] 중앙배너 스킵: {_cb_err}")
+
+            # [v15.81] 패턴 인터럽트 SFX 오버레이 (재훅 배너 시점)
+            try:
+                if _cb_events and output_video.exists():
+                    _n_sfx81 = min(len(_cb_events), 3)
+                    _sfx81_out = output_video.with_name(output_video.stem + '_sfx.mp4')
+                    _sfx81_inputs = ['-f','lavfi']
+                    _sfx81_fc_parts = []
+                    _sfx81_cmd = ['ffmpeg','-y','-i',str(output_video)]
+                    for _si81 in range(_n_sfx81):
+                        _ts81 = int((_cb_events[_si81].get('start', 0.0)) * 1000)
+                        _sfx81_cmd += ['-f','lavfi','-i',
+                            f'aevalsrc=0.3*sin(2*PI*880*t)*exp(-t/0.05):s=44100:d=0.12']
+                        _sfx81_fc_parts.append(
+                            f'[{_si81+1}:a]adelay={_ts81}|{_ts81}[pop{_si81}]')
+                    _all_tags = '[0:a]' + ''.join(f'[pop{x}]' for x in range(_n_sfx81))
+                    _sfx81_fc = ';'.join(_sfx81_fc_parts) + f';{_all_tags}amix=inputs={_n_sfx81+1}:duration=first[ao]'
+                    _sfx81_cmd += ['-filter_complex',_sfx81_fc,
+                                   '-map','0:v','-map','[ao]',
+                                   '-c:v','copy','-c:a','aac','-b:a','192k','-y',str(_sfx81_out)]
+                    if (run_ffmpeg_command(_sfx81_cmd, timeout=120.0)
+                            and _sfx81_out.exists() and _sfx81_out.stat().st_size > 4096):
+                        shutil.move(str(_sfx81_out), str(output_video))
+                        logger.info(f'[v15.81] SFX 오버레이 완료: {_n_sfx81}개 팝')
+                    else:
+                        try: _sfx81_out.unlink()
+                        except: pass
+                        logger.warning('[v15.81] SFX 스킵')
+            except Exception as _sfx81_err:
+                logger.warning(f'[v15.81] SFX 예외: {_sfx81_err}')
             # 숏폼 생성
             if request.generate_shorts:
                 shorts_output = SHORTS_DIR / f"{job_id}_short.mp4"
@@ -6377,6 +7112,13 @@ async def auto_generate_script(
 
 목표 나레이션 길이: 총 {target_total_chars}자 이상 (각 섹션 {min_section_chars}자 이상 필수)
 
+## [v15.81] 100만뷰 필수 구조
+  - **Hook (첫 8초)**: 충격 수치 선공개 + Bold Promise + 결말 예고 (시청유지율 +18%)
+    예: `지금부터 [하이라이트: 3년 안에 사라질 직업 1위]를 공개합니다.`
+    예: `이 영상 끝까지 보면 [하이라이트: 연봉 3000만원 격차] 이유를 알게 됩니다.`
+  - **오픈루프**: 2~3번째 섹션에서 미해결 질문 → `왜 갑자기 이 현상이? 답은 후반부에.`
+  - **재훅 포인트 (매 180초)**: `잠깐, 더 놀라운 사실이 있습니다` 류의 긴장 재주입
+
 ## 방송 다큐 3막 구조 필수
   - 1막(오프닝/도발): 충격적 사실로 시작, "지금 이 순간~", "당신이 모르는~" 형식. 안녕하세요 금지.
   - 2막(심층분석): 전문가 인용, 통계, 사례, 반전 포인트. 매 60초 새 긴장 요소.
@@ -6384,10 +7126,11 @@ async def auto_generate_script(
 
 ## 나레이션 규칙
   - 한 문장 15~25자. 짧고 힘있게.
-  - 숫자/통계 사용 시 반드시 [하이라이트: 수치 또는 핵심어] 마커 삽입
+  - 숫자/통계 사용 시 반드시 [하이라이트: 수치 또는 핵심어] 마커 삽입 (씬당 최소 1개 필수)
     예시: "전 세계 [하이라이트: 470조원] 규모의 시장이 열리고 있습니다."
     예시: "이미 [하이라이트: 34개국 기업]이 도입을 완료했습니다."
   - 중요 전문용어: [하이라이트: 용어명] 마커 삽입
+  - 마커 없는 씬 절대 금지 — 수치 없는 씬도 [하이라이트: 핵심키워드] 포함
   - 패턴 인터럽트: 30초마다 반전 질문/충격 포인트
 
 ## 금지 사항
@@ -6431,7 +7174,7 @@ async def auto_build_scenes(
     """[AUTO 4/12] 원고 → 씬 자동 분할 (target_duration 비례)"""
     # [v15.70] target_duration 기반 동적 씬 수 계산
     _target_dur = max(target_duration_sec, 60)
-    _avg_scene_sec = 5.5  # 씬당 평균 5.5초
+    _avg_scene_sec = 7.5  # [v15.81] 7-9min optimal: 70씬 기준 (이전: 5.5)
     _min_scenes = max(8, int(_target_dur / 7))
     _max_scenes = max(15, int(_target_dur / 4))
     _rec_scenes = max(10, int(_target_dur / _avg_scene_sec))
@@ -6489,6 +7232,15 @@ JSON:
 ]"""
     result = await _call_llm_json(prompt, max_tokens=8000, temperature=0.5, quality_first=True)  # [v15.74]
 
+    # [v15.82] LLM dict 래퍼 언팩: {scenes:[...]}, {data:[...]}, {result:[...]}
+    if isinstance(result, dict) and not isinstance(result, list):
+        for _k82 in ('scenes','data','result','items','clips','list'):
+            if _k82 in result and isinstance(result[_k82], list):
+                result = result[_k82]; break
+        else:
+            _vals82 = [v for v in result.values() if isinstance(v, list) and v]
+            if _vals82: result = max(_vals82, key=len)
+        logger.info(f'[v15.82] dict 래퍼 언팩 완료: {len(result) if isinstance(result,list) else 0}개')
     if not isinstance(result, list) or not result:
         # fallback: 섹션별로 단순 씬 생성
         result = []
@@ -6715,6 +7467,61 @@ def auto_merge_voice_into_scenes(scenes_data: List[Dict], voice_plan: List[Dict]
             visual_pacing=s.get("preferred_motion", "slow_zoom_in"),
         )
         merged.append(scene)
+    # [v15.79] 키워드 중복 제거 — 동일 keyword 씬 시각적 변형
+    _seen_kw79 = {}
+    _VV79 = {
+        "business meeting": ["executive boardroom presentation","startup coworking team discussion","entrepreneur laptop office work","business handshake deal closing","corporate strategy whiteboard"],
+        "robotic factory": ["industrial robot assembly line close","automated manufacturing precision arm","factory floor human robot collaboration"],
+        "technology office": ["developer coding dual monitor screen","data scientist laptop analytics dashboard","tech startup open office modern"],
+        "city street people": ["pedestrian crosswalk rush hour asian","urban commuter subway crowd city","street market vendor outdoor crowd","city park families walking green"],
+        "ai technology": ["neural network visualization data","machine learning server room glowing","AI chip semiconductor close up","deep learning research lab scientist"],
+    }
+    _GA79 = ["close up detail","aerial establishing","wide panoramic","night illuminated","morning golden hour","indoor workspace","outdoor urban","slow motion","time lapse","documentary handheld"]
+    _ai79 = 0
+    for _sc79 in merged:
+        _kw79 = (_sc79.keyword or "").lower().strip()
+        if not _kw79:
+            continue
+        if _kw79 not in _seen_kw79:
+            _seen_kw79[_kw79] = 0
+        else:
+            _seen_kw79[_kw79] += 1
+            _dn79 = _seen_kw79[_kw79]
+            _vk79 = next((k for k in _VV79 if k in _kw79 or _kw79 in k), None)
+            if _vk79:
+                _nk79 = _VV79[_vk79][(_dn79 - 1) % len(_VV79[_vk79])]
+            else:
+                _bp79 = _kw79.split()[:2]
+                _nk79 = " ".join(_bp79) + " " + _GA79[_ai79 % len(_GA79)]
+                _ai79 += 1
+            _sc79.keyword = _nk79[:80]
+            if _sc79.visual_keywords:
+                _sc79.visual_keywords[0] = _nk79
+            logger.info(f"[v15.79] 중복kw 변형: {_kw79!r} -> {_nk79!r}")
+    # [v15.80] 타임라인 정규화 - 씬별 절대 타임코드 + 길이 보정
+    _MIN_DUR80 = 4.0    # 나레이션 씬 최소 길이(초)
+    _MAX_DUR80 = 30.0   # 씬 최대 길이(초)
+    _SUB_OFF80 = 0.1    # 자막 시작/종료 오프셋
+    _cursor80  = 0.0
+    for _sc80 in merged:
+        # 1. 길이 보정
+        _dur80 = float(_sc80.duration_seconds or 5.0)
+        _dur80 = max(_dur80, _MIN_DUR80)
+        _dur80 = min(_dur80, _MAX_DUR80)
+        _sc80.duration_seconds = round(_dur80, 2)
+        # 2. 절대 타임코드
+        _t0_80 = round(_cursor80, 3)
+        _t1_80 = round(_cursor80 + _dur80, 3)
+        _sc80.timing = {
+            'start':     _t0_80,
+            'end':       _t1_80,
+            'duration':  round(_dur80, 3),
+            'sub_start': round(_t0_80 + _SUB_OFF80, 3),
+            'sub_end':   round(_t1_80 - _SUB_OFF80, 3),
+        }
+        _cursor80 = _t1_80
+        logger.debug(f'[v15.80] 타임라인: {_sc80.scene_id} {_t0_80:.1f}~{_t1_80:.1f}s ({_dur80:.1f}s)')
+    logger.info(f'[v15.80] 타임라인 정규화 완료: 총 {_cursor80:.1f}s / {len(merged)}씬')
     logger.info(f"[AUTO] Scene 모델 변환 완료: {len(merged)}개")
     return merged
 
@@ -6862,7 +7669,15 @@ async def auto_generate_youtube_metadata(
 주제: {topic} | 제목초안: {script.get('title', topic)}
 언어: {language} | 길이: {total_min}분 {total_sec_remain}초
 
-제목규칙: 파워워드("완전정복","충격","절대모르는","비밀") + 숫자 포함 + 30~40자
+제목규칙 [v15.81] — 아래 7가지 공식 중 주제에 맞는 1개 선택:
+  1. 숫자형:    "N가지 [주제] 비밀 (아무도 안 알려주는)"
+  2. 궁금증 갭: "왜 갑자기 [현상]이 시작됐나? 충격 이유"
+  3. 경고형:    "지금 당장 [행동]하지 않으면 늦습니다"
+  4. 전환 약속: "[시간] 만에 [결과] 만든 [방법]"
+  5. 비교형:    "[A] vs [B], 진짜 승자는?"
+  6. 충격 공개: "아무도 몰랐던 [주제]의 [충격적 사실]"
+  7. 연도+행동: "2026년, 지금 [주제] [행동]해야 하는 이유"
+  규칙: 파워워드 필수 + 숫자 포함 + 30~40자 + CTR 목표 7%+
 설명규칙: 첫줄요약 + 타임스탬프 + 해시태그5개 + CTA
 태그: 30개 (주제+관련+롱테일)
 

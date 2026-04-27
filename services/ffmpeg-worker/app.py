@@ -2505,6 +2505,8 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
 
             # [v15.69] Kling T2V 우선 시도
             _kling_ok = False
+            _wan_ok = _rep_ok = _ws_ok = _veo_ok = _pw_ok = False
+            _pollo_ok = _sflow_ok = _apif_ok = _mhour_ok = False
             _is_hook_or_close = (scene.tone_profile or "").lower() in ("hook","closing","cta") or idx == 0 or idx == total_scenes - 1
             _ai_vid_selective = os.getenv("AI_VIDEO_SELECTIVE","true").lower() in ("1","true","yes")
             # [v15.70 Hybrid] hook/closing 필수 + selective mode 기반
@@ -2542,7 +2544,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                         continue
             # [PATCH L] Replicate WAN 2.1 B-roll ($0.20/영상 — Kling/WAN API 미설정 시)
             _should_replicate = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_REPLICATE_API_KEY)
-            if not _kling_ok and not _should_wan and _should_replicate:
+            if not _kling_ok and not _wan_ok and _should_replicate:
                 _rp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage 4K").strip(", ")
                 if _rp and len(_rp) > 10:
                     _ro = job_assets_dir / f"{scene.scene_id}_rep.mp4"
@@ -2557,7 +2559,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
 
             # [PATCH O] WaveSpeed API B-roll ($0.01/sec, 신규 $1 무료 — 최저가)
             _should_ws = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_WAVESPEED_API_KEY)
-            if not _kling_ok and not _should_wan and not _should_replicate and _should_ws:
+            if not _kling_ok and not _wan_ok and not _rep_ok and _should_ws:
                 _wsp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic B-roll 4K").strip(", ")
                 if _wsp and len(_wsp) > 10:
                     _wso = job_assets_dir / f"{scene.scene_id}_ws.mp4"
@@ -2572,7 +2574,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
 
             # [PATCH P / v15.84] Veo 2 — Google Gemini 유료키 활용
             _should_veo = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_GEMINI_API_KEY) and _AI_VIDEO_PROVIDER in ("veo", "")
-            if not _kling_ok and not _should_wan and not _should_replicate and not _should_ws and _should_veo:
+            if not _kling_ok and not _wan_ok and not _rep_ok and not _ws_ok and _should_veo:
                 _vp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic 4K footage").strip(", ")
                 if _vp and len(_vp) > 10:
                     _vd = max(int(scene.duration_seconds or 5), 5)
@@ -2599,8 +2601,8 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                 and (not _ai_vid_selective or _is_hook_or_close)
                 and (not _has_any_ai_api or _AI_VIDEO_PROVIDER == "playwright")
             )
-            if (not _kling_ok and not _should_wan and not _should_replicate
-                    and not _should_ws and not _should_veo and _should_pw):
+            if (not _kling_ok and not _wan_ok and not _rep_ok
+                    and not _ws_ok and not _veo_ok and _should_pw):
                 _pp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage").strip(", ")
                 if _pp and len(_pp) > 10:
                     _pd = max(int(scene.duration_seconds or 5), 3)
@@ -2615,7 +2617,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
 
             # [PATCH R / v15.86] Pollo.ai WAN 2.6 T2V
             _should_pollo = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_POLLO_API_KEY)
-            if not _kling_ok and not _should_wan and not _should_replicate and not _should_ws and not _should_veo and not _should_pw and _should_pollo:
+            if not _kling_ok and not _wan_ok and not _rep_ok and not _ws_ok and not _veo_ok and not _pw_ok and _should_pollo:
                 _plp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic B-roll").strip()[:480]
                 if _plp and len(_plp) > 10:
                     _plo = job_assets_dir / f"{scene.scene_id}_pollo.mp4"
@@ -2630,7 +2632,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
 
             # [PATCH S / v15.86] SiliconFlow WAN 2.6 T2V
             _should_sflow = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_SILICONFLOW_API_KEY)
-            if not _kling_ok and not _should_wan and not _should_replicate and not _should_ws and not _should_veo and not _should_pw and not _should_pollo and _should_sflow:
+            if not _kling_ok and not _wan_ok and not _rep_ok and not _ws_ok and not _veo_ok and not _pw_ok and not _pollo_ok and _should_sflow:
                 _sfp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic B-roll").strip()[:480]
                 if _sfp and len(_sfp) > 10:
                     _sfo = job_assets_dir / f"{scene.scene_id}_sflow.mp4"
@@ -2645,7 +2647,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
 
             # [PATCH T / v15.86] APIframe Runway Gen3 T2V
             _should_apiframe = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_APIFRAME_API_KEY)
-            if not _kling_ok and not _should_wan and not _should_replicate and not _should_ws and not _should_veo and not _should_pw and not _should_pollo and not _should_sflow and _should_apiframe:
+            if not _kling_ok and not _wan_ok and not _rep_ok and not _ws_ok and not _veo_ok and not _pw_ok and not _pollo_ok and not _sflow_ok and _should_apiframe:
                 _afp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic B-roll 4K").strip()[:480]
                 if _afp and len(_afp) > 10:
                     _afo = job_assets_dir / f"{scene.scene_id}_apif.mp4"
@@ -2660,7 +2662,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
 
             # [PATCH U / v15.86] MagicHour T2V
             _should_mhour = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_MAGICHOUR_API_KEY)
-            if not _kling_ok and not _should_wan and not _should_replicate and not _should_ws and not _should_veo and not _should_pw and not _should_pollo and not _should_sflow and not _should_apiframe and _should_mhour:
+            if not _kling_ok and not _wan_ok and not _rep_ok and not _ws_ok and not _veo_ok and not _pw_ok and not _pollo_ok and not _sflow_ok and not _apif_ok and _should_mhour:
                 _mhp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage").strip()[:480]
                 if _mhp and len(_mhp) > 10:
                     _mho = job_assets_dir / f"{scene.scene_id}_mhour.mp4"

@@ -2253,6 +2253,167 @@ async def generate_playwright_video(
         return False
 
 
+# ============================================================
+# [PATCH R-U / v15.86] Pollo + SiliconFlow + APIframe + MagicHour
+# ============================================================
+_POLLO_API_KEY       = os.getenv("POLLO_API_KEY", "")
+_POLLO_MODEL         = os.getenv("POLLO_MODEL", "wan-v2-6-flash")
+_SILICONFLOW_API_KEY = os.getenv("SILICONFLOW_API_KEY", "")
+_SILICONFLOW_MODEL   = os.getenv("SILICONFLOW_MODEL", "Wan-AI/Wan2.6-T2V-14B")
+_APIFRAME_API_KEY    = os.getenv("APIFRAME_API_KEY", "")
+_MAGICHOUR_API_KEY   = os.getenv("MAGICHOUR_API_KEY", "")
+
+
+async def _download_video(url: str, output_path: Path) -> bool:
+    async with httpx.AsyncClient(timeout=120.0) as dl:
+        vr = await dl.get(url)
+    if vr.status_code == 200:
+        output_path.write_bytes(vr.content)
+        return output_path.exists() and output_path.stat().st_size > 4096
+    return False
+
+
+async def generate_pollo_video(prompt_en: str, duration: int, scene_id: str,
+                                output_path: Path, max_wait_sec: float = 180.0) -> bool:
+    if not _POLLO_API_KEY: return False
+    try:
+        dur = min(max(int(duration), 3), 10)
+        h = {"Authorization": f"Bearer {_POLLO_API_KEY}", "Content-Type": "application/json"}
+        payload = {"model": _POLLO_MODEL, "prompt": prompt_en[:480],
+                   "duration": dur, "aspect_ratio": "16:9"}
+        async with httpx.AsyncClient(timeout=30.0) as c:
+            r = await c.post("https://api.pollo.ai/api/v1/generations/video", headers=h, json=payload)
+        if r.status_code not in (200, 201, 202):
+            logger.warning(f"[Pollo] {r.status_code}: {r.text[:200]}"); return False
+        d = r.json()
+        task_id = (d.get("data") or d).get("id") or d.get("task_id", "")
+        if not task_id: logger.warning(f"[Pollo] no task_id"); return False
+        logger.info(f"[Pollo] task={task_id}")
+        waited = 0.0
+        async with httpx.AsyncClient(timeout=30.0) as c:
+            while waited < max_wait_sec:
+                await asyncio.sleep(6.0); waited += 6.0
+                pr = await c.get(f"https://api.pollo.ai/api/v1/generations/video/{task_id}", headers=h)
+                if pr.status_code != 200: continue
+                pd = pr.json().get("data") or pr.json()
+                st = pd.get("status", "")
+                if st in ("failed", "error"): return False
+                if st not in ("completed", "succeeded", "success", "done"): continue
+                vurl = (pd.get("output") or {}).get("url") or pd.get("video_url") or pd.get("url", "")
+                if not vurl:
+                    for k in ("outputs", "videos", "results"):
+                        v = pd.get(k)
+                        if isinstance(v, list) and v: vurl = v[0].get("url", ""); break
+                if vurl:
+                    ok = await _download_video(vurl, output_path)
+                    if ok: logger.info(f"[Pollo] OK {scene_id}")
+                    return ok
+        return False
+    except Exception as e: logger.warning(f"[Pollo] {e}"); return False
+
+
+async def generate_siliconflow_video(prompt_en: str, duration: int, scene_id: str,
+                                      output_path: Path, max_wait_sec: float = 180.0) -> bool:
+    if not _SILICONFLOW_API_KEY: return False
+    try:
+        dur = min(max(int(duration), 3), 10)
+        h = {"Authorization": f"Bearer {_SILICONFLOW_API_KEY}", "Content-Type": "application/json"}
+        payload = {"model": _SILICONFLOW_MODEL, "prompt": prompt_en[:480],
+                   "image_size": "1280x720", "num_frames": dur * 8}
+        async with httpx.AsyncClient(timeout=30.0) as c:
+            r = await c.post("https://api.siliconflow.cn/v1/video/submit", headers=h, json=payload)
+        if r.status_code not in (200, 201, 202):
+            logger.warning(f"[SFlow] {r.status_code}: {r.text[:200]}"); return False
+        d = r.json()
+        rid = d.get("requestId") or d.get("request_id", "")
+        if not rid: logger.warning(f"[SFlow] no requestId"); return False
+        logger.info(f"[SFlow] requestId={rid}")
+        waited = 0.0
+        async with httpx.AsyncClient(timeout=30.0) as c:
+            while waited < max_wait_sec:
+                await asyncio.sleep(8.0); waited += 8.0
+                pr = await c.post("https://api.siliconflow.cn/v1/video/status",
+                                  headers=h, json={"requestId": rid})
+                if pr.status_code != 200: continue
+                pd = pr.json(); st = pd.get("status", "")
+                if st == "Failed": return False
+                if st != "Succeed": continue
+                videos = ((pd.get("results") or {}).get("videos") or [{}])
+                vurl = videos[0].get("url", "") if videos else ""
+                if vurl:
+                    ok = await _download_video(vurl, output_path)
+                    if ok: logger.info(f"[SFlow] OK {scene_id}")
+                    return ok
+        return False
+    except Exception as e: logger.warning(f"[SFlow] {e}"); return False
+
+
+async def generate_apiframe_video(prompt_en: str, duration: int, scene_id: str,
+                                   output_path: Path, max_wait_sec: float = 180.0) -> bool:
+    if not _APIFRAME_API_KEY: return False
+    try:
+        h = {"Authorization": _APIFRAME_API_KEY, "Content-Type": "application/json"}
+        payload = {"prompt": prompt_en[:480],
+                   "duration": min(max(int(duration), 5), 10), "ratio": "1280:768"}
+        async with httpx.AsyncClient(timeout=30.0) as c:
+            r = await c.post("https://api.apiframe.pro/runway/gen3-text", headers=h, json=payload)
+        if r.status_code not in (200, 201, 202):
+            logger.warning(f"[APIframe] {r.status_code}: {r.text[:200]}"); return False
+        d = r.json()
+        tid = d.get("task_id") or d.get("id", "")
+        if not tid: logger.warning(f"[APIframe] no task_id"); return False
+        logger.info(f"[APIframe] task={tid}")
+        waited = 0.0
+        async with httpx.AsyncClient(timeout=30.0) as c:
+            while waited < max_wait_sec:
+                await asyncio.sleep(8.0); waited += 8.0
+                pr = await c.get(f"https://api.apiframe.pro/fetch/{tid}", headers=h)
+                if pr.status_code != 200: continue
+                pd = pr.json(); st = (pd.get("status") or "").lower()
+                if st in ("failed", "error"): return False
+                if st not in ("completed", "success", "done"): continue
+                vurl = pd.get("video_url") or pd.get("output_url") or pd.get("url", "")
+                if vurl:
+                    ok = await _download_video(vurl, output_path)
+                    if ok: logger.info(f"[APIframe] OK {scene_id}")
+                    return ok
+        return False
+    except Exception as e: logger.warning(f"[APIframe] {e}"); return False
+
+
+async def generate_magichour_video(prompt_en: str, duration: int, scene_id: str,
+                                    output_path: Path, max_wait_sec: float = 180.0) -> bool:
+    if not _MAGICHOUR_API_KEY: return False
+    try:
+        h = {"Authorization": f"Bearer {_MAGICHOUR_API_KEY}", "Content-Type": "application/json"}
+        payload = {"name": f"lf_{scene_id}", "height": 720, "width": 1280,
+                   "end_seconds": min(max(int(duration), 3), 10), "start_seconds": 0,
+                   "video_type": "text-to-video", "prompt": prompt_en[:480]}
+        async with httpx.AsyncClient(timeout=30.0) as c:
+            r = await c.post("https://api.magichour.ai/api/v1/text-to-video", headers=h, json=payload)
+        if r.status_code not in (200, 201, 202):
+            logger.warning(f"[MHour] {r.status_code}: {r.text[:200]}"); return False
+        d = r.json()
+        pid = d.get("id") or d.get("project_id", "")
+        if not pid: logger.warning(f"[MHour] no id"); return False
+        logger.info(f"[MHour] project={pid}")
+        waited = 0.0
+        async with httpx.AsyncClient(timeout=30.0) as c:
+            while waited < max_wait_sec:
+                await asyncio.sleep(8.0); waited += 8.0
+                pr = await c.get(f"https://api.magichour.ai/api/v1/text-to-video/{pid}", headers=h)
+                if pr.status_code != 200: continue
+                pd = pr.json(); st = (pd.get("status") or "").lower()
+                if st in ("failed", "error"): return False
+                if st not in ("complete", "completed", "done"): continue
+                vurl = pd.get("video_url") or pd.get("download_url") or pd.get("url", "")
+                if vurl:
+                    ok = await _download_video(vurl, output_path)
+                    if ok: logger.info(f"[MHour] OK {scene_id}")
+                    return ok
+        return False
+    except Exception as e: logger.warning(f"[MHour] {e}"); return False
+
 async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[Scene]:
     """각 장면에 대해 자산 검색 및 다운로드 ([AF-14] 영상 중복 제거)."""
     seen_urls: set = set()
@@ -2387,6 +2548,66 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                         scene.asset_url = str(_po)
                         updated_scenes.append(scene)
                         logger.info(f"[PW-Q] OK {scene.scene_id}")
+                        continue
+
+            # [PATCH R / v15.86] Pollo.ai WAN 2.6 T2V
+            _should_pollo = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_POLLO_API_KEY)
+            if not _kling_ok and not _should_wan and not _should_replicate and not _should_ws and not _should_veo and not _should_pw and _should_pollo:
+                _plp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic B-roll").strip()[:480]
+                if _plp and len(_plp) > 10:
+                    _plo = job_assets_dir / f"{scene.scene_id}_pollo.mp4"
+                    _pld = max(int(scene.duration_seconds or 5), 3)
+                    logger.info(f"[Pollo] {scene.scene_id} dur={_pld}s")
+                    _pollo_ok = await generate_pollo_video(_plp, _pld, scene.scene_id, _plo)
+                    if _pollo_ok:
+                        scene.asset_url = str(_plo)
+                        updated_scenes.append(scene)
+                        logger.info(f"[Pollo] OK {scene.scene_id}")
+                        continue
+
+            # [PATCH S / v15.86] SiliconFlow WAN 2.6 T2V
+            _should_sflow = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_SILICONFLOW_API_KEY)
+            if not _kling_ok and not _should_wan and not _should_replicate and not _should_ws and not _should_veo and not _should_pw and not _should_pollo and _should_sflow:
+                _sfp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic B-roll").strip()[:480]
+                if _sfp and len(_sfp) > 10:
+                    _sfo = job_assets_dir / f"{scene.scene_id}_sflow.mp4"
+                    _sfd = max(int(scene.duration_seconds or 5), 3)
+                    logger.info(f"[SFlow] {scene.scene_id} dur={_sfd}s")
+                    _sflow_ok = await generate_siliconflow_video(_sfp, _sfd, scene.scene_id, _sfo)
+                    if _sflow_ok:
+                        scene.asset_url = str(_sfo)
+                        updated_scenes.append(scene)
+                        logger.info(f"[SFlow] OK {scene.scene_id}")
+                        continue
+
+            # [PATCH T / v15.86] APIframe Runway Gen3 T2V
+            _should_apiframe = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_APIFRAME_API_KEY)
+            if not _kling_ok and not _should_wan and not _should_replicate and not _should_ws and not _should_veo and not _should_pw and not _should_pollo and not _should_sflow and _should_apiframe:
+                _afp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic B-roll 4K").strip()[:480]
+                if _afp and len(_afp) > 10:
+                    _afo = job_assets_dir / f"{scene.scene_id}_apif.mp4"
+                    _afd = max(int(scene.duration_seconds or 5), 3)
+                    logger.info(f"[APIframe] {scene.scene_id} dur={_afd}s")
+                    _apif_ok = await generate_apiframe_video(_afp, _afd, scene.scene_id, _afo)
+                    if _apif_ok:
+                        scene.asset_url = str(_afo)
+                        updated_scenes.append(scene)
+                        logger.info(f"[APIframe] OK {scene.scene_id}")
+                        continue
+
+            # [PATCH U / v15.86] MagicHour T2V
+            _should_mhour = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_MAGICHOUR_API_KEY)
+            if not _kling_ok and not _should_wan and not _should_replicate and not _should_ws and not _should_veo and not _should_pw and not _should_pollo and not _should_sflow and not _should_apiframe and _should_mhour:
+                _mhp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage").strip()[:480]
+                if _mhp and len(_mhp) > 10:
+                    _mho = job_assets_dir / f"{scene.scene_id}_mhour.mp4"
+                    _mhd = max(int(scene.duration_seconds or 5), 3)
+                    logger.info(f"[MHour] {scene.scene_id} dur={_mhd}s")
+                    _mhour_ok = await generate_magichour_video(_mhp, _mhd, scene.scene_id, _mho)
+                    if _mhour_ok:
+                        scene.asset_url = str(_mho)
+                        updated_scenes.append(scene)
+                        logger.info(f"[MHour] OK {scene.scene_id}")
                         continue
 
             # 병렬로 Pexels와 Pixabay 검색

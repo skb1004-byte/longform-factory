@@ -1428,6 +1428,69 @@ async def get_pixabay_videos(keyword: str, per_page: int = 5) -> List[Dict[str, 
 # ─────────────────────────────────────────────
 import hmac as _hmac, hashlib as _hashlib, sqlite3 as _sqlite3, time as _time_j
 
+
+# ─────────────────────────────────────────────
+# [PATCH V / v15.87] Coverr.co + Mixkit 무료 스톡
+# ─────────────────────────────────────────────
+async def get_coverr_videos(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
+    """Coverr.co 무료 스톡 영상 — API 키 불필요"""
+    try:
+        import urllib.parse as _up
+        q = _up.quote(keyword)
+        url = f'https://coverr.co/api/v2/videos?keywords={q}&page=1&per_page={per_page}'
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json'})
+            if resp.status_code != 200:
+                return []
+            data = resp.json()
+            results = []
+            for item in data.get('hits', data.get('results', [])):
+                mp4 = item.get('mp4') or item.get('url') or ''
+                urls = item.get('urls', {})
+                if not mp4 and isinstance(urls, dict):
+                    mp4 = urls.get('mp4_download') or urls.get('mp4') or urls.get('original') or ''
+                if mp4 and 'mp4' in mp4.lower():
+                    res = item.get('resolution', {})
+                    w = res.get('width', 1920) if isinstance(res, dict) else 1920
+                    h = res.get('height', 1080) if isinstance(res, dict) else 1080
+                    results.append({'video_files': [{'link': mp4, 'width': w, 'height': h}]})
+        logger.info(f'[Coverr] "{keyword}": {len(results)}개')
+        return results
+    except Exception as e:
+        logger.warning(f'[Coverr] 오류: {e}')
+        return []
+
+
+async def get_mixkit_videos(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
+    """Mixkit 무료 스톡 영상 — API 키 불필요"""
+    try:
+        import urllib.parse as _up
+        q = _up.quote(keyword)
+        # Mixkit JSON search endpoint
+        url = f'https://mixkit.co/api/v1/items?section=video&page=1&per_page={per_page}&q={q}'
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            resp = await client.get(url, headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json'})
+            if resp.status_code != 200:
+                return []
+            data = resp.json()
+            items = data.get('data', data) if isinstance(data, dict) else data
+            if not isinstance(items, list):
+                return []
+            results = []
+            for item in items:
+                video_url = (item.get('download_url') or item.get('video_url')
+                             or item.get('url') or item.get('source_url') or '')
+                if video_url and ('.mp4' in video_url or 'video' in video_url):
+                    results.append({'video_files': [{'link': video_url,
+                                    'width': item.get('width', 1920),
+                                    'height': item.get('height', 1080)}]})
+        logger.info(f'[Mixkit] "{keyword}": {len(results)}개')
+        return results
+    except Exception as e:
+        logger.warning(f'[Mixkit] 오류: {e}')
+        return []
+
+
 def _init_asset_cache():
     """SQLite 자산 캐시 초기화."""
     try:
@@ -2642,10 +2705,13 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                 logger.info(f"[J-CACHE] \"{expanded_kw}\" HIT: {_cached_path_j}")
                 updated_scenes.append(scene)
                 continue
-            pexels_videos, pixabay_videos = await asyncio.gather(
+            pexels_videos, pixabay_videos, _coverr_v, _mixkit_v = await asyncio.gather(
                 get_pexels_videos(expanded_kw),
-                get_pixabay_videos(expanded_kw)
+                get_pixabay_videos(expanded_kw),
+                get_coverr_videos(expanded_kw),
+                get_mixkit_videos(expanded_kw)
             )
+            pexels_videos += _coverr_v + _mixkit_v  # [PATCH V] Coverr+Mixkit 병합
             # 부정 키워드 필터링
             pexels_videos = [v for v in pexels_videos if not _is_negative(v, expanded_kw)]
             pixabay_videos = [v for v in pixabay_videos if not _is_negative(v, expanded_kw)]
@@ -2658,10 +2724,13 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                 if _cq in _seen_q: continue
                 _seen_q.add(_cq)
                 try:
-                    _px_c, _pb_c = await asyncio.gather(
+                    _px_c, _pb_c, _cv_c, _mx_c = await asyncio.gather(
                         get_pexels_videos(_cq, per_page=5),
-                        get_pixabay_videos(_cq, per_page=5)
+                        get_pixabay_videos(_cq, per_page=5),
+                        get_coverr_videos(_cq, per_page=3),
+                        get_mixkit_videos(_cq, per_page=3)
                     )
+                    _px_c += _cv_c + _mx_c  # [PATCH V]
                     _px_c = [v for v in _px_c if not _is_negative(v, _cq)]
                     _pb_c = [v for v in _pb_c if not _is_negative(v, _cq)]
                     pexels_videos += _px_c

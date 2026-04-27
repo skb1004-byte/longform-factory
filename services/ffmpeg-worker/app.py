@@ -2203,6 +2203,56 @@ async def generate_veo_video(
         return False
 
 
+
+# [PATCH Q / v15.85] Playwright 웹 자동화 폴백 (API 키 없을 때 / AI_VIDEO_PROVIDER=playwright)
+_PW_QUEUE_DIR = Path("/data/jobs/pw_queue")  # Docker 내부 경로 (E:\...\v2\jobs\pw_queue)
+
+async def generate_playwright_video(
+    prompt_en: str,
+    duration: int,
+    scene_id: str,
+    output_path: Path,
+    max_wait_sec: float = 360.0,
+) -> bool:
+    """Windows 호스트 playwright_worker.py 큐에 등록 → 완료 파일 폴링."""
+    try:
+        _PW_QUEUE_DIR.mkdir(parents=True, exist_ok=True)
+        req_file  = _PW_QUEUE_DIR / f"{scene_id}.json"
+        done_file = req_file.with_suffix(".done")
+        fail_file = req_file.with_suffix(".fail")
+        done_file.unlink(missing_ok=True)
+        fail_file.unlink(missing_ok=True)
+        req_file.write_text(
+            json.dumps({"prompt": prompt_en[:480], "duration": duration,
+                        "output_path": str(output_path)}),
+            encoding="utf-8",
+        )
+        logger.info(f"[PW-Q] 큐 등록: {req_file.name} dur={duration}s")
+        waited = 0.0
+        poll   = 6.0
+        while waited < max_wait_sec:
+            await asyncio.sleep(poll)
+            waited += poll
+            if done_file.exists():
+                try:
+                    res = json.loads(done_file.read_text(encoding="utf-8"))
+                    p   = Path(res.get("path", ""))
+                    if p.exists() and p.stat().st_size > 4096:
+                        logger.info(f"[PW-Q] OK {scene_id} {p.stat().st_size//1024}KB ({waited:.0f}s)")
+                        return True
+                except Exception:
+                    pass
+            elif fail_file.exists():
+                logger.warning(f"[PW-Q] 실패 {scene_id}: {fail_file.read_text(encoding='utf-8')[:200]}")
+                return False
+            logger.debug(f"[PW-Q] 대기 중... {waited:.0f}s")
+        logger.warning(f"[PW-Q] timeout {max_wait_sec}s: {scene_id}")
+        return False
+    except Exception as e:
+        logger.warning(f"[PW-Q] 예외: {e}")
+        return False
+
+
 async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[Scene]:
     """각 장면에 대해 자산 검색 및 다운로드 ([AF-14] 영상 중복 제거)."""
     seen_urls: set = set()
@@ -2309,6 +2359,34 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                         scene.asset_url = str(_vo)
                         updated_scenes.append(scene)
                         logger.info(f"[Veo2] OK {scene.scene_id} — 스톡 스킵")
+                        continue
+
+
+            # [PATCH Q / v15.85] Playwright 웹 폴백 — API 키 없을 때 자동 라우팅
+            _has_any_ai_api = any([
+                os.getenv("KLING_ACCESS_KEY", ""),
+                os.getenv("PIAPI_KEY", ""),
+                os.getenv("REPLICATE_API_TOKEN", ""),
+                os.getenv("WAVESPEED_API_KEY", ""),
+                os.getenv("GEMINI_API_KEY", ""),
+            ])
+            _should_pw = (
+                _AI_VIDEO_ENABLED
+                and (not _ai_vid_selective or _is_hook_or_close)
+                and (not _has_any_ai_api or _AI_VIDEO_PROVIDER == "playwright")
+            )
+            if (not _kling_ok and not _should_wan and not _should_replicate
+                    and not _should_ws and not _should_veo and _should_pw):
+                _pp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage").strip(", ")
+                if _pp and len(_pp) > 10:
+                    _pd = max(int(scene.duration_seconds or 5), 3)
+                    _po = job_assets_dir / f"{scene.scene_id}_pw.mp4"
+                    logger.info(f"[PW-Q] {scene.scene_id} dur={_pd}s (API 키 없음 → 웹 폴백)")
+                    _pw_ok = await generate_playwright_video(_pp, _pd, scene.scene_id, _po)
+                    if _pw_ok:
+                        scene.asset_url = str(_po)
+                        updated_scenes.append(scene)
+                        logger.info(f"[PW-Q] OK {scene.scene_id}")
                         continue
 
             # 병렬로 Pexels와 Pixabay 검색

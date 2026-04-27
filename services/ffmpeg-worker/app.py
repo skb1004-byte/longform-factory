@@ -2639,15 +2639,30 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                 logger.info(f"[v15.69 SANITIZE] '{_raw_kw}' → '{_sanitized_kw}'")
                 scene.keyword = _sanitized_kw
 
+            # [PATCH Q-WEB / v15.91] 웹 우선 — Grok/Playwright 먼저 시도
+            _should_pw = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close)
+            if _should_pw:
+                _pp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage").strip(", ")
+                if _pp and len(_pp) > 10:
+                    _pd = max(int(scene.duration_seconds or 5), 3)
+                    _po = job_assets_dir / f"{scene.scene_id}_pw.mp4"
+                    logger.info(f"[PW-Web] {scene.scene_id} dur={_pd}s — 웹 우선 시도")
+                    _pw_ok = await generate_playwright_video(_pp, _pd, scene.scene_id, _po)
+                    if _pw_ok:
+                        scene.asset_url = str(_po)
+                        updated_scenes.append(scene)
+                        logger.info(f"[PW-Web] OK {scene.scene_id}")
+                        continue
+
             # [v15.69] Kling T2V 우선 시도
             _kling_ok = False
             _wan_ok = _rep_ok = _ws_ok = _veo_ok = _pw_ok = False
-            _pollo_ok = _sflow_ok = _apif_ok = _mhour_ok = False
+            _pollo_ok = _sflow_ok = _apif_ok = _mhour_ok = _sora_ok = _grok_ok = False
             _is_hook_or_close = (scene.tone_profile or "").lower() in ("hook","closing","cta") or idx == 0 or idx == total_scenes - 1
             _ai_vid_selective = os.getenv("AI_VIDEO_SELECTIVE","true").lower() in ("1","true","yes")
             # [v15.70 Hybrid] hook/closing 필수 + selective mode 기반
             _should_kling = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and _AI_VIDEO_PROVIDER in ("kling", "")
-            if _should_kling:
+            if not _pw_ok and _should_kling:
                 _kp = (
                     scene.narration_en or
                     (scene.visual_intent or "") + ", " +
@@ -2724,34 +2739,6 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                         continue
 
 
-            # [PATCH Q / v15.85] Playwright 웹 폴백 — API 키 없을 때 자동 라우팅
-            _has_any_ai_api = any([
-                os.getenv("KLING_ACCESS_KEY", ""),
-                os.getenv("PIAPI_KEY", ""),
-                os.getenv("REPLICATE_API_TOKEN", ""),
-                os.getenv("WAVESPEED_API_KEY", ""),
-                os.getenv("GEMINI_API_KEY", ""),
-                os.getenv("OPENAI_API_KEY", ""),
-                os.getenv("XAI_API_KEY", ""),
-            ])
-            _should_pw = (
-                _AI_VIDEO_ENABLED
-                and (not _ai_vid_selective or _is_hook_or_close)
-                and (not _has_any_ai_api or _AI_VIDEO_PROVIDER == "playwright")
-            )
-            if (not _kling_ok and not _wan_ok and not _rep_ok
-                    and not _ws_ok and not _veo_ok and _should_pw):
-                _pp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage").strip(", ")
-                if _pp and len(_pp) > 10:
-                    _pd = max(int(scene.duration_seconds or 5), 3)
-                    _po = job_assets_dir / f"{scene.scene_id}_pw.mp4"
-                    logger.info(f"[PW-Q] {scene.scene_id} dur={_pd}s (API 키 없음 → 웹 폴백)")
-                    _pw_ok = await generate_playwright_video(_pp, _pd, scene.scene_id, _po)
-                    if _pw_ok:
-                        scene.asset_url = str(_po)
-                        updated_scenes.append(scene)
-                        logger.info(f"[PW-Q] OK {scene.scene_id}")
-                        continue
 
             # [PATCH R / v15.86] Pollo.ai WAN 2.6 T2V
             _should_pollo = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_POLLO_API_KEY)
@@ -4201,7 +4188,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.90.0",
+        "job_id": job_id, "version": "15.91.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -6773,7 +6760,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.90.0",
+        "version": "15.91.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -6804,7 +6791,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.90.0",
+        "version": "15.91.0",
         "timestamp": datetime.now().isoformat()
     }
 

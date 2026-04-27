@@ -2113,6 +2113,9 @@ async def generate_wavespeed_video(
 # [PATCH P / v15.84] Google Gemini Veo 2 API — $0.12/sec (무료 티어: 월 5 videos)
 _GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # generativelanguage.googleapis.com
 
+_OPENAI_API_KEY  = os.getenv("OPENAI_API_KEY", "")   # Sora 2 T2V
+_XAI_API_KEY     = os.getenv("XAI_API_KEY", "")      # Grok Imagine Video
+
 async def generate_veo_video(
     prompt_en: str,
     duration: int,
@@ -2218,6 +2221,186 @@ async def generate_veo_video(
         logger.warning(f"[Veo2] 예외: {e}")
         return False
 
+
+
+
+# ─────────────────────────────────────────────────────────────
+# [PATCH W / v15.90] OpenAI Sora 2 T2V
+# ─────────────────────────────────────────────────────────────
+async def generate_sora_video(
+    prompt_en: str,
+    duration: int,
+    scene_id: str,
+    output_path: Path,
+    max_wait_sec: float = 360.0,
+) -> bool:
+    """OpenAI Sora 2 text-to-video — /v1/video/generations API."""
+    if not _OPENAI_API_KEY:
+        return False
+    try:
+        dur = min(max(int(duration), 5), 20)  # Sora 2: 5~20초
+        headers = {
+            "Authorization": f"Bearer {_OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": "sora-2",
+            "prompt": prompt_en[:480],
+            "size": "1280x720",
+            "n": 1,
+            "duration": dur,
+        }
+        async with httpx.AsyncClient(timeout=60.0) as cli:
+            r = await cli.post(
+                "https://api.openai.com/v1/video/generations",
+                headers=headers, json=payload,
+            )
+        if r.status_code not in (200, 201, 202):
+            logger.warning(f"[Sora2] submit fail {r.status_code}: {r.text[:200]}")
+            return False
+        data = r.json()
+        gen_id = data.get("id") or (data.get("data", [{}])[0].get("id", ""))
+        if not gen_id:
+            logger.warning(f"[Sora2] generation id 없음: {data}")
+            return False
+        logger.info(f"[Sora2] 생성 요청 OK, id={gen_id}")
+
+        # polling
+        waited = 0.0
+        async with httpx.AsyncClient(timeout=30.0) as cli:
+            while waited < max_wait_sec:
+                await asyncio.sleep(8.0)
+                waited += 8.0
+                pr = await cli.get(
+                    f"https://api.openai.com/v1/video/generations/{gen_id}",
+                    headers={"Authorization": f"Bearer {_OPENAI_API_KEY}"},
+                )
+                if pr.status_code != 200:
+                    continue
+                pd = pr.json()
+                status = pd.get("status", "")
+                if status in ("in_progress", "queued", "pending"):
+                    logger.debug(f"[Sora2] {status} ({waited:.0f}s)")
+                    continue
+                if status != "succeeded":
+                    logger.warning(f"[Sora2] 실패 status={status}")
+                    return False
+                # 다운로드
+                vid_list = pd.get("data", pd.get("videos", []))
+                if not vid_list:
+                    vid_list = [pd]
+                video_url = vid_list[0].get("url", "")
+                if not video_url:
+                    # content endpoint 시도
+                    dl_r = await cli.get(
+                        f"https://api.openai.com/v1/video/generations/{gen_id}/content/video",
+                        headers={"Authorization": f"Bearer {_OPENAI_API_KEY}"},
+                    )
+                    if dl_r.status_code == 200:
+                        output_path.write_bytes(dl_r.content)
+                        ok = output_path.stat().st_size > 4096
+                        if ok:
+                            logger.info(f"[Sora2] OK {output_path} ({output_path.stat().st_size//1024}KB)")
+                        return ok
+                    logger.warning("[Sora2] download URL 없음")
+                    return False
+                async with httpx.AsyncClient(timeout=120.0) as dl:
+                    vr = await dl.get(video_url)
+                if vr.status_code == 200:
+                    output_path.write_bytes(vr.content)
+                    ok = output_path.stat().st_size > 4096
+                    if ok:
+                        logger.info(f"[Sora2] OK {output_path} ({output_path.stat().st_size//1024}KB)")
+                    return ok
+                return False
+        logger.warning(f"[Sora2] timeout {max_wait_sec}s 초과")
+        return False
+    except Exception as e:
+        logger.warning(f"[Sora2] 예외: {e}")
+        return False
+
+
+# ─────────────────────────────────────────────────────────────
+# [PATCH X / v15.90] xAI Grok Imagine Video T2V
+# ─────────────────────────────────────────────────────────────
+async def generate_grok_video(
+    prompt_en: str,
+    duration: int,
+    scene_id: str,
+    output_path: Path,
+    max_wait_sec: float = 360.0,
+) -> bool:
+    """xAI Grok Imagine Video — api.x.ai/v1/videos/generations."""
+    if not _XAI_API_KEY:
+        return False
+    try:
+        headers = {
+            "Authorization": f"Bearer {_XAI_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": "grok-imagine-video",
+            "prompt": prompt_en[:480],
+            "n": 1,
+        }
+        async with httpx.AsyncClient(timeout=60.0) as cli:
+            r = await cli.post(
+                "https://api.x.ai/v1/videos/generations",
+                headers=headers, json=payload,
+            )
+        if r.status_code not in (200, 201, 202):
+            logger.warning(f"[Grok-V] submit fail {r.status_code}: {r.text[:200]}")
+            return False
+        data = r.json()
+        gen_id = data.get("id") or data.get("generation_id", "")
+        if not gen_id:
+            logger.warning(f"[Grok-V] generation id 없음: {data}")
+            return False
+        logger.info(f"[Grok-V] 생성 요청 OK, id={gen_id}")
+
+        # polling
+        waited = 0.0
+        async with httpx.AsyncClient(timeout=30.0) as cli:
+            while waited < max_wait_sec:
+                await asyncio.sleep(8.0)
+                waited += 8.0
+                pr = await cli.get(
+                    f"https://api.x.ai/v1/videos/generations/{gen_id}",
+                    headers={"Authorization": f"Bearer {_XAI_API_KEY}"},
+                )
+                if pr.status_code != 200:
+                    continue
+                pd = pr.json()
+                status = pd.get("status", "")
+                if status in ("in_progress", "queued", "pending", "processing"):
+                    logger.debug(f"[Grok-V] {status} ({waited:.0f}s)")
+                    continue
+                if status not in ("completed", "succeeded"):
+                    logger.warning(f"[Grok-V] 실패 status={status}")
+                    return False
+                # 다운로드 URL 파싱
+                video_url = (
+                    pd.get("url") or
+                    (pd.get("videos", [{}])[0].get("url", "")) or
+                    (pd.get("data", [{}])[0].get("url", ""))
+                )
+                if not video_url:
+                    logger.warning("[Grok-V] video URL 없음")
+                    return False
+                async with httpx.AsyncClient(timeout=120.0) as dl:
+                    vr = await dl.get(video_url)
+                if vr.status_code == 200:
+                    output_path.write_bytes(vr.content)
+                    ok = output_path.stat().st_size > 4096
+                    if ok:
+                        logger.info(f"[Grok-V] OK {output_path} ({output_path.stat().st_size//1024}KB)")
+                    return ok
+                return False
+        logger.warning(f"[Grok-V] timeout {max_wait_sec}s 초과")
+        return False
+    except Exception as e:
+        logger.warning(f"[Grok-V] 예외: {e}")
+        return False
 
 
 # [PATCH Q / v15.85] Playwright 웹 자동화 폴백 (API 키 없을 때 / AI_VIDEO_PROVIDER=playwright)
@@ -2548,6 +2731,8 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                 os.getenv("REPLICATE_API_TOKEN", ""),
                 os.getenv("WAVESPEED_API_KEY", ""),
                 os.getenv("GEMINI_API_KEY", ""),
+                os.getenv("OPENAI_API_KEY", ""),
+                os.getenv("XAI_API_KEY", ""),
             ])
             _should_pw = (
                 _AI_VIDEO_ENABLED
@@ -2626,6 +2811,43 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                         scene.asset_url = str(_mho)
                         updated_scenes.append(scene)
                         logger.info(f"[MHour] OK {scene.scene_id}")
+                        continue
+
+
+            # [PATCH W / v15.90] OpenAI Sora 2 T2V
+            _should_sora = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_OPENAI_API_KEY)
+            _sora_ok = False
+            if (not _kling_ok and not _wan_ok and not _rep_ok and not _ws_ok and not _veo_ok
+                    and not _pw_ok and not _pollo_ok and not _sflow_ok and not _apif_ok and not _mhour_ok
+                    and _should_sora):
+                _srp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage 4K").strip()[:480]
+                if _srp and len(_srp) > 10:
+                    _sro = job_assets_dir / f"{scene.scene_id}_sora.mp4"
+                    _srd = max(int(scene.duration_seconds or 5), 5)
+                    logger.info(f"[Sora2] {scene.scene_id} dur={_srd}s")
+                    _sora_ok = await generate_sora_video(_srp, _srd, scene.scene_id, _sro)
+                    if _sora_ok:
+                        scene.asset_url = str(_sro)
+                        updated_scenes.append(scene)
+                        logger.info(f"[Sora2] OK {scene.scene_id}")
+                        continue
+
+            # [PATCH X / v15.90] xAI Grok Imagine Video T2V
+            _should_grok = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_XAI_API_KEY)
+            _grok_ok = False
+            if (not _kling_ok and not _wan_ok and not _rep_ok and not _ws_ok and not _veo_ok
+                    and not _pw_ok and not _pollo_ok and not _sflow_ok and not _apif_ok and not _mhour_ok and not _sora_ok
+                    and _should_grok):
+                _grp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage").strip()[:480]
+                if _grp and len(_grp) > 10:
+                    _gro = job_assets_dir / f"{scene.scene_id}_grok.mp4"
+                    _grd = max(int(scene.duration_seconds or 5), 5)
+                    logger.info(f"[Grok-V] {scene.scene_id} dur={_grd}s")
+                    _grok_ok = await generate_grok_video(_grp, _grd, scene.scene_id, _gro)
+                    if _grok_ok:
+                        scene.asset_url = str(_gro)
+                        updated_scenes.append(scene)
+                        logger.info(f"[Grok-V] OK {scene.scene_id}")
                         continue
 
             # 병렬로 Pexels와 Pixabay 검색
@@ -3979,7 +4201,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.89.0",
+        "job_id": job_id, "version": "15.90.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -6551,7 +6773,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.89.0",
+        "version": "15.90.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -6582,7 +6804,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.89.0",
+        "version": "15.90.0",
         "timestamp": datetime.now().isoformat()
     }
 

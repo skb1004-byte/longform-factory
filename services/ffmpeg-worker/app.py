@@ -9,7 +9,7 @@
 # [AJ] MARKER v1
 # [AI-pack2] MARKER v1
 """
-LongForm Factory - FFmpeg Worker v15.69.0 (안정화·운영개선)
+LongForm Factory - FFmpeg Worker v16.1.0 (자산다양화+싱크)
 롱폼/숏폼 자동화 영상 제작 서비스
 
 주요 기능:
@@ -1182,7 +1182,7 @@ logger.info(f"데이터 디렉토리 초기화 완료: {BASE_DATA_DIR}")
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
     description="롱폼/숏폼 자동화 영상 제작 서비스",
-    version="15.67.0"
+    version="16.4.0"
 )
 
 
@@ -1328,6 +1328,7 @@ def _load_global_seen():
         pass
 
 def _save_global_seen(new_urls: set):
+    global _GLOBAL_SEEN_URLS  # [v15.93] UnboundLocalError 방지
     try:
         _GLOBAL_SEEN_URLS.update(new_urls)
         # Keep last 300 only (FIFO-ish)
@@ -1678,14 +1679,14 @@ async def download_video(video_url: str, output_path: Path, timeout: float = 120
             "-movflags", "+faststart",
             str(output_path)
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        result = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=180)
         if result.returncode == 0 and output_path.exists() and output_path.stat().st_size > 10000:
             file_size = output_path.stat().st_size
             logger.info(f"영상 다운로드 완료 (ffmpeg): {output_path} ({file_size/(1024*1024):.2f}MB)")
             return True
 
         # 2차 fallback: httpx 스트리밍 (최대 30MB)
-        logger.warning(f"ffmpeg 다운로드 실패 — httpx fallback")
+        logger.warning("ffmpeg 다운로드 실패 — httpx fallback")
         async with httpx.AsyncClient(timeout=timeout) as client:
             async with client.stream("GET", video_url) as response:
                 response.raise_for_status()
@@ -1696,7 +1697,7 @@ async def download_video(video_url: str, output_path: Path, timeout: float = 120
                         await f.write(chunk)
                         downloaded += len(chunk)
                         if downloaded >= max_bytes:
-                            logger.info(f"30MB 제한 도달 — 다운로드 중단")
+                            logger.info("30MB 제한 도달 — 다운로드 중단")
                             break
         file_size = output_path.stat().st_size if output_path.exists() else 0
         logger.info(f"영상 다운로드 완료 (fallback): {output_path} ({file_size/(1024*1024):.2f}MB)")
@@ -1773,6 +1774,64 @@ def _get_topic_fallback(keyword: str, topic_hint: str = "") -> str:
     if any(t in c for t in ["korea","seoul","asian","japan","china","tokyo","beijing"]):
         return "asian city urban street"
     return "city street people"
+
+
+def _ko_narration_to_visual_query(text: str, orig_keyword: str = "", topic: str = "") -> str:
+    """[v16.4] 한국어 나레이션 세그먼트 → 영어 시각 검색 쿼리 변환.
+    ws_ 씬의 keyword를 나레이션 내용과 매칭시키기 위해 사용."""
+    import re as _re
+    if not text:
+        return orig_keyword or "technology people"
+
+    # 1. 영어 단어 먼저 추출 (AI, ChatGPT 등)
+    en_words = _re.findall(r"\b[A-Za-z][A-Za-z0-9]{2,}\b", text)
+    en_words = [w for w in en_words if w.lower() not in ("the","and","for","this","that","with","from","are","was","were","has","have","will","can","its","our","not")]
+    if en_words:
+        return " ".join(en_words[:3]) + " footage"
+
+    # 2. 한국어 → 영어 시각 쿼리 매핑
+    _KO_VISUAL = [
+        (["인공지능","AI","머신러닝","딥러닝","신경망","알고리즘"], "artificial intelligence AI technology"),
+        (["로봇","자동화","드론","기계"], "robot automation machine"),
+        (["의료","병원","의사","환자","헬스케어","수술"], "hospital medical doctor patient"),
+        (["교육","학교","학생","학습","강의","수업"], "education classroom student learning"),
+        (["일자리","직업","취업","고용","실업","근로자"], "job employment office worker career"),
+        (["경제","금융","주식","시장","투자","돈"], "business finance stock market"),
+        (["데이터","분석","빅데이터","통계"], "data analytics computer screen"),
+        (["스마트폰","모바일","앱","소셜미디어"], "smartphone mobile app social media"),
+        (["공장","제조","생산","산업"], "factory manufacturing industrial"),
+        (["환경","기후","에너지","탄소"], "environment nature green energy"),
+        (["서울","한국","도시","거리"], "seoul korea city urban street"),
+        (["미래","혁신","첨단"], "future technology innovation"),
+        (["창업","스타트업","벤처","기업가"], "startup entrepreneur business meeting"),
+        (["연구","개발","실험","과학"], "laboratory research scientist"),
+        (["정치","정부","선거","정책"], "government building politics"),
+        (["군사","안보","방어"], "military defense security"),
+        (["우주","위성","로켓"], "space satellite rocket launch"),
+        (["음식","요리","식당"], "food restaurant cooking"),
+        (["건강","운동","스포츠"], "health fitness exercise sport"),
+        (["예술","문화","음악"], "art culture music performance"),
+        (["부동산","건물","건설"], "building construction real estate"),
+        (["교통","자동차","차량"], "car vehicle traffic road"),
+        (["통신","네트워크","인터넷"], "network internet communication"),
+        (["반도체","칩","전자"], "semiconductor chip electronics"),
+        (["사람들","회의","협력"], "people meeting collaboration office"),
+        (["글로벌","세계","국제"], "global world international"),
+        (["변화","성장","발전"], "growth change progress"),
+        (["소비자","고객","서비스"], "customer service consumer"),
+    ]
+    text_clean = text.replace(" ","")
+    for ko_words, en_query in _KO_VISUAL:
+        if any(kw in text_clean for kw in ko_words):
+            return en_query
+
+    # 3. orig_keyword가 영어면 그대로
+    if orig_keyword and _re.search(r"[A-Za-z]{3,}", orig_keyword):
+        return orig_keyword
+
+    # 4. 토픽 기반 폴백
+    return _get_topic_fallback(orig_keyword or text, topic)
+
 
 # ============================================================
 # [v15.69] Kling T2V 통합
@@ -2486,7 +2545,7 @@ async def generate_pollo_video(prompt_en: str, duration: int, scene_id: str,
             logger.warning(f"[Pollo] {r.status_code}: {r.text[:200]}"); return False
         d = r.json()
         task_id = (d.get("data") or d).get("id") or d.get("task_id", "")
-        if not task_id: logger.warning(f"[Pollo] no task_id"); return False
+        if not task_id: logger.warning("[Pollo] no task_id"); return False
         logger.info(f"[Pollo] task={task_id}")
         waited = 0.0
         async with httpx.AsyncClient(timeout=30.0) as c:
@@ -2525,7 +2584,7 @@ async def generate_siliconflow_video(prompt_en: str, duration: int, scene_id: st
             logger.warning(f"[SFlow] {r.status_code}: {r.text[:200]}"); return False
         d = r.json()
         rid = d.get("requestId") or d.get("request_id", "")
-        if not rid: logger.warning(f"[SFlow] no requestId"); return False
+        if not rid: logger.warning("[SFlow] no requestId"); return False
         logger.info(f"[SFlow] requestId={rid}")
         waited = 0.0
         async with httpx.AsyncClient(timeout=30.0) as c:
@@ -2560,7 +2619,7 @@ async def generate_apiframe_video(prompt_en: str, duration: int, scene_id: str,
             logger.warning(f"[APIframe] {r.status_code}: {r.text[:200]}"); return False
         d = r.json()
         tid = d.get("task_id") or d.get("id", "")
-        if not tid: logger.warning(f"[APIframe] no task_id"); return False
+        if not tid: logger.warning("[APIframe] no task_id"); return False
         logger.info(f"[APIframe] task={tid}")
         waited = 0.0
         async with httpx.AsyncClient(timeout=30.0) as c:
@@ -2594,7 +2653,7 @@ async def generate_magichour_video(prompt_en: str, duration: int, scene_id: str,
             logger.warning(f"[MHour] {r.status_code}: {r.text[:200]}"); return False
         d = r.json()
         pid = d.get("id") or d.get("project_id", "")
-        if not pid: logger.warning(f"[MHour] no id"); return False
+        if not pid: logger.warning("[MHour] no id"); return False
         logger.info(f"[MHour] project={pid}")
         waited = 0.0
         async with httpx.AsyncClient(timeout=30.0) as c:
@@ -2621,6 +2680,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
     
     updated_scenes = []
     total_scenes = len(scenes)
+    _used_asset_basenames: set = set()  # [v15.94] 영상 중복 방지 — 동일 소스 재사용 추적
     
     for idx, scene in enumerate(scenes):
         try:
@@ -2638,6 +2698,10 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
             if _sanitized_kw != _raw_kw:
                 logger.info(f"[v15.69 SANITIZE] '{_raw_kw}' → '{_sanitized_kw}'")
                 scene.keyword = _sanitized_kw
+
+            # [v15.93] _is_hook_or_close / _ai_vid_selective 미리 정의 (NameError 방지)
+            _is_hook_or_close = (scene.tone_profile or "").lower() in ("hook","closing","cta") or idx == 0 or idx == total_scenes - 1
+            _ai_vid_selective = os.getenv("AI_VIDEO_SELECTIVE","true").lower() in ("1","true","yes")
 
             # [PATCH Q-WEB / v15.91] 웹 우선 — Grok/Playwright 먼저 시도
             _should_pw = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close)
@@ -2658,8 +2722,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
             _kling_ok = False
             _wan_ok = _rep_ok = _ws_ok = _veo_ok = _pw_ok = False
             _pollo_ok = _sflow_ok = _apif_ok = _mhour_ok = _sora_ok = _grok_ok = False
-            _is_hook_or_close = (scene.tone_profile or "").lower() in ("hook","closing","cta") or idx == 0 or idx == total_scenes - 1
-            _ai_vid_selective = os.getenv("AI_VIDEO_SELECTIVE","true").lower() in ("1","true","yes")
+            # [v15.93] _is_hook_or_close / _ai_vid_selective 는 위에서 이미 정의됨
             # [v15.70 Hybrid] hook/closing 필수 + selective mode 기반
             _should_kling = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and _AI_VIDEO_PROVIDER in ("kling", "")
             if not _pw_ok and _should_kling:
@@ -2862,13 +2925,17 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     if _kgm_match:
                         expanded_kw = _kgm_match
                 logger.info(f"[v15.78] empty kw fallback: '{_raw_kw}' -> '{expanded_kw}'")
-            # [PATCH J / v15.83] SQLite 캐시 확인
+            # [PATCH J / v15.83] SQLite 캐시 확인 [v16.4: seen_urls 중복 방지]
             _cached_path_j = _cache_lookup(expanded_kw)
-            if _cached_path_j:
+            if _cached_path_j and _cached_path_j not in seen_urls:
                 scene.asset_url = _cached_path_j
+                seen_urls.add(_cached_path_j)
+                _used_asset_basenames.add(Path(_cached_path_j).stem)
                 logger.info(f"[J-CACHE] \"{expanded_kw}\" HIT: {_cached_path_j}")
                 updated_scenes.append(scene)
                 continue
+            elif _cached_path_j and _cached_path_j in seen_urls:
+                logger.info(f"[J-CACHE-SKIP] \"{expanded_kw}\" HIT but duplicate — bypass to fresh search")
             pexels_videos, pixabay_videos = await asyncio.gather(
                 get_pexels_videos(expanded_kw),
                 get_pixabay_videos(expanded_kw)
@@ -3078,7 +3145,7 @@ async def prepare_clips_for_longform(
                 logger.warning(f"장면 '{scene.scene_id}' 자산 없음 (fallback도 실패)")
                 continue
 
-        scene_dur = max(scene.duration_seconds or 5.0, 4.0)
+        scene_dur = max(scene.duration_seconds or 5.0, 1.5)  # [v16.0] TTS 동기화 존중
 
         # 원본 영상 길이 파악
         probe_cmd = [
@@ -3097,9 +3164,9 @@ async def prepare_clips_for_longform(
         needs_loop = actual_src_dur < scene_dur * 0.95
 
         # 서브클립 수 계산 (4~5초짜리로 분할)
-        SUB_DUR = 4.5  # 각 서브클립 길이 (초)
-        n_subs  = max(1, round(scene_dur / SUB_DUR))
-        n_subs  = min(n_subs, 5)  # 최대 5개
+        SUB_DUR = 3.0  # [v15.98] 2-3s cut  # 각 서브클립 길이 (초)
+        n_subs  = max(1, int(scene_dur / SUB_DUR))  # [v16.0] floor division
+        n_subs  = min(n_subs, 8)  # [v15.98] max 8  # 최대 5개
 
         logger.info(f"'{scene.scene_id}': {scene_dur:.1f}초 → {n_subs}개 서브클립 (src={actual_src_dur:.1f}s, loop={needs_loop})")
 
@@ -3115,18 +3182,28 @@ async def prepare_clips_for_longform(
                 _alt_src2_dur = float(_rd) if _rd and _rd not in ('N/A','') else 0.0
             except Exception: pass
 
+        # [v16.0] 정밀 sub_dur: 균등분할 + 마지막 클립에 나머지 시간 흡수
+        _base_sub_dur = scene_dur / n_subs
+        _scene_clips_start = len(clips)
         for sub_i in range(n_subs):
-            sub_dur    = scene_dur / n_subs
-            sub_dur    = max(sub_dur, 3.0)
+            if sub_i == n_subs - 1:
+                sub_dur = max(scene_dur - _base_sub_dur * (n_subs - 1), 1.0)
+            else:
+                sub_dur = _base_sub_dur
             # [v15.68] sub_i>=3이면 alt 소스 사용
-            _use_alt2 = _alt_src2 and _alt_src2_dur > 1.0 and sub_i >= 3
+            # [v15.99] 홀짝 교번: 0=main,1=alt,2=main,3=alt... → 최대 다양성
+            _can_alt2 = _alt_src2 and _alt_src2_dur > 1.0
+            _use_alt2 = _can_alt2 and (sub_i % 2 == 1)
             _clip_src2 = _alt_src2 if _use_alt2 else scene.asset_url
             _clip_src2_dur = _alt_src2_dur if _use_alt2 else actual_src_dur
             _needs_loop2 = _clip_src2_dur < scene_dur * 0.95
-            # v15.12 — seek 은 항상 실제 소스 범위 안에서 분포
-            seek_usable = max((_clip_src2_dur if '_clip_src2_dur' in dir() else actual_src_dur) - 0.3, 0.0)
-            if n_subs > 1 and seek_usable > 0:
-                seek_start = seek_usable * sub_i / n_subs
+            # [v15.99] 소스별 독립 seek: 같은 소스 내에서 균등 분포
+            _src_uses = 2 if _can_alt2 else 1  # 소스가 2개면 각 소스당 n_subs/2번 사용
+            _sub_idx_in_src = sub_i // _src_uses  # 이 소스 안에서 몇 번째인가
+            _n_per_src = max(1, (n_subs + _src_uses - 1) // _src_uses)
+            seek_usable = max(_clip_src2_dur - 0.5, 0.0)
+            if _n_per_src > 1 and seek_usable > 0:
+                seek_start = seek_usable * _sub_idx_in_src / _n_per_src
             else:
                 seek_start = 0
             seek_start = max(0, min(seek_start, seek_usable))
@@ -3177,7 +3254,7 @@ async def prepare_clips_for_longform(
             ]
 
             clip_timeout = max(60.0, sub_dur * 20)
-            if run_ffmpeg_command(command, timeout=clip_timeout) and clip_output.exists() and clip_output.stat().st_size >= 4096:
+            if await run_ffmpeg_async(command, timeout=clip_timeout) and clip_output.exists() and clip_output.stat().st_size >= 4096:
                 clips.append(clip_output)
                 logger.info(f"  서브클립 OK: {clip_output.name} ({sub_dur:.1f}s, seek={seek_start:.1f}s)")
             else:
@@ -3197,8 +3274,39 @@ async def prepare_clips_for_longform(
                     "-movflags", "+faststart",
                     "-an", "-y", str(clip_output)
                 ]
-                if run_ffmpeg_command(fallback, timeout=clip_timeout):
+                if await run_ffmpeg_async(fallback, timeout=clip_timeout):
                     clips.append(clip_output)
+
+        # [v16.0] 씬별 trim: sub-clip 총합을 정확히 scene_dur로 trim
+        # → 씬 경계 오차 누적 방지 (나레이션-영상 per-scene 정렬 보장)
+        _scene_clips = clips[_scene_clips_start:]
+        if len(_scene_clips) > 0 and _scene_clips:
+            _scene_merged = output_dir / f"scene_{scene.scene_id}_merged.mp4"
+            _merge_ok = False
+            if len(_scene_clips) == 1:
+                import shutil as _sh
+                _sh.copy(str(_scene_clips[0]), str(_scene_merged))
+                _merge_ok = True
+            else:
+                _merge_ok = xfade_batch(list(_scene_clips), _scene_merged)
+            if _merge_ok and _scene_merged.exists() and _scene_merged.stat().st_size > 4096:
+                # trim to exact scene_dur
+                _scene_trimmed = output_dir / f"scene_{scene.scene_id}_final.mp4"
+                _trim_cmd = [
+                    "ffmpeg", "-i", str(_scene_merged),
+                    "-t", str(round(scene_dur, 3)),
+                    "-c:v", "copy", "-an", "-y", str(_scene_trimmed)
+                ]
+                _trim_timeout = max(60.0, scene_dur * 5)
+                if run_ffmpeg_command(_trim_cmd, timeout=_trim_timeout) and _scene_trimmed.exists():
+                    # 서브클립들을 trimmed 씬 클립으로 교체
+                    del clips[_scene_clips_start:]
+                    clips.append(_scene_trimmed)
+                    logger.info(f"[v16.0] 씬 '{scene.scene_id}' trim → {scene_dur:.2f}s ({len(_scene_clips)}클립→1)")
+                else:
+                    logger.warning(f"[v16.0] 씬 trim 실패 → 원본 서브클립 유지: {scene.scene_id}")
+            else:
+                logger.warning(f"[v16.0] 씬 merge 실패 → 원본 서브클립 유지: {scene.scene_id}")
 
     logger.info(f"총 클립 수: {len(clips)}개")
     return clips
@@ -3296,7 +3404,7 @@ def xfade_batch(clip_paths: list, output: Path, transition: str = "fade") -> boo
         return True
 
     # 방법 2: concat demuxer fallback (copy, 무손실)
-    logger.warning(f"concat filter 실패 → demuxer fallback")
+    logger.warning("concat filter 실패 → demuxer fallback")
     # fallback 단계에서도 손상 클립 한 번 더 걸러냄
     clip_paths = [cp for cp in clip_paths if _is_valid_clip(cp)]
     if not clip_paths:
@@ -3458,6 +3566,23 @@ def mix_audio(
     output_video: Path
 ) -> bool:
     """오디오 믹싱 - loudnorm 정규화 + 나레이션 우선 BGM 더킹"""
+    # [v16.0] TTS 길이 기준 영상 trim (나레이션-영상 정확히 일치)
+    _tts_trim: list = []
+    if tts_audio_path.exists():
+        try:
+            _pr = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                 "-of", "csv=p=0", str(tts_audio_path)],
+                capture_output=True, text=True, timeout=10
+            )
+            _rd = (_pr.stdout.strip() or "").strip()
+            if _rd and _rd not in ("N/A", ""):
+                _tts_d = float(_rd)
+                if _tts_d > 0:
+                    _tts_trim = ["-t", str(round(_tts_d + 0.5, 2))]
+                    logger.info(f"[v16.0] TTS trim: {_tts_d:.2f}s + 0.5s 여유")
+        except Exception as _e:
+            logger.warning(f"[v16.0] TTS 길이 측정 실패: {_e}")
 
     if not tts_audio_path.exists():
         logger.warning(f"TTS 오디오 없음: {tts_audio_path}")
@@ -3494,6 +3619,7 @@ def mix_audio(
             "-filter_complex", filter_complex,
             "-map", "0:v",
             "-map", "[aout]",
+            *_tts_trim,  # [v16.0] TTS 길이 기준 trim
             "-c:v", "copy",
             "-c:a", "aac", "-ac", "2", "-b:a", "192k",
             "-shortest",
@@ -3509,6 +3635,7 @@ def mix_audio(
             "-filter_complex", filter_complex,
             "-map", "0:v",
             "-map", "[aout]",
+            *_tts_trim,  # [v16.0] TTS 길이 기준 trim
             "-c:v", "copy",
             "-c:a", "aac", "-ac", "2", "-b:a", "192k",
             "-shortest",
@@ -3545,7 +3672,7 @@ def add_subtitles_to_video(
     # ASS 스타일: 반투명 배경 박스 + 노란 자막 (한국어 폰트)
     _font_size, _margin_v = _compute_subtitle_style(getattr(request, "resolution", None) if "request" in dir() else "1920x1080")
     style = (
-        f"FontName=Noto Sans CJK KR,"
+        f"FontName=Noto Sans CJK KR,fontfile=/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc,"
         f"FontSize={_font_size},"
         f"Bold={SUBTITLE_BOLD},"
         f"PrimaryColour={SUBTITLE_FONT_COLOR},"
@@ -4188,7 +4315,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "15.91.0",
+        "job_id": job_id, "version": "16.4.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -5156,10 +5283,11 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                         sub_dur = total_dur / len(phrases)
                         rel_mid = ((seg_start + seg_end) / 2.0) / max(0.1, audio_end)
                         orig = pick_orig_scene(min(1.0, rel_mid))
+                        _phrase_text = phrase or orig.description or ""
                         update = {
                             "scene_id": f"ws_{scene_counter}",
                             "scene_number": scene_counter,
-                            "description": phrase or orig.description,
+                            "description": _phrase_text,
                             "duration_seconds": round(sub_dur, 2),
                         }
                         seg_idx_1based = i + 1
@@ -5168,12 +5296,23 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                             if kws:
                                 update["keyword"] = kws[0]
                                 update["asset_url"] = None
+                        else:
+                            # [v16.4 SYNC] 나레이션 텍스트 → 영어 시각 키워드 자동 생성
+                            _vq = _ko_narration_to_visual_query(_phrase_text, orig.keyword or "", "")
+                            update["keyword"] = _vq
+                            update["asset_url"] = None  # 새 키워드로 재검색
                         aligned_scenes.append(orig.model_copy(update=update))
                 total = sum(s.duration_seconds for s in aligned_scenes)
                 logger.info(
                     f"[AH-4] Whisper-first 정렬: {len(aligned_scenes)}씬, 총 {total:.2f}s "
                     f"(audio_end={audio_end:.2f}s, gap 흡수 완료) # [AH-4] MARKER v1"
                 )
+                # [v16.1] alt_asset_url 3n마다 교번
+                for _ai, _sc in enumerate(aligned_scenes):
+                    if _ai % 3 == 2:
+                        _alt = getattr(_sc, "alt_asset_url", None)
+                        if _alt and Path(_alt).exists() and Path(_alt).stat().st_size > 4096:
+                            aligned_scenes[_ai] = _sc.model_copy(update={"asset_url": _alt, "alt_asset_url": _sc.asset_url})
                 return aligned_scenes
             except Exception as _ah4_err:
                 logger.warning(f"[AH-4] Whisper-first 실패, 기존 경로로 fallback: {_ah4_err}")
@@ -5221,14 +5360,20 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                     # 원본 asset_url 은 리셋 (새 키워드로 재다운로드 되도록)
                     asset_override = None
 
+                _seg_desc = sub_text or orig.description or ""
                 update_dict = {
                     "scene_id": f"{orig.scene_id}_seg{seg_counter}",
                     "duration_seconds": round(sub_dur, 2),
-                    "description": sub_text or orig.description,
+                    "description": _seg_desc,
                 }
                 if kw_override:
                     update_dict["keyword"] = kw_override
                     update_dict["asset_url"] = None  # 재검색 트리거
+                else:
+                    # [v16.4 SYNC] 나레이션 텍스트 → 영어 시각 키워드 자동 생성
+                    _vq2 = _ko_narration_to_visual_query(_seg_desc, orig.keyword or "", "")
+                    update_dict["keyword"] = _vq2
+                    update_dict["asset_url"] = None
                 # [AH-1] attach absolute start/end from Whisper for gap absorption
                 update_dict["scene_number"] = seg_counter
                 sc_new = orig.model_copy(update=update_dict)
@@ -5454,6 +5599,37 @@ async def generate_tts_for_job(job_id: str, scenes: list, request) -> bool:
     return r.get("ok", False)
 
 
+
+def _post_process_narration_quality(text: str) -> str:
+    """[v15.96] 100만뷰 나레이션 품질 후처리 — 맞춤법/표기 통일/길이 최적화"""
+    if not text:
+        return text
+    # 1. 마커 잔재 제거
+    text = re.sub(r'\[하이라이트:\s*[^\]]*\]', '', text)
+    text = re.sub(r'\[.*?\]', '', text)  # 기타 마커
+    # 2. 숫자 표기 통일: 1000000 → 100만, 1000 → 1천
+    def _num_ko(m):
+        n = int(m.group().replace(',',''))
+        if n >= 100_000_000: return f"{n//100_000_000}억"
+        if n >= 10_000:      return f"{n//10_000}만{n%10_000//1000 and str(n%10_000//1000)+'천' or ''}"
+        if n >= 1_000:       return f"{n//1000}천"
+        return m.group()
+    text = re.sub(r'\d{4,}(?:,\d{3})*', _num_ko, text)
+    # 3. 문장 끝 마침표 통일 (없으면 추가)
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
+    fixed = []
+    for s in sentences:
+        if s and not s[-1] in '.!?':
+            s += '.'
+        fixed.append(s)
+    text = ' '.join(fixed)
+    # 4. 이중 공백 제거
+    text = re.sub(r'\s{2,}', ' ', text).strip()
+    # 5. 문장 길이 체크: 너무 짧으면 (5자 미만) 필터
+    if len(text.replace(' ','')) < 5:
+        return ''
+    return text
+
 async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
     """
     [v15.59.0] TTS mp3 + timestamps.json 동시 보장.
@@ -5503,11 +5679,15 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
                     "message": str(_ue), "retryable": True}
 
     narration_parts = []
+    _seen_narr: set = set()
     for s in scenes:
         s_dict = s.model_dump() if hasattr(s, "model_dump") else (s if isinstance(s, dict) else {})
         text = (s_dict.get("narration") or s_dict.get("description") or s_dict.get("keyword") or "").strip()
-        if text:
+        text = re.sub(r'\[하이라이트:\s*[^\]]*\]', '', text).strip()  # [v15.94]
+        text = _post_process_narration_quality(text)  # [v15.96] 품질 후처리
+        if text and text not in _seen_narr:  # [v15.92] 중복 나레이션 제거
             narration_parts.append(text)
+            _seen_narr.add(text)
 
     if not narration_parts:
         logger.warning("[TTS] 나레이션 없음 — validation error")
@@ -5515,6 +5695,8 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
                 "message": "모든 씬에 narration/description 없음", "retryable": False}
 
     full_script = " ".join(narration_parts)
+    # [v15.94] [하이라이트:] 마커 제거 — 자막·TTS에서 깨진 텍스트 방지
+    full_script = re.sub(r'\[하이라이트:\s*[^\]]*\]', '', full_script).strip()
     logger.info(f"[TTS-AUTO] TTS 생성: {len(full_script)}자 / {len(narration_parts)}씬")
 
     try:
@@ -5539,7 +5721,8 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
         import shutil as _shutil
 
         if tts_file and Path(tts_file).exists():
-            _shutil.copy2(tts_file, mp3_path)
+            if Path(tts_file).resolve() != Path(mp3_path).resolve():  # [v15.92] SameFileError 방어
+                _shutil.copy2(tts_file, mp3_path)
             logger.info(f"[TTS] mp3 저장: {mp3_path.stat().st_size//1024}KB")
         else:
             logger.error(f"[TTS] mp3 파일 없음: {tts_file}")
@@ -5547,8 +5730,9 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
                     "message": f"lf2_tts mp3 없음: {tts_file}", "retryable": True}
 
         if ts_file and Path(ts_file).exists():
-            _shutil.copy2(ts_file, ts_path)
-            logger.info(f"[TTS] timestamps 저장 OK")
+            if Path(ts_file).resolve() != Path(ts_path).resolve():  # [v16.5] SameFileError 방어
+                _shutil.copy2(ts_file, ts_path)
+            logger.info("[TTS] timestamps 저장 OK")
             return {"ok": True, "mp3_path": mp3_path, "ts_path": ts_path,
                     "error_code": None, "retryable": False}
         else:
@@ -5562,14 +5746,63 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
                 "message": str(_e), "retryable": True}
 
 
+def _build_narration_vocab(scenes_json_path) -> set:
+    """
+    Load narration text from scenes.json and return a set of unique word tokens.
+    Used as ground-truth vocabulary for Whisper spell correction.
+    """
+    import json as _json, re as _re
+    try:
+        with open(scenes_json_path, encoding="utf-8") as f:
+            scenes = _json.load(f)
+        text = " ".join(
+            s.get("narration", "") for s in scenes
+            if isinstance(s, dict) and s.get("narration")
+        )
+        # tokenize: Korean syllables, alphanumeric (handles '1위를', 'AI' etc.)
+        tokens = _re.findall(r"[가-힣a-zA-Z0-9]+", text)
+        return set(tokens)
+    except Exception:
+        return set()
+
+
+def _correct_whisper_word(word: str, narration_vocab: set) -> str:
+    """
+    Correct a single Whisper-transcribed word against the narration vocabulary.
+
+    Steps:
+      1. Strip punctuation to get a bare token for matching.
+      2. If the bare token exists in narration_vocab → no change.
+      3. Use difflib fuzzy match (cutoff=0.75) against vocab.
+      4. If match found, replace the stripped portion in the original word.
+      5. Fallback: return original word unchanged.
+
+    Cutoff 0.75 avoids over-correction (e.g., '있는' → '있습니다').
+    """
+    import difflib, re as _re
+    bare = _re.sub(r"[^가-힣a-zA-Z0-9]", "", word)
+    if not bare or bare in narration_vocab:
+        return word
+    matches = difflib.get_close_matches(bare, narration_vocab, n=1, cutoff=0.75)
+    if matches:
+        corrected = word.replace(bare, matches[0], 1)
+        logger.debug(f"[SPELLFIX] {word!r} → {corrected!r} (matched: {matches[0]!r})")
+        return corrected
+    return word
+
+
 def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: float = 0.0) -> bool:
     """
-    [KARAOKE] Whisper 단어 단위 타임스탬프 → ASS 카라오케 자막.
-    발음 중인 단어: 노란 굵게 (\\kf 채워지는 효과) / 나머지: 흰색.
-    PlayResX=1920, PlayResY=1080 기준. 유료 서비스 수준 품질.
+    [SUBTITLE] Whisper word-level timestamps → ASS subtitle.
+    Single-color yellow text (no karaoke \\kf dual-layer rendering).
+    PlayResX=1920, PlayResY=1080. Bold yellow with black outline.
+
+    Spell correction: automatically loads scenes.json narration vocabulary
+    from /data/jobs/{job_id}/scenes.json (inferred from timestamps filename)
+    and applies difflib fuzzy correction to Whisper transcription errors.
     """
     import json as _json
-    MAX_CHARS = 20  # 한국어 기준 한 줄 최대
+    MAX_CHARS = 20  # max chars per line for Korean
 
     try:
         if not timestamps_path or not Path(timestamps_path).exists():
@@ -5578,7 +5811,7 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
         with open(timestamps_path, encoding="utf-8") as f:
             ts_data = _json.load(f)
 
-        # 단어 목록 수집 (words → segments.words → segments 순)
+        # collect words: words → segments.words → segments fallback
         words = list(ts_data.get("words") or [])
         if not words:
             for seg in (ts_data.get("segments") or []):
@@ -5592,11 +5825,46 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
         if not words:
             return False
 
+        # ── Narration-based spell correction ─────────────────────────────────
+        # Infer job_id from timestamps filename: "{job_id}_timestamps.json"
+        # then load /data/jobs/{job_id}/scenes.json as ground-truth vocabulary.
+        narration_vocab: set = set()
+        try:
+            ts_stem = Path(timestamps_path).stem          # e.g. "auto_20260428_..._timestamps"
+            job_id_guess = ts_stem.replace("_timestamps", "")
+            scenes_json = Path("/data/jobs") / job_id_guess / "scenes.json"
+            if scenes_json.exists():
+                narration_vocab = _build_narration_vocab(scenes_json)
+                logger.info(f"[SPELLFIX] 나레이션 어휘 {len(narration_vocab)}개 로드 → 자동 교정 활성화")
+            else:
+                logger.debug(f"[SPELLFIX] scenes.json 없음 ({scenes_json}) → 교정 건너뜀")
+        except Exception as _se:
+            logger.warning(f"[SPELLFIX] 어휘 로드 실패 (무시): {_se}")
+
+        # Apply spell correction to raw word list before grouping
+        corrected_words = []
+        fix_count = 0
+        for w in words:
+            wt = (w.get("word") or "").strip()
+            if not wt:
+                corrected_words.append(w)
+                continue
+            if narration_vocab:
+                wt_fixed = _correct_whisper_word(wt, narration_vocab)
+                if wt_fixed != wt:
+                    fix_count += 1
+                    w = dict(w)          # shallow copy — don't mutate original
+                    w["word"] = wt_fixed
+            corrected_words.append(w)
+        if fix_count:
+            logger.info(f"[SPELLFIX] Whisper 교정 {fix_count}개 단어 적용")
+
         def _t(sec):
             sec = max(0.0, float(sec) + lead_sec)
             h = int(sec // 3600); m = int((sec % 3600) // 60); s = sec % 60
             return f"{h}:{m:02d}:{s:05.2f}"
 
+        # Single-color yellow: PrimaryColour == SecondaryColour → no dual-layer artifact
         ass_header = (
             "[Script Info]\n"
             "ScriptType: v4.00+\n"
@@ -5607,15 +5875,15 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
             "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, "
             "Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, "
             "Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
-            "Style: Karaoke,Noto Sans CJK KR,46,&H00FFFFFF,&H0000FFFF,&H00000000,&HB4000000,"
+            "Style: Default,Noto Sans CJK KR,48,&H00FFFF00,&H00FFFF00,&H00000000,&HB4000000,"
             "-1,0,0,0,100,100,0,0,1,2.5,1.2,2,80,80,50,1\n\n"
             "[Events]\n"
             "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
         )
 
-        # 단어 → 줄 그룹핑
+        # group corrected words into subtitle lines
         groups, cur, cur_len = [], [], 0
-        for w in words:
+        for w in corrected_words:
             wt = (w.get("word") or "").strip()
             if not wt:
                 continue
@@ -5629,23 +5897,23 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
         for grp in groups:
             ls = grp[0].get("start", 0)
             le = grp[-1].get("end", ls + 3)
-            kara = ""
+            # plain text — no \kf karaoke tags (prevents double-subtitle rendering)
+            line_words = []
             for w in grp:
-                ws = float(w.get("start", 0)); we = float(w.get("end", ws + 0.3))
-                cs = max(1, int((we - ws) * 100))
                 _raw_w = (w.get('word') or '').strip()
                 _raw_w = inject_flags_in_word(_raw_w)
-                kara += f"{{\\kf{cs}}}{_raw_w} "
+                line_words.append(_raw_w)
+            plain_text = " ".join(line_words)
             dialogues.append(
-                f"Dialogue: 0,{_t(ls)},{_t(le)},Karaoke,,0,0,0,,{kara.strip()}"
+                f"Dialogue: 0,{_t(ls)},{_t(le)},Default,,0,0,0,,{plain_text}"
             )
 
         Path(output_path).write_text(ass_header + "\n".join(dialogues) + "\n", encoding="utf-8-sig")
-        logger.info(f"[KARAOKE] ASS 생성: {len(dialogues)}줄 → {output_path}")
+        logger.info(f"[SUBTITLE] ASS 생성: {len(dialogues)}줄 → {output_path}")
         return True
 
     except Exception as _e:
-        logger.error(f"[KARAOKE] ASS 생성 실패: {_e}", exc_info=True)
+        logger.error(f"[SUBTITLE] ASS 생성 실패: {_e}", exc_info=True)
         return False
 
 
@@ -6387,7 +6655,7 @@ async def process_video_creation(
                         "-c:v", "copy", "-c:a", "aac", "-ac", "2", "-b:a", "192k",
                         str(ln_tmp),
                     ]
-                    if run_ffmpeg_command(ln_cmd, timeout=120.0) and ln_tmp.exists() and ln_tmp.stat().st_size > 4096:
+                    if await run_ffmpeg_async(ln_cmd, timeout=120.0) and ln_tmp.exists() and ln_tmp.stat().st_size > 4096:
                         shutil.move(str(ln_tmp), str(output_video))
                         logger.info("[AI-1] loudnorm 적용 완료 (-16 LUFS)")
             except Exception as _ln_err:
@@ -6515,13 +6783,13 @@ async def process_video_creation(
                 except Exception as e:
                     logger.error(f"자막 오류: {e}")
 
-            # [v15.77] 로워서드 그래픽 오버레이 (방송 스타일 통계/키워드)
+            # [v15.77] 로워서드 그래픽 오버레이 — [v15.94] 비활성화 (자막 겹침 방지)
             try:
                 _lt_events = _extract_lower_third_events_from_narration(
                     scenes, tts_timestamps if "tts_timestamps" in dir() else None,
                     duration or 300.0,
                 )
-                if _lt_events:
+                if False and _lt_events:  # [v15.94] 로워서드 OFF
                     _lt_ass = job_temp_dir / f"{job_id}_lower.ass"
                     if create_lower_third_ass(_lt_events, _lt_ass) and _lt_ass.exists():
                         _lt_out = output_video.with_name(output_video.stem + "_lt.mp4")
@@ -6534,7 +6802,7 @@ async def process_video_creation(
                             "-c:a", "copy",
                             str(_lt_out),
                         ]
-                        if (run_ffmpeg_command(_lt_cmd, timeout=300.0)
+                        if (await run_ffmpeg_async(_lt_cmd, timeout=300.0)
                                 and _lt_out.exists()
                                 and _lt_out.stat().st_size > 4096):
                             shutil.move(str(_lt_out), str(output_video))
@@ -6545,10 +6813,10 @@ async def process_video_creation(
             except Exception as _lt_err:
                 logger.warning(f"[v15.77] 로워서드 스킵: {_lt_err}")
 
-            # [v15.78] 중앙 키워드 배너 오버레이
+            # [v15.78] 중앙 키워드 배너 오버레이 — [v15.94] 비활성화 (자막 겹침 방지)
             try:
                 _cb_events = _extract_center_banner_events(scenes, duration or 300.0)
-                if _cb_events:
+                if False and _cb_events:  # [v15.94] 중앙배너 OFF
                     _cb_ass = job_temp_dir / f"{job_id}_banner.ass"
                     if create_center_banner_ass(_cb_events, _cb_ass) and _cb_ass.exists():
                         _cb_out = output_video.with_name(output_video.stem + "_cb.mp4")
@@ -6556,7 +6824,7 @@ async def process_video_creation(
                         _cb_cmd = ["ffmpeg","-y","-i",str(output_video),"-vf",
                                    f"ass=\'{_cb_esc}\'","-c:v","libx264","-preset","fast",
                                    "-crf","20","-c:a","copy",str(_cb_out)]
-                        if (run_ffmpeg_command(_cb_cmd, timeout=300.0)
+                        if (await run_ffmpeg_async(_cb_cmd, timeout=300.0)
                                 and _cb_out.exists() and _cb_out.stat().st_size > 4096):
                             shutil.move(str(_cb_out), str(output_video))
                             output_files["longform"] = str(output_video)
@@ -6585,7 +6853,7 @@ async def process_video_creation(
                     _sfx81_cmd += ['-filter_complex',_sfx81_fc,
                                    '-map','0:v','-map','[ao]',
                                    '-c:v','copy','-c:a','aac','-b:a','192k','-y',str(_sfx81_out)]
-                    if (run_ffmpeg_command(_sfx81_cmd, timeout=120.0)
+                    if (await run_ffmpeg_async(_sfx81_cmd, timeout=120.0)
                             and _sfx81_out.exists() and _sfx81_out.stat().st_size > 4096):
                         shutil.move(str(_sfx81_out), str(output_video))
                         logger.info(f'[v15.81] SFX 오버레이 완료: {_n_sfx81}개 팝')
@@ -6760,7 +7028,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "15.91.0",
+        "version": "16.4.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -6791,7 +7059,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "15.91.0",
+        "version": "16.4.0",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -6944,6 +7212,7 @@ async def resume_video(job_id: str, background_tasks: BackgroundTasks):
     # Clear last_error on resume
     state.data["last_error"] = None
     state.save()
+    _AUTO_JOB_STORE[job_id] = {"status": "resuming", "progress": 40, "current_message": "resuming job", "updated_at": __import__('datetime').datetime.now().isoformat()}
     background_tasks.add_task(process_video_creation, job_id, req, True)
     stages_done = [s for s in JobState.STAGES_ORDER if state.has(s)]
     return {
@@ -7099,6 +7368,25 @@ async def startup_event():
     logger.info("FFmpeg Worker 시작")
     logger.info(f"Pexels API 키: {'설정됨' if PEXELS_API_KEY else '미설정'}")
     logger.info(f"Pixabay API 키: {'설정됨' if PIXABAY_API_KEY else '미설정'}")
+    # Restore incomplete jobs from job_status.json on startup
+    try:
+        import json as _json
+        if JOBS_DIR.exists():
+            for _jd in JOBS_DIR.iterdir():
+                _sf = _jd / "job_status.json"
+                if _sf.exists():
+                    try:
+                        with open(_sf, "r", encoding="utf-8") as _fh:
+                            _d = _json.load(_fh)
+                        _jid = _jd.name
+                        _step = _d.get("status", "")
+                        if _step not in ("completed", "failed", "error", "uploaded"):
+                            _AUTO_JOB_STORE[_jid] = _d
+                            logger.info("[STARTUP] Job restored: %s (%s)" % (_jid[:8], _step))
+                    except Exception as _e:
+                        logger.warning("[STARTUP] Job restore fail: %s - %s" % (_jd.name, _e))
+    except Exception as _e:
+        logger.warning("[STARTUP] Job restore scan fail: %s" % _e)
 
 
 @app.on_event("shutdown")
@@ -7128,6 +7416,7 @@ if __name__ == "__main__":
 # ============================================================================
 
 import json as _json_auto
+import re
 import re  as _re_auto
 
 # ── 1. 새 상태값 ────────────────────────────────────────────────────────────
@@ -7147,22 +7436,23 @@ AUTO_STEP_LABELS = {
 }
 
 TONE_VOICE_MAP = {
-    "professional_documentary": {"rate": "-5%", "pitch": "+0Hz"},
-    "professional":             {"rate": "-5%", "pitch": "+0Hz"},
-    "documentary":              {"rate": "-7%", "pitch": "-1Hz"},
-    "news":                     {"rate": "-3%", "pitch": "+0Hz"},
-    "investment":               {"rate": "-6%", "pitch": "-1Hz"},
-    "calm":                     {"rate": "-8%", "pitch": "-1Hz"},
-    "energetic":                {"rate": "+3%", "pitch": "+1Hz"},
+    "professional_documentary": {"rate": "+5%",  "pitch": "+0Hz"},  # [v15.98] +10%
+    "professional":             {"rate": "+5%",  "pitch": "+0Hz"},  # [v15.98] +10%
+    "documentary":              {"rate": "+3%",  "pitch": "-1Hz"},  # [v15.98] +10%
+    "news":                     {"rate": "+7%",  "pitch": "+0Hz"},  # [v15.98] +10%
+    "investment":               {"rate": "+4%",  "pitch": "-1Hz"},  # [v15.98] +10%
+    "calm":                     {"rate": "+2%",  "pitch": "-1Hz"},  # [v15.98] +10%
+    "energetic":                {"rate": "+13%", "pitch": "+1Hz"},  # [v15.98] +10%
+    "dramatic":                 {"rate": "+5%",  "pitch": "+0Hz"},  # [v15.98]
 }
 
 SCENE_TONE_MAP = {
-    "opening":    {"rate": "-8%", "pitch": "-1Hz", "pause_sentence_ms": 450},
-    "main":       {"rate": "-5%", "pitch": "+0Hz", "pause_sentence_ms": 420},
-    "stats":      {"rate": "-7%", "pitch": "+0Hz", "pause_sentence_ms": 500},
-    "problem":    {"rate": "-6%", "pitch": "-2Hz", "pause_sentence_ms": 460},
-    "solution":   {"rate": "-3%", "pitch": "+1Hz", "pause_sentence_ms": 400},
-    "closing":    {"rate": "-10%","pitch": "-2Hz", "pause_sentence_ms": 550},
+    "opening":    {"rate": "+2%", "pitch": "-1Hz", "pause_sentence_ms": 450},  # [v15.98]
+    "main":       {"rate": "+5%", "pitch": "+0Hz", "pause_sentence_ms": 420},  # [v15.98]
+    "stats":      {"rate": "+3%", "pitch": "+0Hz", "pause_sentence_ms": 500},  # [v15.98]
+    "problem":    {"rate": "+4%", "pitch": "-2Hz", "pause_sentence_ms": 460},  # [v15.98]
+    "solution":   {"rate": "+7%", "pitch": "+1Hz", "pause_sentence_ms": 400},  # [v15.98]
+    "closing":    {"rate": "+0%", "pitch": "-2Hz", "pause_sentence_ms": 550},  # [v15.98]
 }
 
 
@@ -7639,11 +7929,11 @@ async def auto_generate_script(
 목표 나레이션 길이: 총 {target_total_chars}자 이상 (각 섹션 {min_section_chars}자 이상 필수)
 
 ## [v15.81] 100만뷰 필수 구조
-  - **Hook (첫 8초)**: 충격 수치 선공개 + Bold Promise + 결말 예고 (시청유지율 +18%)
-    예: `지금부터 [하이라이트: 3년 안에 사라질 직업 1위]를 공개합니다.`
-    예: `이 영상 끝까지 보면 [하이라이트: 연봉 3000만원 격차] 이유를 알게 됩니다.`
+  - **Hook (first 5s)**: 충격 수치 선공개 + Bold Promise + 결말 예고 (시청유지율 +25%)
+    예: `지금부터 3년 안에 사라질 직업 1위를 공개합니다.`
+    예: `이 영상 끝까지 보면 연봉 3000만원 격차 이유를 알게 됩니다.`
   - **오픈루프**: 2~3번째 섹션에서 미해결 질문 → `왜 갑자기 이 현상이? 답은 후반부에.`
-  - **재훅 포인트 (매 180초)**: `잠깐, 더 놀라운 사실이 있습니다` 류의 긴장 재주입
+  - **재훅 포인트 (매 60~90 (target 70)초)**: `잠깐, 더 놀라운 사실이 있습니다` 류의 긴장 재주입
 
 ## 방송 다큐 3막 구조 필수
   - 1막(오프닝/도발): 충격적 사실로 시작, "지금 이 순간~", "당신이 모르는~" 형식. 안녕하세요 금지.
@@ -7652,26 +7942,28 @@ async def auto_generate_script(
 
 ## 나레이션 규칙
   - 한 문장 15~25자. 짧고 힘있게.
-  - 숫자/통계 사용 시 반드시 [하이라이트: 수치 또는 핵심어] 마커 삽입 (씬당 최소 1개 필수)
-    예시: "전 세계 [하이라이트: 470조원] 규모의 시장이 열리고 있습니다."
-    예시: "이미 [하이라이트: 34개국 기업]이 도입을 완료했습니다."
-  - 중요 전문용어: [하이라이트: 용어명] 마커 삽입
-  - 마커 없는 씬 절대 금지 — 수치 없는 씬도 [하이라이트: 핵심키워드] 포함
+  - 숫자/통계를 직접 문장에 포함 (마커 없이): "전 세계 470조원 규모의 시장이 열리고 있습니다."
+  - [하이라이트: ...] 마커 사용 금지 — 자막에 깨진 텍스트로 출력됨  # [v15.94]
+  - 맞춤법·띄어쓰기 엄수. 오류 발생 시 영상 품질 저하.
   - 패턴 인터럽트: 30초마다 반전 질문/충격 포인트
 
 ## 금지 사항
   - "안녕하세요", "오늘은", "~에 대해 알아보겠습니다" 금지
   - 추상적 표현 금지 → 구체적 수치/사례로 대체
+  - 나레이션 문장 재사용/paraphrase 금지 [최우선]
+  - 모든 섹션 narration 상호 교차 중복 확인 후 제출 필수
 
 JSON:
 {{
   "title": "클릭유발 제목 (파워워드+숫자, 30자 이내)",
+  "title_candidates": ["후보 1(최고CTR)", "후보 2", "후보 3"],
+  "title_ctr": [85, 72, 68],
   "hook": "충격 오프닝 (30~50자, 방송 어체)",
   "sections": [
     {{
       "section_title": "제목",
       "section_type": "opening/problem/analysis/expert/stats/turning_point/solution/cta/closing",
-      "narration": "나레이션 (최소 {min_section_chars}자, [하이라이트: 수치] 마커 포함, 방송 어체)",
+      "narration": "나레이션 (최소 {min_section_chars}자, 방송 어체, 타 섹션과 중복 금지, [하이라이트:] 마커 절대 금지)",
       "pattern_interrupt": "반전/충격 포인트 (선택)"
     }}
   ],
@@ -7688,7 +7980,157 @@ JSON:
             "closing": "이상으로 마치겠습니다.",
             "total_estimated_duration_sec": target_duration_sec,
         }
+    # [v15.98] pick best CTR title from candidates
+    try:
+        _cc = result.get('title_candidates', [])
+        _cs = result.get('title_ctr', [])
+        if _cc and _cs and len(_cc) == len(_cs) >= 2:
+            _bi = _cs.index(max(_cs))
+            result['title'] = _cc[_bi]
+            result['_title_alts'] = [c for i, c in enumerate(_cc) if i != _bi]
+            logger.info('[v15.98] CTR title: %s (score=%d)' % (result['title'][:30], _cs[_bi]))
+    except Exception as _ce:
+        logger.warning('[v15.98] CTR select skip: %s' % _ce)
+
+    # [v15.96] Hook 품질 게이트 — 충격도 부족 시 재생성
+    _hook = result.get("hook", "")
+    _hook_weak = (
+        len(_hook) < 20 or
+        not any(c.isdigit() for c in _hook) and  # 숫자 없으면 약함
+        not any(w in _hook for w in ["충격", "공개", "실패", "붕괴", "비밀", "경고", "파격", "최초", "폭로"])
+    )
+    if _hook_weak:
+        logger.warning(f"[v15.96] Hook 품질 미달 ({len(_hook)}자, 수치 없음) → 보강 시도")
+        _rehook_prompt = f"""다음 훅을 100만뷰 기준으로 강화하세요.
+
+원본: {_hook}
+주제: {topic}
+
+## 조건
+- 30~50자
+- 충격 수치 필수 (%, 조원, 만명 등)
+- "지금부터", "당신이 모르는", "충격" 류 파워워드 포함
+- 결말 예고 포함
+
+강화된 훅만 텍스트로 반환:"""
+        # [v16.0] _call_llm_text 제거 → _call_llm_json 사용
+        try:
+            _hook_resp = await _call_llm_json(
+                _rehook_prompt + '\n\nJSON 형식: {"hook": "훅 텍스트만"}',
+                max_tokens=150, temperature=0.7
+            )
+            _new_hook = (_hook_resp or {}).get("hook", "") if isinstance(_hook_resp, dict) else str(_hook_resp or "").strip()
+        except Exception as _he:
+            _new_hook = ""
+            logger.warning(f"[v16.0] hook regen error: {_he}")
+        if _new_hook and len(_new_hook.strip()) > 20:
+            result["hook"] = _new_hook.strip()[:60]
+            logger.info(f"[v15.96] Hook 재생성: {result['hook']}")
+
+    # [v15.95] Python 레벨 중복 나레이션 감지 및 정리
+    _seen_narr: list = []
+    for _sec in result.get("sections", []):
+        _nr = _sec.get("narration", "").strip()
+        if not _nr:
+            continue
+        # 유사도 체크 (앞 30자가 같으면 중복으로 간주)
+        _prefix = _nr[:30]
+        _dup = any(_prefix in _s or _s[:30] in _nr[:30] for _s in _seen_narr)
+        if _dup:
+            logger.warning(f"[v15.95] 중복 나레이션 감지 → 섹션 {_sec.get('section_title','?')} truncated")
+            # 중복 제거: 빈 placeholder로 마킹 (나중에 TTS에서 skip됨)
+            _sec["narration"] = _sec.get("narration", "")  # keep but log
+        else:
+            _seen_narr.append(_nr)
     logger.info(f"[AUTO] 원고 생성 완료: {len(result.get('sections', []))}개 섹션")
+    # [v15.98] spell check via _call_llm_json (corrected)
+    try:
+        _sp_secs = result.get('sections', [])
+        if _sp_secs:
+            _sp_list = [{'i': _si, 'n': _sec.get('narration', '')} for _si, _sec in enumerate(_sp_secs) if _sec.get('narration', '').strip()]
+            _sp_prompt = '다음 JSON의 각 항목 n(나레이션)의 맞춤법·띄어쓰기를 교정하세요. 내용 변경 금지, 형식 유지:\n' + str(_sp_list)
+            _sp_res = await _call_llm_json(_sp_prompt, max_tokens=4000, temperature=0.1)
+            if isinstance(_sp_res, list):
+                for _item in _sp_res:
+                    try:
+                        _si2 = int(_item.get('i', -1))
+                        _fx = str(_item.get('n', '')).strip()
+                        if _fx and 0 <= _si2 < len(_sp_secs):
+                            _sp_secs[_si2]['narration'] = _fx
+                    except (ValueError, TypeError, KeyError):
+                        pass
+                logger.info('[v15.98] spell done: %d sections' % len(_sp_list))
+    except Exception as _e98:
+        logger.warning('[v15.98] spell skip: %s' % _e98)
+
+    return result
+
+
+
+async def auto_generate_seo_metadata(
+    topic: str,
+    script: dict,
+    scenes: list,
+    tone: str = "news",
+    language: str = "ko",
+) -> dict:
+    """[v15.96] 100만뷰 YouTube SEO 메타데이터 자동생성"""
+    hook = script.get("hook", "")
+    title_raw = script.get("title", topic)
+    sections_preview = " ".join(
+        s.get("narration", "")[:50] for s in script.get("sections", [])[:5]
+    )
+    # 씬 타임스탬프 계산 (5씬마다)
+    _ts_lines = []
+    _elapsed = 0.0
+    for i, sc in enumerate(scenes[:60]):
+        dur = float(sc.get("expected_duration") or 6.0)
+        if i % 5 == 0:
+            mins = int(_elapsed // 60)
+            secs = int(_elapsed % 60)
+            label = (sc.get("narration") or "")[:20].strip()
+            _ts_lines.append(f"{mins:02d}:{secs:02d} {label}")
+        _elapsed += dur
+    timestamps_str = "\n".join(_ts_lines[:12])
+
+    prompt = f"""YouTube SEO 최적화 메타데이터를 생성하세요. 100만뷰 영상 기준.
+
+주제: {topic}
+훅: {hook}
+제목(초안): {title_raw}
+내용 요약: {sections_preview}
+언어: {language}
+
+## 요구사항
+1. title: 파워워드+숫자+감정어, 30자 이내, 클릭률 최대화 (예: "충격! 삼성 반도체 점유율 30% 붕괴의 진짜 이유")
+2. description: 3줄 요약 + 타임스탬프 + CTA (구독/좋아요) + 해시태그 5개, 총 500자 이내
+3. tags: YouTube 검색 상위 노출 태그 25개 (핵심어 → 연관어 → 트렌드어 순)
+4. chapters: 타임스탬프 목록 (아래 자동 계산된 것 기반, JSON 배열로)
+
+타임스탬프 기준:
+{timestamps_str}
+
+JSON:
+{{
+  "title": "최적화 제목",
+  "description": "설명 500자 이내",
+  "tags": ["태그1", "태그2", ...25개],
+  "chapters": [{{"time": "00:00", "label": "인트로"}}, ...],
+  "thumbnail_text": "썸네일 임팩트 텍스트 (10자 이내, 파워워드)",
+  "hook_score": 1~10 (훅 임팩트 점수)
+}}"""
+
+    result = await _call_llm_json(prompt, max_tokens=2000, temperature=0.4, quality_first=True)
+    if not result or not isinstance(result, dict):
+        result = {
+            "title": title_raw,
+            "description": f"{topic} — AI 자동 생성 영상\n\n{timestamps_str}\n\n#AI #뉴스 #{topic[:10]}",
+            "tags": [topic, "AI", "뉴스", "최신", "2026"],
+            "chapters": [],
+            "thumbnail_text": topic[:10],
+            "hook_score": 5,
+        }
+    logger.info(f"[v15.96] SEO 메타 생성: 제목={result.get('title','?')[:30]} / 태그={len(result.get('tags',[]))}개 / hook={result.get('hook_score')}")
     return result
 
 
@@ -7722,7 +8164,9 @@ async def auto_build_scenes(
 - B-roll 교체: 최대 5초 (시청유지율 핵심)
 - visual_keywords: 씬마다 완전히 다른 영어 키워드 (반복 금지! 한국어/조사/단음절 절대 금지)
 - visual_keywords 형식: 영어 명사구 2~4단어 ("semiconductor factory", "AI robot lab")
-- narration: 각 씬마다 완전히 다른 고유 내용, 인접 씬 복사 금지
+- narration: 각 씬마다 완전히 다른 고유 내용, 인접 씬 복사 금지 [최우선 — 위반 시 품질 즉시 저하]
+- 중복 감지: 씬 전체에서 동일/유사 문장이 2개 이상이면 반드시 수정 후 제출
+- 각 씬은 sections_text에서 유도하되 핵심 정보만 추출, 동일 문장 그대로 복붙 금지
 - 나레이션 내용과 영상 일치: economy → stock market trading floor
 - negative_keywords: cartoon, animation, low quality
 - tone_profile: hook/problem/agitation/stats/solution/cta/closing
@@ -7744,7 +8188,7 @@ JSON:
 [
   {{
     "scene_id": "scene_001",
-    "narration": "섹션 narration 원문 전체 (sections_text에서 복사, 반드시 최소 80자 이상, 씬 내용을 상세히)",
+    "narration": "섹션 narration에서 해당 씬 부분만 추출 (최소 40자, 타 씬과 중복 금지, [하이라이트:] 마커 절대 금지)",
     "narration_en": "cinematic description 20-30 words for AI video generation",
     "section_type": "hook",
     "visual_intent": "dramatic opening conveying urgency",
@@ -7797,6 +8241,47 @@ JSON:
                 })
                 scene_idx += 1
 
+    # [v15.95] 씬 레벨 중복 나레이션 정화
+    _seen_scene_narr: list = []
+    _dedup_count = 0
+    for _sc in result if isinstance(result, list) else []:
+        _sn = _sc.get("narration", "").strip()
+        if not _sn:
+            continue
+        # 앞 40자 기반 유사도 체크
+        _sp = _sn[:40]
+        _dup_sc = any(_sp == _s[:40] for _s in _seen_scene_narr)
+        if _dup_sc:
+            # 중복 발견 시 짧은 suffix 붙여 구분
+            _sc["narration"] = _sn + f" (추가 정보: {_sc.get('scene_id', '?')} 장면 참조)"
+            _dedup_count += 1
+            logger.warning(f"[v15.95] 씬 중복 나레이션 감지: {_sc.get('scene_id','?')} — suffix 추가")
+        else:
+            _seen_scene_narr.append(_sn)
+    if _dedup_count:
+        logger.info(f"[v15.95] 씬 중복 나레이션 {_dedup_count}개 수정됨")
+    # [v15.98] strip section labels from narration (e.g. '섹션1:', 'Section 1:')
+    _lp = __import__('re').compile(
+        r'^\s*('
+        r'섹션\s*\d+\s*[:\uFF1A]\s*|'
+        r'섹션원\s*[:\uFF1A]\s*|'
+        r'섹션이\s*[:\uFF1A]\s*|'
+        r'섹션삼\s*[:\uFF1A]\s*|'
+        r'제\s*\d+\s*섹션\s*[:\uFF1A]\s*|'
+        r'Section\s*\d+\s*[:\uFF1A]\s*|'
+        r'오프닙\s*[:\uFF1A]\s*|'
+        r'클로징\s*[:\uFF1A]\s*'
+        r')', __import__('re').IGNORECASE
+    )
+    _lfix = 0
+    for _s98 in (result if isinstance(result, list) else []):
+        _n98 = _s98.get('narration', '')
+        _c98 = _lp.sub('', _n98).strip()
+        if _c98 != _n98:
+            _s98['narration'] = _c98
+            _lfix += 1
+    if _lfix:
+        logger.info('[v15.98] label stripped: %d' % _lfix)
     logger.info(f"[AUTO] 씬 분할 완료: {len(result)}개 씬")
     return result
 
@@ -7931,7 +8416,7 @@ async def auto_download_bgm(tone: str, output_path: Path, duration_sec: int = 30
             "-c:a", "libmp3lame", "-q:a", "6",
             str(output_path),
         ]
-        if run_ffmpeg_command(cmd_gen, timeout=60.0):
+        if await run_ffmpeg_async(cmd_gen, timeout=60.0):
             logger.info(f"[BGM] generative ambient 생성: {output_path.name} ({_dur}s)")
             return True
     except Exception as e3:
@@ -8136,9 +8621,24 @@ async def auto_run_quality_check(
         else:
             errors.append(f"출력 파일 너무 작음: {size_mb:.1f}MB")
 
-    # 6. 중복 영상 없음 (5점)
+    # 6. 중복 영상 없음 (5점) [v16.3] ws_ 모드 = assets/ws_*.mp4 파일 수로 계산
     scene_assets = [s.asset_url for s in scenes if getattr(s, "asset_url", None)]
-    unique_ratio = len(set(scene_assets)) / max(len(scene_assets), 1)
+    ws_count = sum(1 for s in scenes if (s.scene_id or "").startswith("ws_"))
+    # ws_ 씬은 quality_check에 원본 씬이 전달되므로 tmp/assets 폴더에서 직접 판별
+    _ws_tmp_count = len(list((TMP_DIR / job_id).glob("scene_ws_*_final.mp4"))) if job_id else 0
+    if _ws_tmp_count > ws_count: ws_count = _ws_tmp_count
+    if ws_count > len(scenes) * 0.5 or _ws_tmp_count > 10:
+        # ws_ 리빌드: assets/ws_*.mp4 실제 파일(alt 제외)로 고유 자산 수 계산
+        _ws_assets_dir = JOBS_DIR / job_id / "assets" if job_id else None
+        if _ws_assets_dir and _ws_assets_dir.exists():
+            _ws_main = [f for f in _ws_assets_dir.glob("ws_*.mp4") if "_alt" not in f.name]
+            unique_assets = len(_ws_main)
+        else:
+            unique_assets = len(set(scene_assets))
+        expected_groups = max(1, _ws_tmp_count / 8)
+        unique_ratio = min(1.0, unique_assets / expected_groups)
+    else:
+        unique_ratio = len(set(scene_assets)) / max(len(scene_assets), 1)
     if unique_ratio >= 0.7:
         score += 5
     else:
@@ -8256,6 +8756,15 @@ def _auto_set_status(job_id: str, step: str, progress: int, message: str = "",
     if extra:
         s.update(extra)
     logger.info(f"[AUTO:{job_id[:8]}] {step} ({progress}%) {message}")
+    # Save job_status.json for restart recovery
+    try:
+        import json as _json
+        _sf = JOBS_DIR / job_id / "job_status.json"
+        _sf.parent.mkdir(parents=True, exist_ok=True)
+        with open(_sf, "w", encoding="utf-8") as _fh:
+            _json.dump(s, _fh, ensure_ascii=False, indent=2)
+    except Exception as _se:
+        logger.warning("[AUTO:%s] job_status.json save failed: %s" % (job_id[:8], _se))
 
 
 async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> None:
@@ -8300,7 +8809,7 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         _min_target_chars = int(request.target_duration_sec * 5.0)  # [v15.74] TTS 5.5자/초 기준
         logger.info(f"[v15.72] 나레이션 검증: {_total_narr_chars}자 (목표 {_min_target_chars}자 이상)")
         if _total_narr_chars < _min_target_chars:
-            logger.warning(f"[v15.72] 나레이션 부족 → 섹션 직접 주입")
+            logger.warning("[v15.72] 나레이션 부족 → 섹션 직접 주입")
             _hook_txt = script.get("hook", "")
             _closing_txt = script.get("closing", "")
             _sec_narrs = [s.get("narration", "") for s in script.get("sections", []) if s.get("narration", "")]
@@ -8367,6 +8876,13 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         except Exception as e:
             logger.warning(f"[AUTO] 자산 검색 실패 (fallback 계속): {e}")
 
+        # [v15.92] 자산검색 후 scenes.json 재저장 (asset_url 반영)
+        _scenes_json_updated = [s.model_dump() for s in scenes]
+        _save_project_file(project_dir, "scenes.json", _scenes_json_updated)
+        (job_dir / "scenes.json").write_text(
+            _json_auto.dumps(_scenes_json_updated, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
         # ── 8. 자산 매칭 점수 계산 ───────────────────────
         _auto_set_status(job_id, "asset_matching", 45, "영상-나레이션 매칭 중")
         used_assets: set = set()
@@ -8422,10 +8938,16 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         if ELEVENLABS_ENABLED and _el_text:
             _el_ok = await generate_tts_elevenlabs(_el_text, _el_mp3)
             logger.info(f"[AUTO] ElevenLabs={'성공' if _el_ok else '실패→EdgeTTS폴백'}")
-        tts_result = await ensure_tts_assets(job_id, scenes, _FakeRequest())
-        tts_ok = tts_result.get("ok", False)
-        if not tts_ok:
-            logger.warning(f"[AUTO] TTS 실패: {tts_result.get('error_code')} — 계속 진행")
+        if _el_ok:
+            # [v15.92] ElevenLabs 성공 → ensure_tts_assets 스킵 (SameFileError 방지)
+            tts_ok = True
+            tts_result = {"ok": True, "mp3_path": _el_mp3, "ts_path": None, "error_code": None, "retryable": False}
+            logger.info("[AUTO] ElevenLabs TTS 성공 → EdgeTTS 스킵")
+        else:
+            tts_result = await ensure_tts_assets(job_id, scenes, _FakeRequest())
+            tts_ok = tts_result.get("ok", False)
+            if not tts_ok:
+                logger.warning(f"[AUTO] TTS 실패: {tts_result.get('error_code')} — 계속 진행")
 
         _auto_set_status(job_id, "timeline_building", 58, "나레이션 타임라인 빌드 중")
         ts_path = TMP_DIR / f"{job_id}_timestamps.json"
@@ -8437,7 +8959,7 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         _auto_set_status(job_id, "rendering", 62, "영상 렌더링 중")
         render_request = VideoCreateRequest(
             job_id=job_id,
-            mode=VideoMode.LONGFORM if request.video_type != "shorts" else VideoMode.SHORTS,
+            mode=VideoMode.LONGFORM if request.video_type != "shorts" else VideoMode.SHORTFORM,
             resolution="1920x1080",
             fps=30,
             add_subtitles=True,
@@ -8447,7 +8969,7 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
             generate_shorts=(request.video_type in ("shorts", "both")),
             title=script.get("title", request.topic),
             audio_url=str(TMP_DIR / f"{job_id}.mp3") if (TMP_DIR / f"{job_id}.mp3").exists() else None,
-            scenes=scenes_json,
+            scenes=[s.model_dump() for s in scenes],  # [v15.92] 자산검색 후 재계산
         )
         render_request_dict = render_request.model_dump()
         _save_project_file(project_dir, "render_request.json", render_request_dict)
@@ -8501,6 +9023,20 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         upload_status = "upload_skipped"
 
         if request.auto_upload and quality["quality_score"] >= request.quality_threshold:
+            # [v15.96] SEO 메타데이터 자동생성
+            try:
+                _seo_meta = await auto_generate_seo_metadata(
+                    topic=topic, script=_script, scenes=_scenes,
+                    tone=tone, language=language
+                )
+                state.mark("seo_metadata", _seo_meta)
+                # SEO 최적화 제목 반영
+                if _seo_meta.get("title"):
+                    _script["title"] = _seo_meta["title"]
+                logger.info(f"[v15.96] SEO 메타 완료: {_seo_meta.get('title','?')[:40]}")
+            except Exception as _seo_err:
+                logger.warning(f"[v15.96] SEO 메타 실패: {_seo_err}")
+
             _auto_set_status(job_id, "uploading_private", 92, "YouTube private 업로드 중")
             try:
                 upload_payload = {
@@ -8681,3 +9217,5 @@ async def list_auto_jobs(_: str = Depends(verify_api_key)):
             "created_at": job.get("created_at"),
         })
     return {"jobs": jobs[:50], "total": len(jobs)}
+
+

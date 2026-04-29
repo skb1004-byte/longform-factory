@@ -1196,7 +1196,7 @@ logger.info(f"µ¥ÀÌÅÍ µð·ºÅä¸® ÃÊ±âÈ­ ¿Ï·á: {BASE_DATA_DI
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
     description="·ÕÆû/¼ôÆû ÀÚµ¿È­ ¿µ»ó Á¦ÀÛ ¼­ºñ½º",
-    VERSION = "16.11.0"
+    VERSION = "16.12.0"
 )
 
 
@@ -7602,8 +7602,12 @@ CEREBRAS_MODEL_VAR = os.getenv("CEREBRAS_MODEL", "llama3.1-8b")
 DEEPSEEK_API_KEY   = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_MODEL     = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 GEMINI_MODEL    = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-XAI_LLM_API_KEY = os.getenv("XAI_API_KEY", "")          # Grok LLM (chat completions)
-XAI_LLM_MODEL   = os.getenv("XAI_LLM_MODEL", "grok-3-mini")
+XAI_LLM_API_KEY   = os.getenv("XAI_API_KEY", "")              # Grok LLM (chat completions)
+XAI_LLM_MODEL     = os.getenv("XAI_LLM_MODEL", "grok-3-mini")
+SAMBANOVA_API_KEY  = os.getenv("SAMBANOVA_API_KEY", "")        # SambaNova free (Llama 405B)
+SAMBANOVA_MODEL    = os.getenv("SAMBANOVA_MODEL", "Meta-Llama-3.3-70B-Instruct")
+APIFREELLM_API_KEY = os.getenv("APIFREELLM_API_KEY", "")       # ApiFreeLLM (200B+ free)
+APIFREELLM_MODEL   = os.getenv("APIFREELLM_MODEL", "llama-3.3-70b")
 
 async def _call_llm_json(
     prompt: str,
@@ -7752,6 +7756,44 @@ async def _call_llm_json(
                         if result is not None:
                             return result
 
+                elif provider == "sambanova" and SAMBANOVA_API_KEY:
+                    async with httpx.AsyncClient(timeout=60.0) as client:
+                        resp = await client.post(
+                            "https://api.sambanova.ai/v1/chat/completions",
+                            headers={"Authorization": f"Bearer {SAMBANOVA_API_KEY}",
+                                     "Content-Type": "application/json"},
+                            json={"model": LLM_MODEL or SAMBANOVA_MODEL,
+                                  "max_tokens": max_tokens, "temperature": temperature,
+                                  "messages": [{"role": "system", "content": system},
+                                               {"role": "user", "content": prompt}]},
+                        )
+                        if resp.status_code != 200:
+                            logger.warning(f"[LLM/sambanova] {resp.status_code}")
+                            continue
+                        raw = resp.json()["choices"][0]["message"]["content"]
+                        result = _parse_json_raw(raw)
+                        if result is not None:
+                            return result
+
+                elif provider == "apifreellm" and APIFREELLM_API_KEY:
+                    async with httpx.AsyncClient(timeout=60.0) as client:
+                        resp = await client.post(
+                            "https://api.apifreellm.com/v1/chat/completions",
+                            headers={"Authorization": f"Bearer {APIFREELLM_API_KEY}",
+                                     "Content-Type": "application/json"},
+                            json={"model": LLM_MODEL or APIFREELLM_MODEL,
+                                  "max_tokens": max_tokens, "temperature": temperature,
+                                  "messages": [{"role": "system", "content": system},
+                                               {"role": "user", "content": prompt}]},
+                        )
+                        if resp.status_code != 200:
+                            logger.warning(f"[LLM/apifreellm] {resp.status_code}")
+                            continue
+                        raw = resp.json()["choices"][0]["message"]["content"]
+                        result = _parse_json_raw(raw)
+                        if result is not None:
+                            return result
+
                 elif provider == "deepseek" and DEEPSEEK_API_KEY:
                     async with httpx.AsyncClient(timeout=60.0) as client:
                         resp = await client.post(
@@ -7798,12 +7840,14 @@ async def _call_llm_json(
     if provider_cfg == "all":
         # Å°°¡ ÀÖ´Â ¸ðµç ÇÁ·Î¹ÙÀÌ´õ º´·Ä ·¹ÀÌ½º
         candidates = ["anthropic"]
-        if GEMINI_API_KEY:       candidates.append("gemini")
-        if CEREBRAS_API_KEY:     candidates.append("cerebras")
-        if GROQ_API_KEY:         candidates.append("groq")
-        if XAI_LLM_API_KEY:     candidates.append("xai")
-        if OPENROUTER_API_KEY:   candidates.append("openrouter")
-        if DEEPSEEK_API_KEY:     candidates.append("deepseek")
+        if GEMINI_API_KEY:         candidates.append("gemini")
+        if CEREBRAS_API_KEY:       candidates.append("cerebras")
+        if GROQ_API_KEY:           candidates.append("groq")
+        if XAI_LLM_API_KEY:       candidates.append("xai")
+        if SAMBANOVA_API_KEY:      candidates.append("sambanova")
+        if APIFREELLM_API_KEY:     candidates.append("apifreellm")
+        if OPENROUTER_API_KEY:     candidates.append("openrouter")
+        if DEEPSEEK_API_KEY:       candidates.append("deepseek")
         candidates.append("ollama")  # Ç×»ó fallback
     else:
         candidates = [provider_cfg]
@@ -7813,7 +7857,9 @@ async def _call_llm_json(
 
     # Ç°Áú ¿ì¼± º´·Ä ·¹ÀÌ½º: HIGH_QUALITY 8ÃÊ À¯¿¹ ¡æ ±× ÈÄ ANY
     # anthropic/gemini = Ç°Áú ¿ì¼±, ³ª¸ÓÁö = ¼Óµµ fallback
-    _HQ = {"anthropic", "gemini"} if quality_first else set()
+    # [v16.12] HQ tier: anthropic/gemini/sambanova (large models, quality first)
+    # SPEED tier: cerebras/groq/apifreellm (fast inference, fallback)
+    _HQ = {"anthropic", "gemini", "sambanova"} if quality_first else set()
     loop_tasks = {asyncio.ensure_future(_call_one(p)): p for p in candidates}
     pending = set(loop_tasks.keys())
     winner = None

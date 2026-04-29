@@ -302,7 +302,7 @@ function JobCard({ job, onCancel, onYTUpload }) {
 }
 
 function GenerateForm({ onSubmit, loading }) {
-  const [form, setForm] = useState({ topic:'', duration:'600', style:'professional', mode:'longform', language:'ko', provider:'gemini', autoUpload:false, tts_engine:'edge', tts_voice:'ko-KR-SunHiNeural', autoMode:true });
+  const [form, setForm] = useState({ topic:'', duration:'600', style:'professional', mode:'longform', language:'ko', provider:'gemini', autoUpload:false, tts_engine:'edge', tts_voice:'ko-KR-SunHiNeural', autoMode:true, shorts_5s:true, shorts_10s:true, shorts_60s:true, subtitle_speed:0 });
   const set = (k) => (e) => setForm(f=>({...f,[k]:e.target.value}));
   const toggle = (k) => () => setForm(f=>({...f,[k]:!f[k]}));
   const setTopic = (t) => setForm(f=>({...f,topic:t}));
@@ -380,6 +380,35 @@ function GenerateForm({ onSubmit, loading }) {
               <option value="gpt4all">💻 GPT4All (오프라인)</option>
             </select>
           </div>
+        </div>
+
+        {/* v16.11 숏츠 길이 선택 */}
+        <div className="rounded-lg px-3 py-2.5 bg-lf-bg border border-lf-border">
+          <div className="text-xs text-gray-400 font-medium mb-2">📱 숏츠 출력 길이</div>
+          <div className="flex gap-3">
+            {[['5s','5초',form.shorts_5s,'shorts_5s'],['10s','10초',form.shorts_10s,'shorts_10s'],['60s','60초',form.shorts_60s,'shorts_60s']].map(([id,label,checked,key])=>(
+              <label key={id} className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" checked={checked} onChange={toggle(key)} className="accent-cyan-400 w-3.5 h-3.5"/>
+                <span className={cls('text-xs font-medium',checked?'text-cyan-400':'text-gray-500')}>{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* v16.11 자막속도 슬라이더 -10%~+15% */}
+        <div className="rounded-lg px-3 py-2.5 bg-lf-bg border border-lf-border">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-gray-400 font-medium">🎬 자막 속도</div>
+            <span className={cls('text-xs font-bold', form.subtitle_speed>0?'text-cyan-400':form.subtitle_speed<0?'text-yellow-400':'text-gray-500')}>
+              {form.subtitle_speed===0?'기본':form.subtitle_speed>0?`+${(form.subtitle_speed*100).toFixed(0)}% 빠름`:`${(form.subtitle_speed*100).toFixed(0)}% 느림`}
+            </span>
+          </div>
+          <input type="range" min="-10" max="15" step="1" value={Math.round(form.subtitle_speed*100)}
+            onChange={e=>setForm(f=>({...f,subtitle_speed:parseInt(e.target.value)/100}))}
+            className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+            style={{background:`linear-gradient(to right,#F59E0B 0%,#1A2540 ${(form.subtitle_speed*100+10)/25*100}%,#1A2540 ${(form.subtitle_speed*100+10)/25*100}%,#00D4FF 100%)`}}
+          />
+          <div className="flex justify-between text-xs text-gray-700 mt-1"><span>-10%</span><span>0</span><span>+15%</span></div>
         </div>
 
         {/* v15.95 Auto Pipeline 토글 */}

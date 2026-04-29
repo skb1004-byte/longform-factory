@@ -1064,6 +1064,8 @@ class VideoCreateRequest(BaseModel):
     bgm_volume: float = Field(default=0.3, ge=0.0, le=1.0, description="¹è°æÀ½¾Ç º¼·ý(0-1)")
     generate_thumbnail: bool = Field(default=True, description="½æ³×ÀÏ »ý¼º")
     generate_shorts: bool = Field(default=True, description="¼ôÆû »ý¼º")
+    shorts_durations: List[float] = Field(default=[5.0, 10.0, 60.0], description="¼ôÆû Ãâ·Â ±æÀÌ ¸ñ·Ï(ÃÊ) [v16.11]")
+    subtitle_speed: float = Field(default=0.0, ge=-0.10, le=0.15, description="ÀÚ¸· ¼Óµµ Á¶Á¤ -0.10(10%´À¸°)~+0.15(15%ºü¸§) [v16.11]")
     title: Optional[str] = Field(None, description="½æ³×ÀÏ¿¡ Ç¥½ÃÇÒ Á¦¸ñ")
     subtitle_text: Optional[str] = Field(None, description="¹ÂÁ÷ºñµð¿À ÀÚ¸· ÅØ½ºÆ®")
     audio_url: Optional[str] = Field(None, description="TTS ¿Àµð¿À °æ·Î (Àý´ë°æ·Î ¶Ç´Â /data/tmp/...)")
@@ -1194,7 +1196,7 @@ logger.info(f"µ¥ÀÌÅÍ µð·ºÅä¸® ÃÊ±âÈ­ ¿Ï·á: {BASE_DATA_DI
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
     description="·ÕÆû/¼ôÆû ÀÚµ¿È­ ¿µ»ó Á¦ÀÛ ¼­ºñ½º",
-    VERSION = "16.10.0"
+    VERSION = "16.11.0"
 )
 
 
@@ -5869,7 +5871,7 @@ def _correct_whisper_word(word: str, narration_vocab: set) -> str:
     return word
 
 
-def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: float = 0.0) -> bool:
+def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: float = 0.0, speed_factor: float = 0.0) -> bool:
     """
     [SUBTITLE] Whisper word-level timestamps ¡æ ASS subtitle.
     Single-color yellow text (no karaoke \\kf dual-layer rendering).
@@ -5971,10 +5973,13 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
         if cur:
             groups.append(cur)
 
+        # [v16.11] subtitle_speed: +0.15 = 15% faster (scale 1/1.15), -0.10 = 10% slower (scale 1/0.9)
+        _spd_scale = 1.0 / max(1.0 + speed_factor, 0.1) if speed_factor != 0.0 else 1.0
+
         dialogues = []
         for grp in groups:
-            ls = grp[0].get("start", 0)
-            le = grp[-1].get("end", ls + 3)
+            ls = grp[0].get("start", 0) * _spd_scale
+            le = grp[-1].get("end", ls + 3) * _spd_scale
             # plain text ? no \kf karaoke tags (prevents double-subtitle rendering)
             line_words = []
             for w in grp:
@@ -6815,7 +6820,10 @@ async def process_video_creation(
                         ass_path = srt_path.with_suffix(".ass")
                         subtitle_path = None
                         subtitle_type = None
-                        ass_ok = create_ass_karaoke_from_whisper(tts_timestamps, ass_path)
+                        ass_ok = create_ass_karaoke_from_whisper(
+                            tts_timestamps, ass_path,
+                            speed_factor=getattr(request, "subtitle_speed", 0.0)
+                        )
                         if ass_ok:
                             subtitle_path = ass_path
                             subtitle_type = "ass"
@@ -6943,18 +6951,26 @@ async def process_video_creation(
                 logger.warning(f'[v15.81] SFX ¿¹¿Ü: {_sfx81_err}')
             # ¼ôÆû »ý¼º [v16.6: graceful degradation ? ½ÇÆÐÇØµµ ·ÕÆû ¿Ï·á À¯Áö]
             if request.generate_shorts:
-                shorts_output = SHORTS_DIR / f"{job_id}_short.mp4"
-                try:
-                    shorts_ok = create_shortform_from_longform(output_video, shorts_output)
-                    if shorts_ok:
-                        output_files["shorts"] = str(shorts_output)
-                        state.mark("shorts_done", {"path": str(shorts_output)})
-                        await update_job_status(job_id, JobStatus.PROCESSING, progress=90.0, output_files=output_files)
-                        logger.info(f"[v16.6] ¼ôÆû ¿Ï·á: {shorts_output}")
-                    else:
-                        logger.warning(f"[v16.6] ¼ôÆû »ý¼º ½ÇÆÐ ? ·ÕÆû¸¸À¸·Î ¿Ï·á ÁøÇà (job={job_id})")
-                except Exception as _shorts_err:
-                    logger.warning(f"[v16.6] ¼ôÆû ¿¹¿Ü (·ÕÆû ¿Ï·á À¯Áö): {_shorts_err}")
+                # [v16.11] multi-duration shorts: 5s, 10s, 60s (configurable via shorts_durations)
+                _short_durations = getattr(request, "shorts_durations", [5.0, 10.0, 60.0])
+                for _sdur in _short_durations:
+                    _suffix = f"_{int(_sdur)}s" if _sdur < 60.0 else ""
+                    shorts_output = SHORTS_DIR / f"{job_id}_short{_suffix}.mp4"
+                    try:
+                        shorts_ok = create_shortform_from_longform(
+                            output_video, shorts_output, max_duration=_sdur,
+                            timeout=max(30.0, _sdur * 4)
+                        )
+                        if shorts_ok:
+                            key = f"shorts_{int(_sdur)}s" if _sdur < 60.0 else "shorts"
+                            output_files[key] = str(shorts_output)
+                            state.mark("shorts_done", {"path": str(shorts_output), "duration": _sdur})
+                            logger.info(f"[v16.11] ¼ôÆû {int(_sdur)}s ¿Ï·á: {shorts_output}")
+                        else:
+                            logger.warning(f"[v16.11] ¼ôÆû {int(_sdur)}s ½ÇÆÐ (job={job_id})")
+                    except Exception as _shorts_err:
+                        logger.warning(f"[v16.11] ¼ôÆû {int(_sdur)}s ¿¹¿Ü (·ÕÆû À¯Áö): {_shorts_err}")
+                await update_job_status(job_id, JobStatus.PROCESSING, progress=90.0, output_files=output_files)
         
         await update_job_status(
             job_id,

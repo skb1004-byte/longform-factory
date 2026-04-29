@@ -1276,7 +1276,7 @@ except Exception:
 # ============================================================================
 # FastAPI ¾Û ÃÊ±âÈ­
 # ============================================================================
-VERSION = "16.19.0"  # [v16.19] narration subtitle fallback fix  # module-level — used in /health and status endpoints
+VERSION = "16.20.0"  # [v16.20] fontsdir L4715 + asyncio.ensure_future fix  # module-level — used in /health and status endpoints
 
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
@@ -4712,7 +4712,7 @@ def create_music_video(
 
         # 4) ÀÚ¸· ÇÊÅÍ ¹®ÀÚ¿­ (srt °æ·Î ÀÌ½ºÄÉÀÌÇÁ)
         srt_escaped = str(srt_path).replace("\\", "/").replace(":", "\\:")
-        subtitle_filter = f"subtitles={srt_escaped}:charenc=UTF-8:force_style='{subtitle_style}'"
+        subtitle_filter = f"subtitles={srt_escaped}:charenc=UTF-8:fontsdir=/usr/share/fonts/opentype/noto:force_style='{subtitle_style}'"  # [v16.20] fontsdir
 
         # 5) BGM Æ÷ÇÔ ¿©ºÎ¿¡ µû¶ó ¸í·É ±¸¼º
         if bgm_path and bgm_path.exists():
@@ -7652,7 +7652,7 @@ async def startup_event():
     # [v16.18] job queue worker 시작
     try:
         import asyncio as _aio_startup
-        _aio_startup.get_event_loop().create_task(_job_queue_worker())
+        asyncio.ensure_future(_job_queue_worker())  # [v16.20] ensure_future (get_event_loop deprecated)
         logger.info("[STARTUP] job queue worker started")
     except Exception as _qe:
         logger.warning(f"[STARTUP] queue worker start failed: {_qe}")

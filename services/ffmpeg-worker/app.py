@@ -1196,7 +1196,7 @@ logger.info(f"µ¥ÀÌÅÍ µð·ºÅä¸® ÃÊ±âÈ­ ¿Ï·á: {BASE_DATA_DI
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
     description="·ÕÆû/¼ôÆû ÀÚµ¿È­ ¿µ»ó Á¦ÀÛ ¼­ºñ½º",
-    VERSION = "16.12.0"
+    VERSION = "16.13.0"
 )
 
 
@@ -2696,6 +2696,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
     total_scenes = len(scenes)
     _used_asset_basenames: set = set()  # [v15.94] ¿µ»ó Áßº¹ ¹æÁö ? µ¿ÀÏ ¼Ò½º Àç»ç¿ë ÃßÀû
     
+    _dl_queue: list = []  # [v16.13] parallel download queue
     for idx, scene in enumerate(scenes):
         try:
             # ÁøÇà·ü ¾÷µ¥ÀÌÆ®
@@ -3022,62 +3023,83 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
             # [AF-14] track used URL to prevent duplicate in later scenes
             if best_video_url:
                 seen_urls.add(best_video_url)
-            success = await download_video(best_video_url, asset_path)
-            
-            # [AQ-2/AL-1] alternate retry: try up to 2 more Pexels candidates on failure
-            if not success:
-                logger.warning(f"[AQ-2] 1Â÷ ´Ù¿î·Îµå ½ÇÆÐ, ´ëÃ¼ URL ½Ãµµ: {scene.scene_id}")
-                alt_exclude = set(seen_urls) | {best_video_url}
-                for _alt_attempt in range(2):
-                    alt_url = select_best_video(pexels_videos, pixabay_videos,
-                                                 scene_index=(idx + _alt_attempt + 1),
-                                                 exclude_urls=alt_exclude)
-                    if not alt_url or alt_url == best_video_url:
-                        break
-                    alt_exclude.add(alt_url)
-                    logger.info(f"[AQ-2] ´ëÃ¼ URL {_alt_attempt+1}/2: {alt_url[:80]}")
-                    success = await download_video(alt_url, asset_path)
-                    if success:
-                        seen_urls.add(alt_url)
-                        best_video_url = alt_url
-                        logger.info(f"[AQ-2] ´ëÃ¼ URL ¼º°ø: {scene.scene_id}")
-                        break
-            
-            if success:
-                scene.asset_url = str(asset_path)
-                logger.info(f"Àå¸é '{scene.scene_id}' ´Ù¿î·Îµå ¿Ï·á: {asset_path}")
-                # [PATCH J] Ä³½Ã ±â·Ï
-                _cache_write(expanded_kw, best_video_url, str(asset_path))
-                # [v15.68] alt ¼Ò½º ¿µ»ó ´Ù¿î·Îµå (¼­ºêÅ¬¸³ 3-4¹ø ´Ù¾çÈ­)
-                _scene_alt_kws = getattr(scene, 'alt_keywords', []) or []
-                if _scene_alt_kws and not getattr(scene, 'alt_asset_url', None):
-                    _alt_kw2 = _expand_domain_keyword(_scene_alt_kws[0])
-                    try:
-                        _apx, _apb = await asyncio.gather(
-                            get_pexels_videos(_alt_kw2, per_page=3),
-                            get_pixabay_videos(_alt_kw2, per_page=3)
-                        )
-                        _apx = [v for v in _apx if not _is_negative(v, _alt_kw2)]
-                        _apb = [v for v in _apb if not _is_negative(v, _alt_kw2)]
-                        _au = select_best_video(_apx, _apb, scene_index=idx+200,
-                                               exclude_urls=seen_urls, query_keyword=_alt_kw2)
-                        if _au:
-                            _ap = job_assets_dir / f"{scene.scene_id}_alt.mp4"
-                            if await download_video(_au, _ap):
-                                scene.alt_asset_url = str(_ap)
-                                seen_urls.add(_au)
-                                logger.info(f'[v15.68] alt DL ok: {scene.scene_id}')
-                    except Exception as _adl_e:
-                        logger.debug(f'[v15.68] alt DL skip: {_adl_e}')
-            else:
-                logger.error(f"Àå¸é '{scene.scene_id}' ´Ù¿î·Îµå ½ÇÆÐ (3È¸ ½Ãµµ ÈÄ)")
-            
-            updated_scenes.append(scene)
+            # [v16.13] Phase 1: queue for parallel download
+            _dl_queue.append({
+                "scene": scene, "url": best_video_url, "path": asset_path,
+                "pexels": pexels_videos, "pixabay": pixabay_videos,
+                "idx": idx, "kw": expanded_kw,
+            })
         
         except Exception as e:
             logger.error(f"Àå¸é '{scene.scene_id}' Ã³¸® ¿À·ù: {e}")
             updated_scenes.append(scene)
     
+    # [v16.13] Phase 2: parallel download (Semaphore=4)
+    _dl_sem = asyncio.Semaphore(4)
+
+    async def _dl_task_fn(item: dict):
+        _scene = item["scene"]
+        _url   = item["url"]
+        _path  = item["path"]
+        _px    = item["pexels"]
+        _pb    = item["pixabay"]
+        _idx   = item["idx"]
+        _kw    = item["kw"]
+        async with _dl_sem:
+            _ok = await download_video(_url, _path)
+            if not _ok:
+                _alt_excl = {_url}
+                for _a in range(2):
+                    _au = select_best_video(_px, _pb,
+                                            scene_index=_idx + _a + 1,
+                                            exclude_urls=_alt_excl)
+                    if not _au or _au == _url:
+                        break
+                    _alt_excl.add(_au)
+                    _ok = await download_video(_au, _path)
+                    if _ok:
+                        seen_urls.add(_au)
+                        _url = _au
+                        break
+            if _ok:
+                _scene.asset_url = str(_path)
+                _cache_write(_kw, _url, str(_path))
+                _alt_kws = getattr(_scene, "alt_keywords", []) or []
+                if _alt_kws and not getattr(_scene, "alt_asset_url", None):
+                    _akw2 = _expand_domain_keyword(_alt_kws[0])
+                    try:
+                        _apx2, _apb2 = await asyncio.gather(
+                            get_pexels_videos(_akw2, per_page=3),
+                            get_pixabay_videos(_akw2, per_page=3),
+                        )
+                        _apx2 = [v for v in _apx2 if not _is_negative(v, _akw2)]
+                        _apb2 = [v for v in _apb2 if not _is_negative(v, _akw2)]
+                        _au2 = select_best_video(_apx2, _apb2,
+                                                 scene_index=_idx + 200,
+                                                 exclude_urls=seen_urls,
+                                                 query_keyword=_akw2)
+                        if _au2:
+                            _ap2 = job_assets_dir / f"{_scene.scene_id}_alt.mp4"
+                            if await download_video(_au2, _ap2):
+                                _scene.alt_asset_url = str(_ap2)
+                                seen_urls.add(_au2)
+                    except Exception:
+                        pass
+            else:
+                logger.error(f"scene '{_scene.scene_id}' download failed (3 attempts)")
+            return _scene
+
+    if _dl_queue:
+        _dl_results = await asyncio.gather(
+            *[_dl_task_fn(item) for item in _dl_queue],
+            return_exceptions=True,
+        )
+        for _r in _dl_results:
+            if isinstance(_r, Exception):
+                logger.error(f"[v16.13 dl-task] {_r}")
+            else:
+                updated_scenes.append(_r)
+
     # [AY-E] persist seen URLs globally for cross-job diversity
     try:
         _save_global_seen(seen_urls)
@@ -9133,4 +9155,316 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
                             if rescanned and rescanned[0].asset_url:
                                 scene.asset_url = rescanned[0].asset_url
                         except Exception:
-                            pass
+                            pass
+                if scene.asset_url:
+                    used_assets.add(scene.asset_url)
+        _save_project_file(project_dir, "visual_matching.json", visual_matching)
+
+        # ¦¡¦¡ 9. ³ª·¹ÀÌ¼Ç Å¸ÀÓ¶óÀÎ ºôµå ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "timeline_building", 52, "Å¸ÀÓ¶óÀÎ ±¸¼º Áß")
+        # TTS »ý¼º (ensure_tts_assets)
+        _auto_set_status(job_id, "tts_generating", 52, "TTS ³ª·¹ÀÌ¼Ç »ý¼º Áß")
+        # ÀüÃ¼ ³ª·¹ÀÌ¼Ç ÅØ½ºÆ®¸¦ °¢ ¾À narration ÇÊµå¿¡¼­ ÃßÃâ
+        for scene in scenes:
+            if not scene.narration:
+                matched_raw = next((s for s in scenes_data if s.get("scene_id") == scene.scene_id), {})
+                scene.narration = matched_raw.get("narration", scene.description or scene.keyword)
+
+        # SSML ÀüÃ³¸®: ¾À narrationÀ¸·Î TTS ¿äÃ» »ý¼ºÀ» À§ÇÑ full script Á¶ÇÕ
+        # (±âÁ¸ ensure_tts_assets ´Â scenes.jsonÀÇ narration ÇÊµå¸¦ ÇÕÃÄ¼­ TTS »ý¼º)
+        class _FakeRequest:
+            audio_url = None
+            subtitle_text = None
+            add_subtitles = True
+            add_bgm = True
+            bgm_volume = 0.3
+
+        # ElevenLabs TTS ½Ãµµ ¡æ ½ÇÆÐ ½Ã Edge TTS Æú¹é
+        _el_text = " ".join(s.narration or "" for s in scenes if s.narration)
+        _el_mp3 = TMP_DIR / f"{job_id}.mp3"
+        _el_ok = False
+        if ELEVENLABS_ENABLED and _el_text:
+            _el_ok = await generate_tts_elevenlabs(_el_text, _el_mp3)
+            logger.info(f"[AUTO] ElevenLabs={'¼º°ø' if _el_ok else '½ÇÆÐ¡æEdgeTTSÆú¹é'}")
+        if _el_ok:
+            # [v15.92] ElevenLabs ¼º°ø ¡æ ensure_tts_assets ½ºÅµ (SameFileError ¹æÁö)
+            tts_ok = True
+            tts_result = {"ok": True, "mp3_path": _el_mp3, "ts_path": None, "error_code": None, "retryable": False}
+            logger.info("[AUTO] ElevenLabs TTS ¼º°ø ¡æ EdgeTTS ½ºÅµ")
+        else:
+            tts_result = await ensure_tts_assets(job_id, scenes, _FakeRequest())
+            tts_ok = tts_result.get("ok", False)
+            if not tts_ok:
+                logger.warning(f"[AUTO] TTS ½ÇÆÐ: {tts_result.get('error_code')} ? °è¼Ó ÁøÇà")
+
+        _auto_set_status(job_id, "timeline_building", 58, "³ª·¹ÀÌ¼Ç Å¸ÀÓ¶óÀÎ ºôµå Áß")
+        ts_path = TMP_DIR / f"{job_id}_timestamps.json"
+        ntl_timeline = build_narration_timeline(job_id, scenes, ts_path)
+        save_timeline_report(job_id, ntl_timeline, scenes)
+        _save_project_file(project_dir, "narration_timeline.json", ntl_timeline)
+
+        # ¦¡¦¡ 10. ·»´õ¸µ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "rendering", 62, "¿µ»ó ·»´õ¸µ Áß")
+        _is_shorts_mode = request.video_type == "shorts"
+        render_request = VideoCreateRequest(
+            job_id=job_id,
+            mode=VideoMode.SHORTFORM if _is_shorts_mode else VideoMode.LONGFORM,
+            resolution="1080x1920" if _is_shorts_mode else "1920x1080",  # [v16.7] SHORTFORM ÇØ»óµµ ¼öÁ¤
+            fps=30,
+            add_subtitles=True,
+            add_bgm=True,
+            bgm_volume=0.3,
+            generate_thumbnail=True,
+            generate_shorts=(request.video_type in ("shorts", "both")),
+            title=script.get("title", request.topic),
+            audio_url=str(TMP_DIR / f"{job_id}.mp3") if (TMP_DIR / f"{job_id}.mp3").exists() else None,
+            scenes=[s.model_dump() for s in scenes],  # [v15.92] ÀÚ»ê°Ë»ö ÈÄ Àç°è»ê
+        )
+        render_request_dict = render_request.model_dump()
+        _save_project_file(project_dir, "render_request.json", render_request_dict)
+
+        # ±âÁ¸ process_video_creation È£Ãâ
+        _auto_set_status(job_id, "rendering", 65, "¿µ»ó ÇÕ¼º Áß")
+        await process_video_creation(job_id, render_request)
+
+        # Ãâ·Â ÆÄÀÏ ¼öÁý
+        output_files: Dict[str, str] = {}
+        lf_path = LONGFORM_DIR / f"{job_id}.mp4"
+        if lf_path.exists():
+            output_files["longform"] = str(lf_path)
+        th_path = THUMBNAILS_DIR / f"{job_id}_thumb.jpg"
+        if th_path.exists():
+            output_files["thumbnail"] = str(th_path)
+
+        # ¦¡¦¡ 11. Ç°Áú °Ë»ç ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "quality_checking", 85, "Ç°Áú °Ë»ç Áß")
+        quality = await auto_run_quality_check(job_id, output_files, scenes, ntl_timeline)
+        _save_project_file(project_dir, "quality_report.json", quality)
+
+        # ¦¡¦¡ 12. ¸ÞÅ¸µ¥ÀÌÅÍ »ý¼º ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "thumbnail_generating", 88, "¸ÞÅ¸µ¥ÀÌÅÍ »ý¼º Áß")
+        actual_dur = int(get_video_duration(Path(output_files.get("longform", ""))) or request.target_duration_sec)
+        yt_meta = await auto_generate_youtube_metadata(
+            request.topic, script, request.language, actual_dur, request.upload_privacy
+        )
+        _save_project_file(project_dir, "upload_metadata.json", yt_meta)
+
+        # ¦¡¦¡ 12b. ÇÁ·Î ½æ³×ÀÏ Àç»ý¼º (YouTube Å¸ÀÌÆ² Àû¿ë) ¦¡¦¡
+        yt_title = yt_meta.get("youtube", {}).get("title", request.topic) if isinstance(yt_meta, dict) else request.topic
+        pro_thumb_path = THUMBNAILS_DIR / f"{job_id}_thumb.jpg"
+        lf_path_for_thumb = Path(output_files.get("longform", ""))
+        if lf_path_for_thumb.exists():
+            _auto_set_status(job_id, "thumbnail_generating", 90, "ÇÁ·Î ½æ³×ÀÏ »ý¼º Áß")
+            pro_ok = generate_pro_thumbnail(
+                video_path=lf_path_for_thumb,
+                output_path=pro_thumb_path,
+                title=yt_title,
+                subtitle="",
+            )
+            if pro_ok and pro_thumb_path.exists():
+                output_files["thumbnail"] = str(pro_thumb_path)
+                logger.info(f"[AUTO] ÇÁ·Î ½æ³×ÀÏ Àû¿ë: {pro_thumb_path}")
+            else:
+                logger.warning("[AUTO] ÇÁ·Î ½æ³×ÀÏ ½ÇÆÐ ? ±âÁ¸ ½æ³×ÀÏ À¯Áö")
+
+        # ¦¡¦¡ 13. YouTube ¾÷·Îµå (Ç°Áú Åë°ú ½Ã) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        youtube_url = None
+        upload_status = "upload_skipped"
+
+        if request.auto_upload and quality["quality_score"] >= request.quality_threshold:
+            # [v15.96] SEO ¸ÞÅ¸µ¥ÀÌÅÍ ÀÚµ¿»ý¼º
+            try:
+                _seo_meta = await auto_generate_seo_metadata(
+                    topic=topic, script=_script, scenes=_scenes,
+                    tone=tone, language=language
+                )
+                state.mark("seo_metadata", _seo_meta)
+                # SEO ÃÖÀûÈ­ Á¦¸ñ ¹Ý¿µ
+                if _seo_meta.get("title"):
+                    _script["title"] = _seo_meta["title"]
+                logger.info(f"[v15.96] SEO ¸ÞÅ¸ ¿Ï·á: {_seo_meta.get('title','?')[:40]}")
+            except Exception as _seo_err:
+                logger.warning(f"[v15.96] SEO ¸ÞÅ¸ ½ÇÆÐ: {_seo_err}")
+
+            _auto_set_status(job_id, "uploading_private", 92, "YouTube private ¾÷·Îµå Áß")
+            try:
+                upload_payload = {
+                    "job_id": job_id,
+                    "video_path": output_files.get("longform", ""),
+                    "thumbnail_path": output_files.get("thumbnail", ""),
+                    "title": yt_meta["youtube"]["title"],
+                    "description": yt_meta["youtube"]["description"],
+                    "tags": yt_meta["youtube"]["tags"],
+                    "privacy_status": request.upload_privacy,
+                    "category_id": yt_meta["youtube"].get("category_id", "28"),
+                }
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    up_resp = await client.post(
+                        "http://lf2_uploader:8003/api/upload/upload/youtube",
+                        json=upload_payload,
+                        headers={"X-LF-API-Key": os.getenv("LF_API_KEY", "longform-2026-secret")},
+                    )
+                    if up_resp.status_code == 200:
+                        up_data = up_resp.json()
+                        youtube_url = up_data.get("youtube_url") or up_data.get("url")
+                        upload_status = "upload_completed"
+                        logger.info(f"[AUTO] YouTube ¾÷·Îµå ¿Ï·á: {youtube_url}")
+                    else:
+                        upload_status = "upload_failed"
+                        logger.warning(f"[AUTO] ¾÷·Îµå ÀÀ´ä {up_resp.status_code}: {up_resp.text[:200]}")
+            except Exception as ue:
+                upload_status = "upload_failed"
+                logger.warning(f"[AUTO] YouTube ¾÷·Îµå ½ÇÆÐ: {ue}")
+        elif quality["quality_score"] < request.quality_threshold:
+            upload_status = "upload_hold_quality"
+            logger.info(f"[AUTO] Ç°Áú Á¡¼ö {quality['quality_score']} < {request.quality_threshold} ? ¾÷·Îµå º¸·ù")
+
+        # ¦¡¦¡ ¿Ï·á ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        final_status = "completed" if not quality["errors"] else "needs_review"
+        _auto_set_status(job_id, final_status, 100, "¿Ï·á",
+            extra={
+                "quality_score": quality["quality_score"],
+                "quality_passed": quality["passed"],
+                "warnings": quality["warnings"],
+                "errors": quality["errors"],
+                "output_files": output_files,
+                "youtube_url": youtube_url,
+                "upload_status": upload_status,
+                "project_id": project_id,
+            }
+        )
+
+        # ·Î±× ÀúÀå
+        log_entry = {
+            "completed_at": datetime.now().isoformat(),
+            "quality_score": quality["quality_score"],
+            "upload_status": upload_status,
+            "youtube_url": youtube_url,
+        }
+        _save_project_file(project_dir, "logs.jsonl", log_entry)
+        logger.info(f"[AUTO] ÆÄÀÌÇÁ¶óÀÎ ¿Ï·á: job={job_id} quality={quality['quality_score']} upload={upload_status}")
+
+    except Exception as e:
+        logger.exception(f"[AUTO] ÆÄÀÌÇÁ¶óÀÎ ½ÇÆÐ: {e}")
+        step = _AUTO_JOB_STORE.get(job_id, {}).get("status", "unknown")
+        _auto_set_status(job_id, "failed", _AUTO_JOB_STORE.get(job_id, {}).get("progress", 0),
+            f"½ÇÆÐ: {e}",
+            extra={"error": str(e), "failed_step": step, "retryable": True}
+        )
+        _save_project_file(project_dir, "error.json",
+                           {"error": str(e), "step": step, "timestamp": datetime.now().isoformat()})
+
+
+# ¦¡¦¡ 7. FastAPI ¿£µåÆ÷ÀÎÆ® ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+
+@app.post("/api/auto/topic-job", tags=["Auto"])
+async def create_auto_topic_job(
+    request: AutoTopicRequest,
+    background_tasks: BackgroundTasks,
+    _: str = Depends(verify_api_key),
+):
+    """
+    [v15.66.0] ÁÖÁ¦ ±â¹Ý ¿ÏÀü ÀÚµ¿ ¿µ»ó »ý¼º + YouTube private ¾÷·Îµå.
+    ÁÖÁ¦¡¤Åæ¡¤±æÀÌ¸¸ ÀÔ·ÂÇÏ¸é ¿ø°í¡æ¾À¡æTTS¡æ·»´õ¸µ¡æ¾÷·Îµå±îÁö ÀÚµ¿ Ã³¸®.
+    """
+    import uuid
+    job_id = f"auto_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+    project_id = request.project_id or job_id
+
+    _AUTO_JOB_STORE[job_id] = {
+        "job_id": job_id,
+        "project_id": project_id,
+        "status": "queued",
+        "progress": 0,
+        "topic": request.topic,
+        "mode": request.mode,
+        "current_message": "´ë±â Áß",
+        "quality_score": None,
+        "output_files": {},
+        "youtube_url": None,
+        "error": None,
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+    }
+
+    # asyncio.create_task (Python 3.10+ running loop Á÷Á¢ »ç¿ë)
+    import asyncio as _aio
+    try:
+        _t = _aio.create_task(run_auto_topic_pipeline(job_id, request))
+        _AUTO_TASKS[job_id] = _t  # GC ¹æÁö
+        def _log_done(t, jid=job_id):
+            if t.cancelled():
+                logger.error('[AUTO] TASK CANCELLED: ' + jid)
+            elif t.exception():
+                logger.error('[AUTO] TASK EXCEPTION: ' + jid + ' => ' + str(t.exception()))
+            else:
+                logger.info('[AUTO] TASK DONE OK: ' + jid)
+        _t.add_done_callback(_log_done)
+        logger.info('[AUTO] create_task OK: ' + job_id)
+    except RuntimeError as _ce:
+        logger.warning('[AUTO] create_task fallback: ' + str(_ce))
+        background_tasks.add_task(run_auto_topic_pipeline, job_id, request)
+
+    return AutoTopicResponse(
+        job_id=job_id,
+        project_id=project_id,
+        status="queued",
+        mode=request.mode,
+        status_url=f"/api/auto/jobs/{job_id}/status",
+        message=f"ÀÚµ¿ »ý¼º ÆÄÀÌÇÁ¶óÀÎ ½ÃÀÛ: {request.topic[:50]}",
+    )
+
+
+@app.get("/api/auto/jobs/{job_id}/status", tags=["Auto"])
+async def get_auto_job_status(
+    job_id: str,
+    _: str = Depends(verify_api_key),
+):
+    """[v15.66.0] ÀÚµ¿ »ý¼º ÀÛ¾÷ »óÅÂ Á¶È¸"""
+    job = _AUTO_JOB_STORE.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"auto job '{job_id}' not found")
+
+    step = job.get("status", "unknown")
+    step_label = AUTO_STEP_LABELS.get(step, step)
+
+    return {
+        "job_id": job_id,
+        "project_id": job.get("project_id", job_id),
+        "status": step,
+        "status_label": step_label,
+        "progress": job.get("progress", 0),
+        "current_message": job.get("current_message", ""),
+        "topic": job.get("topic", ""),
+        "mode": job.get("mode", "auto"),
+        "quality_score": job.get("quality_score"),
+        "quality_passed": job.get("quality_passed"),
+        "warnings": job.get("warnings", []),
+        "errors": job.get("errors", []),
+        "output_files": job.get("output_files", {}),
+        "youtube_url": job.get("youtube_url"),
+        "upload_status": job.get("upload_status"),
+        "created_at": job.get("created_at"),
+        "updated_at": job.get("updated_at"),
+        "error": job.get("error"),
+    }
+
+
+@app.get("/api/auto/jobs", tags=["Auto"])
+async def list_auto_jobs(_: str = Depends(verify_api_key)):
+    """[v15.66.0] ÀÚµ¿ »ý¼º ÀÛ¾÷ ¸ñ·Ï"""
+    jobs = []
+    for jid, job in sorted(_AUTO_JOB_STORE.items(),
+                            key=lambda x: x[1].get("created_at", ""), reverse=True):
+        jobs.append({
+            "job_id": jid,
+            "status": job.get("status"),
+            "progress": job.get("progress"),
+            "topic": job.get("topic", ""),
+            "quality_score": job.get("quality_score"),
+            "youtube_url": job.get("youtube_url"),
+            "created_at": job.get("created_at"),
+        })
+    return {"jobs": jobs[:50], "total": len(jobs)}
+
+

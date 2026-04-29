@@ -32,3 +32,71 @@ services/**/*.md
 .agents/plugins/
 .autopus/
 .mcp.json
+
+API_KEYS*.txt
+*.bak*
+_tmp_*
+_patch_*
+_check_*
+_e2e_*
+_fix_*
+_find_*
+_force_*
+_probe.*
+_build_check.*
+.env.paid_sample
+app.py.git_*
+_bb_frames/
+_bi_v53/
+app_container.py
+auth_module.py
+billing_module.py
+korea_public_api.py
+
+# === 자동 생성 임시/패치 파일 ===
+_tmp_*
+_patch_*
+_check_*
+_e2e_*
+_fix_*
+_find_*
+_force_*
+_probe.*
+_build_check.*
+_orig_frames/
+_bb_frames/
+_bi_v53/
+_v37_frames/
+_v38_frames/
+_tmp_frames/
+
+# === API 키 / 민감 정보 ===
+API_KEYS*.txt
+*.paid_sample
+BILLING_*.md
+v2/API_KEYS*.txt
+
+# === 백업 / bak 파일 ===
+*.bak
+*.bak*
+app.py.git_*
+v2/_backup_*/
+
+# === 대용량 미디어 파일 (Git에 보관 불필요) ===
+v2/complete/
+v2/bgm/*.mp3
+
+# === 기타 불필요 ===
+app_container.py
+auth_module.py
+billing_module.py
+korea_public_api.py
+ui_patch*.py
+patch*.py
+patch_*.py
+read_ui*.py
+scan_*.py
+check_x.py
+fix_re.py fix_syntax.py fix_ts.py bom_fix.py
+verify*.py verify*.ps1
+test*.py test*.ps1

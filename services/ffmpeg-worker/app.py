@@ -1191,12 +1191,97 @@ logger.info(f"µ¥ÀÌÅÍ µð·ºÅä¸® ÃÊ±âÈ­ ¿Ï·á: {BASE_DATA_DI
 
 
 # ============================================================================
+# Disk space guard — 400GB 방어
+# ============================================================================
+
+import shutil as _shutil_disk
+
+def check_disk_space(min_free_gb: float = 50.0) -> dict:
+    """E: 드라이브(또는 /data 볼륨) 여유 공간 체크."""
+    try:
+        usage = _shutil_disk.disk_usage(str(BASE_DATA_DIR))
+        free_gb = usage.free / 1_073_741_824
+        total_gb = usage.total / 1_073_741_824
+        used_gb = usage.used / 1_073_741_824
+        ok = free_gb >= min_free_gb
+        if not ok:
+            logger.warning(f"[DISK] 경고: 여유 공간 {free_gb:.1f}GB < {min_free_gb}GB 임계값!")
+        return {"free_gb": round(free_gb, 2), "used_gb": round(used_gb, 2),
+                "total_gb": round(total_gb, 2), "ok": ok}
+    except Exception as _de:
+        logger.debug(f"[DISK] 체크 실패: {_de}")
+        return {"free_gb": -1, "used_gb": -1, "total_gb": -1, "ok": True}
+
+
+def cleanup_job_tmp(job_id: str) -> int:
+    """잡 완료/실패 후 /data/tmp/{job_id}* 임시 파일 삭제. 반환값: 삭제된 파일 수."""
+    removed = 0
+    try:
+        # 1. TMP_DIR/{job_id}.mp3, {job_id}_timestamps.json, {job_id}.ass, {job_id}.srt
+        for pattern in [f"{job_id}.mp3", f"{job_id}_timestamps.json",
+                         f"{job_id}.ass", f"{job_id}.srt", f"{job_id}.wav"]:
+            p = TMP_DIR / pattern
+            if p.exists():
+                p.unlink(missing_ok=True)
+                removed += 1
+        # 2. TMP_DIR/{job_id}/ 서브디렉토리 전체
+        job_tmp_dir = TMP_DIR / job_id
+        if job_tmp_dir.exists() and job_tmp_dir.is_dir():
+            count = len(list(job_tmp_dir.rglob("*")))
+            import shutil as _sh
+            _sh.rmtree(job_tmp_dir, ignore_errors=True)
+            removed += count
+        if removed:
+            logger.info(f"[CLEANUP] {job_id}: tmp {removed}개 파일 삭제 완료")
+    except Exception as _ce:
+        logger.warning(f"[CLEANUP] {job_id} tmp 정리 실패 (무시): {_ce}")
+    return removed
+
+
+def auto_purge_old_tmp(max_age_hours: int = 24) -> int:
+    """TMP_DIR 내 max_age_hours 이상 된 파일/디렉토리 자동 삭제."""
+    import time
+    removed = 0
+    cutoff = time.time() - max_age_hours * 3600
+    try:
+        for item in TMP_DIR.iterdir():
+            try:
+                if item.stat().st_mtime < cutoff:
+                    if item.is_dir():
+                        import shutil as _sh2
+                        count = len(list(item.rglob("*")))
+                        _sh2.rmtree(item, ignore_errors=True)
+                        removed += count
+                    else:
+                        item.unlink(missing_ok=True)
+                        removed += 1
+            except Exception:
+                pass
+    except Exception as _pe:
+        logger.debug(f"[PURGE] old tmp 정리 실패: {_pe}")
+    if removed:
+        logger.info(f"[PURGE] {max_age_hours}h 초과 tmp 파일 {removed}개 삭제")
+    return removed
+
+
+# 시작 시 24시간 이상 된 tmp 파일 자동 정리
+try:
+    _purged = auto_purge_old_tmp(max_age_hours=24)
+    _disk = check_disk_space(min_free_gb=50.0)
+    logger.info(f"[STARTUP] 디스크: {_disk['free_gb']:.1f}GB 여유 / purge {_purged}개")
+except Exception:
+    pass
+
+
+# ============================================================================
 # FastAPI ¾Û ÃÊ±âÈ­
 # ============================================================================
+VERSION = "16.19.0"  # [v16.19] narration subtitle fallback fix  # module-level — used in /health and status endpoints
+
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
     description="·ÕÆû/¼ôÆû ÀÚµ¿È­ ¿µ»ó Á¦ÀÛ ¼­ºñ½º",
-    VERSION = "16.13.0"
+    version=VERSION,
 )
 
 
@@ -3515,13 +3600,13 @@ def concatenate_videos(concat_file: Path, output_video: Path, transition: str = 
             run_ffmpeg_command(["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(bc_txt),
                                "-c", "copy", "-y", str(bout)])
         if bout.exists():
-            batch_outputs.append(str(bout))
+            batch_outputs.append(bout)
     
     if not batch_outputs:
         return False
     
     if len(batch_outputs) == 1:
-        shutil.copy(batch_outputs[0], str(output_video))
+        shutil.copy(str(batch_outputs[0]), str(output_video))
         return True
     
     # ¹èÄ¡ °á°úµéÀ» ÃÖÁ¾ ÇÕÄ¡±â ? ¹èÄ¡´Â ÀÌ¹Ì xfade Ã³¸®µÊ.
@@ -3721,7 +3806,7 @@ def add_subtitles_to_video(
         pass
     _font_size, _margin_v = _compute_subtitle_style(_detected_res)
     style = (
-        f"FontName=Noto Sans CJK KR,fontfile=/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc,"
+        f"FontName=Noto Sans CJK KR,"
         f"FontSize={_font_size},"
         f"Bold={SUBTITLE_BOLD},"
         f"PrimaryColour={SUBTITLE_FONT_COLOR},"
@@ -3741,7 +3826,7 @@ def add_subtitles_to_video(
     if subtitle_type == "ass" or str(srt_path).lower().endswith(".ass"):
         vf_filter = f"ass='{srt_escaped}'"
     else:
-        vf_filter = f"subtitles={srt_escaped}:charenc=UTF-8:force_style='{style}'"
+        vf_filter = f"subtitles={srt_escaped}:charenc=UTF-8:fontsdir=/usr/share/fonts/opentype/noto:force_style='{style}'"
 
     command = [
         "ffmpeg",
@@ -3798,7 +3883,7 @@ def add_text_overlay_to_thumbnail(
         # ÆùÆ® ¼³Á¤ (±âº» ÆùÆ® »ç¿ë)
         try:
             font = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", font_size)
-        except:
+        except Exception:
             # ÆùÆ® ¾øÀ¸¸é ±âº» ÆùÆ® »ç¿ë
             font = ImageFont.load_default()
         
@@ -3882,7 +3967,7 @@ def generate_pro_thumbnail(
 
         for f in tmp_frames:
             try: f.unlink()
-            except: pass
+            except Exception: pass
 
         if best_frame is None:
             logger.warning("[THUMB] ÇÁ·¹ÀÓ ÃßÃâ ½ÇÆÐ")
@@ -4515,7 +4600,7 @@ def create_srt_from_scenes(scenes: list, output_path: Path) -> bool:
         current_time = 0.0
 
         for scene in scenes:
-            text = scene.description or scene.keyword or scene.scene_id
+            text = scene.narration or scene.description or scene.keyword or scene.scene_id  # [v16.18] narration first
             dur = max(scene.duration_seconds or 5.0, 1.0)
 
             import re as _re
@@ -6863,7 +6948,7 @@ async def process_video_creation(
                                 await _redis_set_job(job_id, JobStatus.SUBTITLE_CREATING,
                                     progress=55, step="subtitle_creating",
                                     message="SRT fallback »ý¼º ¿Ï·á")
-                    if not srt_ok and scenes and any(s.description for s in scenes):
+                    if not srt_ok and scenes and any((s.narration or s.description) for s in scenes):  # [v16.19] narration first
                         srt_ok = create_srt_from_scenes(scenes, srt_path)
                         logger.info("¾À µ¿±âÈ­ ÀÚ¸· fallback »ç¿ë")
                     if not srt_ok and request.subtitle_text:
@@ -6967,7 +7052,7 @@ async def process_video_creation(
                         logger.info(f'[v15.81] SFX ¿À¹ö·¹ÀÌ ¿Ï·á: {_n_sfx81}°³ ÆË')
                     else:
                         try: _sfx81_out.unlink()
-                        except: pass
+                        except Exception: pass
                         logger.warning('[v15.81] SFX ½ºÅµ')
             except Exception as _sfx81_err:
                 logger.warning(f'[v15.81] SFX ¿¹¿Ü: {_sfx81_err}')
@@ -7045,6 +7130,11 @@ async def process_video_creation(
             logger.debug(f"[AF-5b] QA Ã¼Å© ½ÇÆÐ: {_qa_err}")
         logger.info(f"ÀÛ¾÷ ¿Ï·á: {job_id}")
         state.mark("completed", {"output_files": output_files})
+        # [CLEANUP] 잡 완료 후 tmp 임시파일 즉시 삭제 (400GB 방어)
+        try:
+            cleanup_job_tmp(job_id)
+        except Exception:
+            pass
         # Eµå¶óÀÌºê ¿Ï¼º Æú´õ¿¡ º¹»ç
         try:
             for key, src_path in list(output_files.items()):
@@ -7139,8 +7229,11 @@ async def process_video_creation(
         await update_job_status(job_id, JobStatus.FAILED, error=str(e))
     finally:
         _CURRENT_JOB = None
-        await _redis_release_lock(job_id, _job_lock_token)
-        await _redis_release_lock(job_id, _job_lock_token)
+        await _redis_release_lock(job_id, _job_lock_token)  # [v16.18] single release
+        try:
+            cleanup_job_tmp(job_id)  # [v16.18] always cleanup tmp
+        except Exception:
+            pass
 
 
 # ============================================================================
@@ -7178,12 +7271,15 @@ async def list_enhancements():
 
 @app.get("/health", tags=["System"])
 async def health_check():
-    """Çï½º Ã¼Å©"""
+    """헬스 체크 + 디스크 공간 경보 (400GB 방어)"""
+    disk = check_disk_space(min_free_gb=50.0)
+    status = "healthy" if disk["ok"] else "disk_warning"
     return {
-        "status": "healthy",
+        "status": status,
         "service": "lf_ffmpeg_worker",
         "version": VERSION,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "disk": disk,
     }
 
 
@@ -7201,10 +7297,10 @@ async def ping_providers():
                 r = await client.get(url, headers=headers)
                 latency = round((time.monotonic() - t0) * 1000)
                 ok = r.status_code in (200, 206, 401, 403)
-                return {"ok": ok, "status": r.status_code, "latency_ms": latency}
+                return {"ok": ok, "status": r.status_code, "ms": latency}
         except Exception as e:
             latency = round((time.monotonic() - t0) * 1000)
-            return {"ok": False, "status": 0, "latency_ms": latency, "error": str(e)[:80]}
+            return {"ok": False, "status": 0, "ms": latency, "error": str(e)[:80]}
 
     ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", os.getenv("ANTHROPIC_AUTH_TOKEN", ""))
     GEMINI_KEY    = os.getenv("GEMINI_API_KEY", "")
@@ -7244,7 +7340,7 @@ async def ping_providers():
     raw = await _run_all()
     for (name, _, _), res in zip(tasks, raw):
         if isinstance(res, Exception):
-            results[name] = {"ok": False, "status": 0, "latency_ms": -1, "error": str(res)[:80]}
+            results[name] = {"ok": False, "status": 0, "ms": -1, "error": str(res)[:80]}
         else:
             results[name] = res
         key_map = {"anthropic": ANTHROPIC_KEY, "gemini": GEMINI_KEY, "xai": XAI_KEY,
@@ -7254,7 +7350,7 @@ async def ping_providers():
             results[name]["no_key"] = True
             results[name]["ok"] = False
 
-    return {"providers": results, "timestamp": datetime.now().isoformat()}
+    return {"results": results, "timestamp": datetime.now().isoformat()}
 
 
 @app.post("/assets/search", response_model=AssetsSearchResponse, tags=["Assets"])
@@ -7421,14 +7517,8 @@ async def resume_video(job_id: str, background_tasks: BackgroundTasks):
 async def get_job_status(job_id: str):
     """ÀÛ¾÷ »óÅÂ Á¶È¸"""
     if job_id not in jobs:
-        # ÀÛ¾÷ÀÌ ¾øÀ¸¸é PENDING »óÅÂ·Î ÃÊ±âÈ­
-        jobs[job_id] = JobInfo(
-            job_id=job_id,
-            status=JobStatus.PENDING,
-            created_at=datetime.now(),
-            updated_at=datetime.now()
-        )
-    
+        raise HTTPException(status_code=404, detail=f"job not found: {job_id}")  # [v16.18]
+
     return jobs[job_id]
 
 
@@ -7559,6 +7649,13 @@ async def ws_job_progress(websocket: WebSocket, job_id: str):
 async def startup_event():
     """¾ÖÇÃ¸®ÄÉÀÌ¼Ç ½ÃÀÛ ½Ã ÃÊ±âÈ­"""
     logger.info("FFmpeg Worker ½ÃÀÛ")
+    # [v16.18] job queue worker 시작
+    try:
+        import asyncio as _aio_startup
+        _aio_startup.get_event_loop().create_task(_job_queue_worker())
+        logger.info("[STARTUP] job queue worker started")
+    except Exception as _qe:
+        logger.warning(f"[STARTUP] queue worker start failed: {_qe}")
     logger.info(f"Pexels API Å°: {'¼³Á¤µÊ' if PEXELS_API_KEY else '¹Ì¼³Á¤'}")
     logger.info(f"Pixabay API Å°: {'¼³Á¤µÊ' if PIXABAY_API_KEY else '¹Ì¼³Á¤'}")
     # Restore incomplete jobs from job_status.json on startup
@@ -9345,8 +9442,8 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
             # [v15.96] SEO ¸ÞÅ¸µ¥ÀÌÅÍ ÀÚµ¿»ý¼º
             try:
                 _seo_meta = await auto_generate_seo_metadata(
-                    topic=topic, script=_script, scenes=_scenes,
-                    tone=tone, language=language
+                    topic=request.topic, script=script, scenes=scenes,
+                    tone=request.tone, language=request.language
                 )
                 state.mark("seo_metadata", _seo_meta)
                 # SEO ÃÖÀûÈ­ Á¦¸ñ ¹Ý¿µ
@@ -9381,10 +9478,14 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
                         logger.info(f"[AUTO] YouTube ¾÷·Îµå ¿Ï·á: {youtube_url}")
                     else:
                         upload_status = "upload_failed"
+                        error_msg = f"YouTube upload response {up_resp.status_code}: {up_resp.text[:200]}"
                         logger.warning(f"[AUTO] ¾÷·Îµå ÀÀ´ä {up_resp.status_code}: {up_resp.text[:200]}")
+                        _auto_set_status(job_id, "upload_failed", 95, error_msg)
             except Exception as ue:
                 upload_status = "upload_failed"
+                error_msg = f"YouTube upload error: {str(ue)[:200]}"
                 logger.warning(f"[AUTO] YouTube ¾÷·Îµå ½ÇÆÐ: {ue}")
+                _auto_set_status(job_id, "upload_failed", 95, error_msg)
         elif quality["quality_score"] < request.quality_threshold:
             upload_status = "upload_hold_quality"
             logger.info(f"[AUTO] Ç°Áú Á¡¼ö {quality['quality_score']} < {request.quality_threshold} ? ¾÷·Îµå º¸·ù")
@@ -9413,6 +9514,11 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         }
         _save_project_file(project_dir, "logs.jsonl", log_entry)
         logger.info(f"[AUTO] ÆÄÀÌÇÁ¶óÀÎ ¿Ï·á: job={job_id} quality={quality['quality_score']} upload={upload_status}")
+        # [CLEANUP] auto 파이프라인 완료 후 tmp 정리 (400GB 방어)
+        try:
+            cleanup_job_tmp(job_id)
+        except Exception:
+            pass
 
     except Exception as e:
         logger.exception(f"[AUTO] ÆÄÀÌÇÁ¶óÀÎ ½ÇÆÐ: {e}")
@@ -9536,5 +9642,189 @@ async def list_auto_jobs(_: str = Depends(verify_api_key)):
             "created_at": job.get("created_at"),
         })
     return {"jobs": jobs[:50], "total": len(jobs)}
+
+
+# ============================================================================
+# [v16.5.0] Settings: .env read/write + Docker rebuild command
+# ============================================================================
+
+_ENV_FILE = Path("/data/.env")
+
+_DOCKER_REBUILD_CMD = (
+    'docker stop lf2_ffmpeg && docker rm lf2_ffmpeg && '
+    'docker run -d --name lf2_ffmpeg --network lf2_net --restart unless-stopped '
+    '--expose 8002 --dns 8.8.8.8 --shm-size=2g '
+    '--env-file "E:\\longform_factory\\v2\\.env" '
+    '-e TZ=Asia/Seoul -e LF_API_KEY=${LF_API_KEY} '
+    '-v "E:\\longform_factory\\v2\\tmp:/data/tmp" '
+    '-v "E:\\longform_factory\\v2\\jobs:/data/jobs" '
+    '-v "E:\\longform_factory\\v2\\output:/data/output" '
+    '-v "E:\\longform_factory\\v2\\bgm:/data/bgm" '
+    '-v "E:\\longform_factory\\v2\\.env:/data/.env" '
+    'lf_ffmpeg_worker:16.5.0'
+)
+
+_ENV_GROUPS: Dict[str, List[str]] = {
+    "LLM": [
+        "ANTHROPIC_API_KEY", "ANTHROPIC_MODEL",
+        "OPENAI_API_KEY", "OPENROUTER_API_KEY",
+        "GEMINI_API_KEY", "GEMINI_MODEL",
+        "CEREBRAS_API_KEY", "CEREBRAS_MODEL",
+        "ARLIAI_API_KEY", "ARLIAI_MODEL",
+        "GROQ_API_KEY", "GROQ_MODEL",
+        "OLLAMA_URL", "OLLAMA_MODEL", "OLLAMA_MODEL_FAST", "OLLAMA_MODEL_QUALITY",
+    ],
+    "TTS": ["ELEVENLABS_API_KEY", "EDGE_VOICE_PRIMARY", "EDGE_VOICE_BACKUP", "EDGE_RATE"],
+    "미디어": ["PEXELS_API_KEY", "PIXABAY_API_KEY"],
+    "AI영상": [
+        "AI_VIDEO_ENABLED", "AI_VIDEO_PROVIDER",
+        "KLING_ACCESS_KEY", "KLING_SECRET_KEY",
+        "LUMA_API_KEY", "SILICONFLOW_API_KEY",
+        "POLLO_API_KEY", "POLLO_MODEL",
+        "APIFRAME_API_KEY", "APIFRAME_MODEL",
+        "MAGICHOUR_API_KEY", "MAGICHOUR_MODEL",
+    ],
+    "업로드": [
+        "YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET",
+        "YOUTUBE_REFRESH_TOKEN", "YOUTUBE_CHANNEL_ID",
+        "FACEBOOK_PAGE_ID", "FACEBOOK_PAGE_TOKEN",
+    ],
+    "파이프라인": [
+        "LF_API_KEY", "GENERATE_SHORTS", "GENERATE_THUMBNAIL",
+        "N8N_USER", "N8N_PASSWORD", "N8N_API_KEY",
+    ],
+    "품질": [
+        "FFMPEG_PRESET", "FFMPEG_CRF",
+        "ASS_FONT_NAME", "ASS_FONT_SIZE", "ASS_MAX_CHARS_PER_LINE", "ASS_MARGIN_V",
+        "BGM_VOLUME", "AUDIO_LOUDNESS_TARGET",
+        "MAX_DOWNLOAD_MB", "MAX_SOURCE_CLIP_SEC",
+    ],
+}
+
+_SECRET_KEYS = {
+    "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "OPENROUTER_API_KEY",
+    "CEREBRAS_API_KEY", "ARLIAI_API_KEY", "ELEVENLABS_API_KEY",
+    "PEXELS_API_KEY", "PIXABAY_API_KEY",
+    "KLING_ACCESS_KEY", "KLING_SECRET_KEY", "LUMA_API_KEY", "SILICONFLOW_API_KEY",
+    "POLLO_API_KEY", "APIFRAME_API_KEY", "MAGICHOUR_API_KEY",
+    "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN", "FACEBOOK_PAGE_TOKEN",
+    "LF_API_KEY", "N8N_PASSWORD", "N8N_API_KEY",
+}
+
+
+def _read_env_dict() -> Dict[str, str]:
+    """Read /data/.env if volume-mounted; fallback to os.environ."""
+    if _ENV_FILE.exists():
+        result: Dict[str, str] = {}
+        for raw in _ENV_FILE.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                k, _, v = line.partition("=")
+                result[k.strip()] = v.strip()
+        return result
+    # Fallback: read from process environment (read-only, no write possible)
+    all_keys: List[str] = [k for keys in _ENV_GROUPS.values() for k in keys]
+    return {k: os.environ.get(k, "") for k in all_keys}
+
+
+def _write_env_dict(updates: Dict[str, str]) -> None:
+    """Patch key=value lines in /data/.env, preserving comments and order. Create file if not found."""
+    if not _ENV_FILE.exists():
+        # Create new .env file with updated keys
+        _ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
+        out: List[str] = []
+        for k, v in updates.items():
+            out.append(f"{k}={v}")
+        import tempfile as _tmp
+        with _tmp.NamedTemporaryFile(mode='w', encoding='utf-8', dir=_ENV_FILE.parent, delete=False) as tf:
+            tf.write("\n".join(out) + "\n")
+            tf_path = tf.name
+        import os as _os
+        _os.replace(tf_path, _ENV_FILE)
+        logger.info(f"[SETTINGS] Created /data/.env with {len(updates)} keys")
+        return
+
+    lines = _ENV_FILE.read_text(encoding="utf-8").splitlines()
+    written: set = set()
+    out: List[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and "=" in stripped:
+            k = stripped.partition("=")[0].strip()
+            if k in updates:
+                out.append(f"{k}={updates[k]}")
+                written.add(k)
+                continue
+        out.append(line)
+    # Append keys not yet in file
+    for k, v in updates.items():
+        if k not in written:
+            out.append(f"{k}={v}")
+    import tempfile as _tmp
+    with _tmp.NamedTemporaryFile(mode='w', encoding='utf-8', dir=_ENV_FILE.parent, delete=False) as tf:
+        tf.write("\n".join(out) + "\n")
+        tf_path = tf.name
+    import os as _os
+    _os.replace(tf_path, _ENV_FILE)
+
+
+class EnvUpdateRequest(BaseModel):
+    updates: Dict[str, str] = Field(..., description="key->value pairs to update")
+
+
+@app.get("/settings/env", tags=["Settings"])
+async def settings_get_env(_: str = Depends(verify_api_key)):
+    """[v16.5.0] .env 파일 읽기 — 그룹별 키 목록 반환 (비밀키 마스킹, 평문값 제외)"""
+    env = _read_env_dict()
+    file_mounted = _ENV_FILE.exists()
+    groups: Dict[str, Any] = {}
+    for group, keys in _ENV_GROUPS.items():
+        entries = []
+        for k in keys:
+            val = env.get(k, "")
+            is_secret = k in _SECRET_KEYS
+            if is_secret and len(val) > 8:
+                masked = "*" * 8 + val[-4:]
+            else:
+                masked = val if not is_secret else ""
+            entry = {
+                "key": k,
+                "masked": masked,
+                "is_secret": is_secret,
+                "set": bool(val),
+            }
+            entries.append(entry)
+        groups[group] = entries
+    return {
+        "groups": groups,
+        "file_mounted": file_mounted,
+        "rebuild_cmd": _DOCKER_REBUILD_CMD,
+    }
+
+
+@app.post("/settings/env", tags=["Settings"])
+async def settings_update_env(req: EnvUpdateRequest, _: str = Depends(verify_api_key)):
+    """[v16.5.0] .env 파일 업데이트 — 컨테이너 재시작 후 적용"""
+    try:
+        _write_env_dict(req.updates)
+        return {
+            "ok": True,
+            "updated": list(req.updates.keys()),
+            "note": "저장 완료. 컨테이너 재시작 후 적용됩니다.",
+        }
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
+@app.post("/settings/rebuild", tags=["Settings"])
+async def settings_rebuild(_: str = Depends(verify_api_key)):
+    """[v16.5.0] Docker 재시작 커맨드 반환 (Windows PowerShell 실행용)"""
+    return {
+        "ok": True,
+        "cmd": _DOCKER_REBUILD_CMD,
+        "note": "Windows PowerShell에서 아래 커맨드를 실행하세요",
+    }
 
 

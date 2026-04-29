@@ -1194,7 +1194,7 @@ logger.info(f"µ¥ÀÌÅÍ µð·ºÅä¸® ÃÊ±âÈ­ ¿Ï·á: {BASE_DATA_DI
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
     description="·ÕÆû/¼ôÆû ÀÚµ¿È­ ¿µ»ó Á¦ÀÛ ¼­ºñ½º",
-    VERSION = "16.9.0"
+    VERSION = "16.10.0"
 )
 
 
@@ -7586,6 +7586,8 @@ CEREBRAS_MODEL_VAR = os.getenv("CEREBRAS_MODEL", "llama3.1-8b")
 DEEPSEEK_API_KEY   = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_MODEL     = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 GEMINI_MODEL    = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+XAI_LLM_API_KEY = os.getenv("XAI_API_KEY", "")          # Grok LLM (chat completions)
+XAI_LLM_MODEL   = os.getenv("XAI_LLM_MODEL", "grok-3-mini")
 
 async def _call_llm_json(
     prompt: str,
@@ -7715,6 +7717,25 @@ async def _call_llm_json(
                         if result is not None:
                             return result
 
+                elif provider == "xai" and XAI_LLM_API_KEY:
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        resp = await client.post(
+                            "https://api.x.ai/v1/chat/completions",
+                            headers={"Authorization": f"Bearer {XAI_LLM_API_KEY}",
+                                     "Content-Type": "application/json"},
+                            json={"model": LLM_MODEL or XAI_LLM_MODEL,
+                                  "max_tokens": max_tokens, "temperature": temperature,
+                                  "messages": [{"role": "system", "content": system},
+                                               {"role": "user", "content": prompt}]},
+                        )
+                        if resp.status_code != 200:
+                            logger.warning(f"[LLM/xai] {resp.status_code}")
+                            continue
+                        raw = resp.json()["choices"][0]["message"]["content"]
+                        result = _parse_json_raw(raw)
+                        if result is not None:
+                            return result
+
                 elif provider == "deepseek" and DEEPSEEK_API_KEY:
                     async with httpx.AsyncClient(timeout=60.0) as client:
                         resp = await client.post(
@@ -7764,6 +7785,7 @@ async def _call_llm_json(
         if GEMINI_API_KEY:       candidates.append("gemini")
         if CEREBRAS_API_KEY:     candidates.append("cerebras")
         if GROQ_API_KEY:         candidates.append("groq")
+        if XAI_LLM_API_KEY:     candidates.append("xai")
         if OPENROUTER_API_KEY:   candidates.append("openrouter")
         if DEEPSEEK_API_KEY:     candidates.append("deepseek")
         candidates.append("ollama")  # Ç×»ó fallback
@@ -9049,316 +9071,4 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
                             if rescanned and rescanned[0].asset_url:
                                 scene.asset_url = rescanned[0].asset_url
                         except Exception:
-                            pass
-                if scene.asset_url:
-                    used_assets.add(scene.asset_url)
-        _save_project_file(project_dir, "visual_matching.json", visual_matching)
-
-        # ¦¡¦¡ 9. ³ª·¹ÀÌ¼Ç Å¸ÀÓ¶óÀÎ ºôµå ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
-        _auto_set_status(job_id, "timeline_building", 52, "Å¸ÀÓ¶óÀÎ ±¸¼º Áß")
-        # TTS »ý¼º (ensure_tts_assets)
-        _auto_set_status(job_id, "tts_generating", 52, "TTS ³ª·¹ÀÌ¼Ç »ý¼º Áß")
-        # ÀüÃ¼ ³ª·¹ÀÌ¼Ç ÅØ½ºÆ®¸¦ °¢ ¾À narration ÇÊµå¿¡¼­ ÃßÃâ
-        for scene in scenes:
-            if not scene.narration:
-                matched_raw = next((s for s in scenes_data if s.get("scene_id") == scene.scene_id), {})
-                scene.narration = matched_raw.get("narration", scene.description or scene.keyword)
-
-        # SSML ÀüÃ³¸®: ¾À narrationÀ¸·Î TTS ¿äÃ» »ý¼ºÀ» À§ÇÑ full script Á¶ÇÕ
-        # (±âÁ¸ ensure_tts_assets ´Â scenes.jsonÀÇ narration ÇÊµå¸¦ ÇÕÃÄ¼­ TTS »ý¼º)
-        class _FakeRequest:
-            audio_url = None
-            subtitle_text = None
-            add_subtitles = True
-            add_bgm = True
-            bgm_volume = 0.3
-
-        # ElevenLabs TTS ½Ãµµ ¡æ ½ÇÆÐ ½Ã Edge TTS Æú¹é
-        _el_text = " ".join(s.narration or "" for s in scenes if s.narration)
-        _el_mp3 = TMP_DIR / f"{job_id}.mp3"
-        _el_ok = False
-        if ELEVENLABS_ENABLED and _el_text:
-            _el_ok = await generate_tts_elevenlabs(_el_text, _el_mp3)
-            logger.info(f"[AUTO] ElevenLabs={'¼º°ø' if _el_ok else '½ÇÆÐ¡æEdgeTTSÆú¹é'}")
-        if _el_ok:
-            # [v15.92] ElevenLabs ¼º°ø ¡æ ensure_tts_assets ½ºÅµ (SameFileError ¹æÁö)
-            tts_ok = True
-            tts_result = {"ok": True, "mp3_path": _el_mp3, "ts_path": None, "error_code": None, "retryable": False}
-            logger.info("[AUTO] ElevenLabs TTS ¼º°ø ¡æ EdgeTTS ½ºÅµ")
-        else:
-            tts_result = await ensure_tts_assets(job_id, scenes, _FakeRequest())
-            tts_ok = tts_result.get("ok", False)
-            if not tts_ok:
-                logger.warning(f"[AUTO] TTS ½ÇÆÐ: {tts_result.get('error_code')} ? °è¼Ó ÁøÇà")
-
-        _auto_set_status(job_id, "timeline_building", 58, "³ª·¹ÀÌ¼Ç Å¸ÀÓ¶óÀÎ ºôµå Áß")
-        ts_path = TMP_DIR / f"{job_id}_timestamps.json"
-        ntl_timeline = build_narration_timeline(job_id, scenes, ts_path)
-        save_timeline_report(job_id, ntl_timeline, scenes)
-        _save_project_file(project_dir, "narration_timeline.json", ntl_timeline)
-
-        # ¦¡¦¡ 10. ·»´õ¸µ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
-        _auto_set_status(job_id, "rendering", 62, "¿µ»ó ·»´õ¸µ Áß")
-        _is_shorts_mode = request.video_type == "shorts"
-        render_request = VideoCreateRequest(
-            job_id=job_id,
-            mode=VideoMode.SHORTFORM if _is_shorts_mode else VideoMode.LONGFORM,
-            resolution="1080x1920" if _is_shorts_mode else "1920x1080",  # [v16.7] SHORTFORM ÇØ»óµµ ¼öÁ¤
-            fps=30,
-            add_subtitles=True,
-            add_bgm=True,
-            bgm_volume=0.3,
-            generate_thumbnail=True,
-            generate_shorts=(request.video_type in ("shorts", "both")),
-            title=script.get("title", request.topic),
-            audio_url=str(TMP_DIR / f"{job_id}.mp3") if (TMP_DIR / f"{job_id}.mp3").exists() else None,
-            scenes=[s.model_dump() for s in scenes],  # [v15.92] ÀÚ»ê°Ë»ö ÈÄ Àç°è»ê
-        )
-        render_request_dict = render_request.model_dump()
-        _save_project_file(project_dir, "render_request.json", render_request_dict)
-
-        # ±âÁ¸ process_video_creation È£Ãâ
-        _auto_set_status(job_id, "rendering", 65, "¿µ»ó ÇÕ¼º Áß")
-        await process_video_creation(job_id, render_request)
-
-        # Ãâ·Â ÆÄÀÏ ¼öÁý
-        output_files: Dict[str, str] = {}
-        lf_path = LONGFORM_DIR / f"{job_id}.mp4"
-        if lf_path.exists():
-            output_files["longform"] = str(lf_path)
-        th_path = THUMBNAILS_DIR / f"{job_id}_thumb.jpg"
-        if th_path.exists():
-            output_files["thumbnail"] = str(th_path)
-
-        # ¦¡¦¡ 11. Ç°Áú °Ë»ç ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
-        _auto_set_status(job_id, "quality_checking", 85, "Ç°Áú °Ë»ç Áß")
-        quality = await auto_run_quality_check(job_id, output_files, scenes, ntl_timeline)
-        _save_project_file(project_dir, "quality_report.json", quality)
-
-        # ¦¡¦¡ 12. ¸ÞÅ¸µ¥ÀÌÅÍ »ý¼º ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
-        _auto_set_status(job_id, "thumbnail_generating", 88, "¸ÞÅ¸µ¥ÀÌÅÍ »ý¼º Áß")
-        actual_dur = int(get_video_duration(Path(output_files.get("longform", ""))) or request.target_duration_sec)
-        yt_meta = await auto_generate_youtube_metadata(
-            request.topic, script, request.language, actual_dur, request.upload_privacy
-        )
-        _save_project_file(project_dir, "upload_metadata.json", yt_meta)
-
-        # ¦¡¦¡ 12b. ÇÁ·Î ½æ³×ÀÏ Àç»ý¼º (YouTube Å¸ÀÌÆ² Àû¿ë) ¦¡¦¡
-        yt_title = yt_meta.get("youtube", {}).get("title", request.topic) if isinstance(yt_meta, dict) else request.topic
-        pro_thumb_path = THUMBNAILS_DIR / f"{job_id}_thumb.jpg"
-        lf_path_for_thumb = Path(output_files.get("longform", ""))
-        if lf_path_for_thumb.exists():
-            _auto_set_status(job_id, "thumbnail_generating", 90, "ÇÁ·Î ½æ³×ÀÏ »ý¼º Áß")
-            pro_ok = generate_pro_thumbnail(
-                video_path=lf_path_for_thumb,
-                output_path=pro_thumb_path,
-                title=yt_title,
-                subtitle="",
-            )
-            if pro_ok and pro_thumb_path.exists():
-                output_files["thumbnail"] = str(pro_thumb_path)
-                logger.info(f"[AUTO] ÇÁ·Î ½æ³×ÀÏ Àû¿ë: {pro_thumb_path}")
-            else:
-                logger.warning("[AUTO] ÇÁ·Î ½æ³×ÀÏ ½ÇÆÐ ? ±âÁ¸ ½æ³×ÀÏ À¯Áö")
-
-        # ¦¡¦¡ 13. YouTube ¾÷·Îµå (Ç°Áú Åë°ú ½Ã) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
-        youtube_url = None
-        upload_status = "upload_skipped"
-
-        if request.auto_upload and quality["quality_score"] >= request.quality_threshold:
-            # [v15.96] SEO ¸ÞÅ¸µ¥ÀÌÅÍ ÀÚµ¿»ý¼º
-            try:
-                _seo_meta = await auto_generate_seo_metadata(
-                    topic=topic, script=_script, scenes=_scenes,
-                    tone=tone, language=language
-                )
-                state.mark("seo_metadata", _seo_meta)
-                # SEO ÃÖÀûÈ­ Á¦¸ñ ¹Ý¿µ
-                if _seo_meta.get("title"):
-                    _script["title"] = _seo_meta["title"]
-                logger.info(f"[v15.96] SEO ¸ÞÅ¸ ¿Ï·á: {_seo_meta.get('title','?')[:40]}")
-            except Exception as _seo_err:
-                logger.warning(f"[v15.96] SEO ¸ÞÅ¸ ½ÇÆÐ: {_seo_err}")
-
-            _auto_set_status(job_id, "uploading_private", 92, "YouTube private ¾÷·Îµå Áß")
-            try:
-                upload_payload = {
-                    "job_id": job_id,
-                    "video_path": output_files.get("longform", ""),
-                    "thumbnail_path": output_files.get("thumbnail", ""),
-                    "title": yt_meta["youtube"]["title"],
-                    "description": yt_meta["youtube"]["description"],
-                    "tags": yt_meta["youtube"]["tags"],
-                    "privacy_status": request.upload_privacy,
-                    "category_id": yt_meta["youtube"].get("category_id", "28"),
-                }
-                async with httpx.AsyncClient(timeout=120.0) as client:
-                    up_resp = await client.post(
-                        "http://lf2_uploader:8003/api/upload/upload/youtube",
-                        json=upload_payload,
-                        headers={"X-LF-API-Key": os.getenv("LF_API_KEY", "longform-2026-secret")},
-                    )
-                    if up_resp.status_code == 200:
-                        up_data = up_resp.json()
-                        youtube_url = up_data.get("youtube_url") or up_data.get("url")
-                        upload_status = "upload_completed"
-                        logger.info(f"[AUTO] YouTube ¾÷·Îµå ¿Ï·á: {youtube_url}")
-                    else:
-                        upload_status = "upload_failed"
-                        logger.warning(f"[AUTO] ¾÷·Îµå ÀÀ´ä {up_resp.status_code}: {up_resp.text[:200]}")
-            except Exception as ue:
-                upload_status = "upload_failed"
-                logger.warning(f"[AUTO] YouTube ¾÷·Îµå ½ÇÆÐ: {ue}")
-        elif quality["quality_score"] < request.quality_threshold:
-            upload_status = "upload_hold_quality"
-            logger.info(f"[AUTO] Ç°Áú Á¡¼ö {quality['quality_score']} < {request.quality_threshold} ? ¾÷·Îµå º¸·ù")
-
-        # ¦¡¦¡ ¿Ï·á ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
-        final_status = "completed" if not quality["errors"] else "needs_review"
-        _auto_set_status(job_id, final_status, 100, "¿Ï·á",
-            extra={
-                "quality_score": quality["quality_score"],
-                "quality_passed": quality["passed"],
-                "warnings": quality["warnings"],
-                "errors": quality["errors"],
-                "output_files": output_files,
-                "youtube_url": youtube_url,
-                "upload_status": upload_status,
-                "project_id": project_id,
-            }
-        )
-
-        # ·Î±× ÀúÀå
-        log_entry = {
-            "completed_at": datetime.now().isoformat(),
-            "quality_score": quality["quality_score"],
-            "upload_status": upload_status,
-            "youtube_url": youtube_url,
-        }
-        _save_project_file(project_dir, "logs.jsonl", log_entry)
-        logger.info(f"[AUTO] ÆÄÀÌÇÁ¶óÀÎ ¿Ï·á: job={job_id} quality={quality['quality_score']} upload={upload_status}")
-
-    except Exception as e:
-        logger.exception(f"[AUTO] ÆÄÀÌÇÁ¶óÀÎ ½ÇÆÐ: {e}")
-        step = _AUTO_JOB_STORE.get(job_id, {}).get("status", "unknown")
-        _auto_set_status(job_id, "failed", _AUTO_JOB_STORE.get(job_id, {}).get("progress", 0),
-            f"½ÇÆÐ: {e}",
-            extra={"error": str(e), "failed_step": step, "retryable": True}
-        )
-        _save_project_file(project_dir, "error.json",
-                           {"error": str(e), "step": step, "timestamp": datetime.now().isoformat()})
-
-
-# ¦¡¦¡ 7. FastAPI ¿£µåÆ÷ÀÎÆ® ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
-
-@app.post("/api/auto/topic-job", tags=["Auto"])
-async def create_auto_topic_job(
-    request: AutoTopicRequest,
-    background_tasks: BackgroundTasks,
-    _: str = Depends(verify_api_key),
-):
-    """
-    [v15.66.0] ÁÖÁ¦ ±â¹Ý ¿ÏÀü ÀÚµ¿ ¿µ»ó »ý¼º + YouTube private ¾÷·Îµå.
-    ÁÖÁ¦¡¤Åæ¡¤±æÀÌ¸¸ ÀÔ·ÂÇÏ¸é ¿ø°í¡æ¾À¡æTTS¡æ·»´õ¸µ¡æ¾÷·Îµå±îÁö ÀÚµ¿ Ã³¸®.
-    """
-    import uuid
-    job_id = f"auto_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
-    project_id = request.project_id or job_id
-
-    _AUTO_JOB_STORE[job_id] = {
-        "job_id": job_id,
-        "project_id": project_id,
-        "status": "queued",
-        "progress": 0,
-        "topic": request.topic,
-        "mode": request.mode,
-        "current_message": "´ë±â Áß",
-        "quality_score": None,
-        "output_files": {},
-        "youtube_url": None,
-        "error": None,
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-    }
-
-    # asyncio.create_task (Python 3.10+ running loop Á÷Á¢ »ç¿ë)
-    import asyncio as _aio
-    try:
-        _t = _aio.create_task(run_auto_topic_pipeline(job_id, request))
-        _AUTO_TASKS[job_id] = _t  # GC ¹æÁö
-        def _log_done(t, jid=job_id):
-            if t.cancelled():
-                logger.error('[AUTO] TASK CANCELLED: ' + jid)
-            elif t.exception():
-                logger.error('[AUTO] TASK EXCEPTION: ' + jid + ' => ' + str(t.exception()))
-            else:
-                logger.info('[AUTO] TASK DONE OK: ' + jid)
-        _t.add_done_callback(_log_done)
-        logger.info('[AUTO] create_task OK: ' + job_id)
-    except RuntimeError as _ce:
-        logger.warning('[AUTO] create_task fallback: ' + str(_ce))
-        background_tasks.add_task(run_auto_topic_pipeline, job_id, request)
-
-    return AutoTopicResponse(
-        job_id=job_id,
-        project_id=project_id,
-        status="queued",
-        mode=request.mode,
-        status_url=f"/api/auto/jobs/{job_id}/status",
-        message=f"ÀÚµ¿ »ý¼º ÆÄÀÌÇÁ¶óÀÎ ½ÃÀÛ: {request.topic[:50]}",
-    )
-
-
-@app.get("/api/auto/jobs/{job_id}/status", tags=["Auto"])
-async def get_auto_job_status(
-    job_id: str,
-    _: str = Depends(verify_api_key),
-):
-    """[v15.66.0] ÀÚµ¿ »ý¼º ÀÛ¾÷ »óÅÂ Á¶È¸"""
-    job = _AUTO_JOB_STORE.get(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail=f"auto job '{job_id}' not found")
-
-    step = job.get("status", "unknown")
-    step_label = AUTO_STEP_LABELS.get(step, step)
-
-    return {
-        "job_id": job_id,
-        "project_id": job.get("project_id", job_id),
-        "status": step,
-        "status_label": step_label,
-        "progress": job.get("progress", 0),
-        "current_message": job.get("current_message", ""),
-        "topic": job.get("topic", ""),
-        "mode": job.get("mode", "auto"),
-        "quality_score": job.get("quality_score"),
-        "quality_passed": job.get("quality_passed"),
-        "warnings": job.get("warnings", []),
-        "errors": job.get("errors", []),
-        "output_files": job.get("output_files", {}),
-        "youtube_url": job.get("youtube_url"),
-        "upload_status": job.get("upload_status"),
-        "created_at": job.get("created_at"),
-        "updated_at": job.get("updated_at"),
-        "error": job.get("error"),
-    }
-
-
-@app.get("/api/auto/jobs", tags=["Auto"])
-async def list_auto_jobs(_: str = Depends(verify_api_key)):
-    """[v15.66.0] ÀÚµ¿ »ý¼º ÀÛ¾÷ ¸ñ·Ï"""
-    jobs = []
-    for jid, job in sorted(_AUTO_JOB_STORE.items(),
-                            key=lambda x: x[1].get("created_at", ""), reverse=True):
-        jobs.append({
-            "job_id": jid,
-            "status": job.get("status"),
-            "progress": job.get("progress"),
-            "topic": job.get("topic", ""),
-            "quality_score": job.get("quality_score"),
-            "youtube_url": job.get("youtube_url"),
-            "created_at": job.get("created_at"),
-        })
-    return {"jobs": jobs[:50], "total": len(jobs)}
-
-
+                            pass

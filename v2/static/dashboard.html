@@ -136,6 +136,8 @@ const PROVIDERS_META = {
   gemini:     { label:'Gemini',      icon:'🔵', type:'online'  },
   openrouter: { label:'OpenRouter',  icon:'🌐', type:'online'  },
   cerebras:   { label:'Cerebras',    icon:'⚡', type:'online'  },
+  groq:       { label:'Groq',        icon:'🚀', type:'online'  },
+  xai:        { label:'Grok (xAI)',  icon:'𝕏',  type:'online'  },
   arliai:     { label:'ArliAI',      icon:'🤖', type:'online'  },
   openai:     { label:'OpenAI',      icon:'🟢', type:'online'  },
   ollama:     { label:'Ollama',      icon:'🦙', type:'offline' },
@@ -368,6 +370,8 @@ function GenerateForm({ onSubmit, loading }) {
               <option value="auto">⚡ AUTO (병렬)</option>
               <option value="gemini">🔵 Gemini</option>
               <option value="cerebras">⚡ Cerebras</option>
+              <option value="groq">🚀 Groq</option>
+              <option value="xai">𝕏 Grok (xAI)</option>
               <option value="arliai">🤖 ArliAI</option>
               <option value="openrouter">🌐 OpenRouter</option>
               <option value="openai">🟢 OpenAI</option>

@@ -4117,23 +4117,76 @@ def generate_pro_thumbnail(
 def create_shortform_from_longform(
     longform_path: Path,
     output_path: Path,
-    max_duration: float = 60.0
+    max_duration: float = 60.0,
+    timeout: float = 120.0,
 ) -> bool:
-    """장편 영상에서 숏폼(1080x1920) 생성"""
+    """[v16.6] 장편 영상에서 숏폼(1080x1920) 생성 — 강화 버전
+
+    crop 필터: scale→crop→pad 순서로 안전하게 처리.
+    - 1단계: 가로 기준으로 1920 높이에 맞게 스케일
+    - 2단계: 중앙 1080×1920 크롭 (비율 0인 경우 방어)
+    - 3단계: 남는 공간 black pad (비율 불일치 시 fallback)
+    """
+    if not longform_path.exists():
+        logger.error(f"[SHORTFORM] 입력 파일 없음: {longform_path}")
+        return False
+
+    dur = get_video_duration(longform_path)
+    if dur is not None and dur <= 0:
+        logger.error(f"[SHORTFORM] 유효하지 않은 duration: {dur}")
+        return False
+
+    actual_max = min(max_duration, dur) if dur else max_duration
+
+    # [v16.6] 안전한 9:16 crop 필터
+    # scale=iw*sar:ih (SAR 보정) → 1920 높이 기준 스케일 → 1080 너비 크롭
+    vf_filter = (
+        "scale='if(gt(iw/ih,9/16),1080,-2)':'if(gt(iw/ih,9/16),-2,1920)',"
+        "crop=1080:1920:(iw-1080)/2:(ih-1920)/2,"
+        "scale=1080:1920"
+    )
+
     command = [
         "ffmpeg",
         "-i", str(longform_path),
-        "-t", str(max_duration),
-        "-vf", "crop=min(iw\\,ih*9/16):min(ih\\,iw*16/9),scale=1080:1920",
+        "-t", str(actual_max),
+        "-vf", vf_filter,
         "-c:v", "libx264",
         "-preset", "fast",
+        "-crf", "23",
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-movflags", "+faststart",
+        "-y",
+        str(output_path),
+    ]
+
+    ok = run_ffmpeg_command(command, timeout=timeout)
+    if ok and output_path.exists() and output_path.stat().st_size > 4096:
+        logger.info(f"[SHORTFORM] 생성 완료: {output_path} ({output_path.stat().st_size/1024/1024:.1f}MB)")
+        return True
+
+    # [v16.6] fallback: 단순 crop 재시도
+    logger.warning("[SHORTFORM] 1차 시도 실패 — 단순 crop fallback 시도")
+    fallback_cmd = [
+        "ffmpeg",
+        "-i", str(longform_path),
+        "-t", str(actual_max),
+        "-vf", "crop=min(iw\\,ih*9/16*1):min(ih\\,iw*16/9*1):0:0,scale=1080:1920",
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
         "-c:a", "aac",
         "-b:a", "128k",
         "-y",
-        str(output_path)
+        str(output_path),
     ]
-    
-    return run_ffmpeg_command(command)
+    ok2 = run_ffmpeg_command(fallback_cmd, timeout=timeout)
+    if ok2 and output_path.exists() and output_path.stat().st_size > 4096:
+        logger.info(f"[SHORTFORM] fallback 생성 완료: {output_path}")
+        return True
+
+    logger.error(f"[SHORTFORM] 생성 최종 실패: {longform_path}")
+    return False
 
 
 def get_video_duration(video_path: Path) -> Optional[float]:
@@ -6541,8 +6594,8 @@ async def process_video_creation(
                     if add_text_overlay_to_thumbnail(tp, tf, title=request.title or f"MV {job_id[:8]}"):
                         output_files["thumbnail"] = str(tf)
 
-        # 장편 영상 생성
-        elif request.mode == VideoMode.LONGFORM or request.generate_shorts:
+        # 장편/숏폼 영상 생성 [v16.6: SHORTFORM 명시 포함]
+        elif request.mode in (VideoMode.LONGFORM, VideoMode.SHORTFORM) or request.generate_shorts:
             await update_job_status(job_id, JobStatus.PROCESSING, progress=20.0)
             
             # [AC/AF-3] resume: reuse existing clips, re-render only missing ones
@@ -6863,13 +6916,20 @@ async def process_video_creation(
                         logger.warning('[v15.81] SFX 스킵')
             except Exception as _sfx81_err:
                 logger.warning(f'[v15.81] SFX 예외: {_sfx81_err}')
-            # 숏폼 생성
+            # 숏폼 생성 [v16.6: graceful degradation — 실패해도 롱폼 완료 유지]
             if request.generate_shorts:
                 shorts_output = SHORTS_DIR / f"{job_id}_short.mp4"
-                if create_shortform_from_longform(output_video, shorts_output):
-                    output_files["shorts"] = str(shorts_output)
-                    state.mark("shorts_done", {"path": str(shorts_output)})
-                    await update_job_status(job_id, JobStatus.PROCESSING, progress=90.0, output_files=output_files)
+                try:
+                    shorts_ok = create_shortform_from_longform(output_video, shorts_output)
+                    if shorts_ok:
+                        output_files["shorts"] = str(shorts_output)
+                        state.mark("shorts_done", {"path": str(shorts_output)})
+                        await update_job_status(job_id, JobStatus.PROCESSING, progress=90.0, output_files=output_files)
+                        logger.info(f"[v16.6] 숏폼 완료: {shorts_output}")
+                    else:
+                        logger.warning(f"[v16.6] 숏폼 생성 실패 — 롱폼만으로 완료 진행 (job={job_id})")
+                except Exception as _shorts_err:
+                    logger.warning(f"[v16.6] 숏폼 예외 (롱폼 완료 유지): {_shorts_err}")
         
         await update_job_status(
             job_id,

@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LongForm Factory — Premium Studio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+/* ── Reset & Base ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif}
+body{background:#040610;color:#e2e8f0;font-size:14px;overflow:hidden}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(139,92,246,.3);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:rgba(139,92,246,.5)}
+
+/* ── CSS Vars ── */
+:root{
+  --bg-base:#040610;
+  --bg-deep:#020408;
+  --bg-panel:rgba(10,12,30,.85);
+  --bg-card:rgba(13,16,38,.8);
+  --bg-hover:rgba(20,24,50,.9);
+  --border:rgba(99,102,241,.12);
+  --border-bright:rgba(99,102,241,.28);
+  --purple:#8b5cf6;
+  --indigo:#6366f1;
+  --blue:#3b82f6;
+  --teal:#14b8a6;
+  --green:#10b981;
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --text-primary:#f1f5f9;
+  --text-secondary:#94a3b8;
+  --text-muted:#4b5563;
+  --glow-purple:0 0 20px rgba(139,92,246,.2);
+  --glow-indigo:0 0 20px rgba(99,102,241,.2);
+  --glass:blur(12px) saturate(180%);
+}
+
+/* ── Layout ── */
+.app{display:flex;height:100vh;overflow:hidden;position:relative}
+.app::before{content:'';position:fixed;top:-200px;left:-100px;width:600px;height:600px;
+  background:radial-gradient(circle,rgba(99,102,241,.06) 0%,transparent 70%);pointer-events:none;z-index:0}
+.app::after{content:'';position:fixed;bottom:-150px;right:100px;width:500px;height:500px;
+  background:radial-gradient(circle,rgba(139,92,246,.05) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+/* ── Sidebar ── */
+.sidebar{
+  width:228px;min-width:228px;position:relative;z-index:10;
+  background:rgba(5,6,20,.95);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  backdrop-filter:var(--glass);
+}
+.sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-row{display:flex;align-items:center;gap:11px}
+.logo-gem{
+  width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5,#3b82f6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+  box-shadow:0 0 16px rgba(124,58,237,.4),inset 0 1px 0 rgba(255,255,255,.15);
+}
+.logo-text h2{font-size:14px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em}
+.logo-text span{font-size:10.5px;color:var(--text-muted);letter-spacing:.02em}
+.nav-section{padding:12px 10px;flex:1;overflow-y:auto}
+.nav-group-label{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;
+  padding:10px 8px 5px;margin-bottom:2px}
+.nav-item{
+  display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;
+  cursor:pointer;color:var(--text-secondary);font-size:13px;font-weight:500;
+  transition:all .18s;margin-bottom:1px;position:relative;
+}
+.nav-item:hover{background:rgba(99,102,241,.08);color:var(--text-primary)}
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(99,102,241,.18),rgba(139,92,246,.08));
+  color:#a78bfa;
+  border-left:2px solid #7c3aed;
+  padding-left:8px;
+}
+.nav-item.active .nav-icon{filter:drop-shadow(0 0 4px rgba(139,92,246,.6))}
+.nav-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:rgba(139,92,246,.2);color:#a78bfa;
+  font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;border:1px solid rgba(139,92,246,.25)}
+.nav-divider{height:1px;background:var(--border);margin:6px 10px}
+.sidebar-footer{
+  padding:12px 14px 16px;border-top:1px solid var(--border);
+  background:rgba(4,5,16,.6);
+}
+.sys-status-row{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-green{background:#10b981;box-shadow:0 0 6px rgba(16,185,129,.6)}
+.dot-amber{background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,.5)}
+.dot-red{background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,.5)}
+.sys-name{font-size:12px;font-weight:600;color:var(--text-secondary);flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sys-ms{font-size:10px;color:var(--text-muted)}
+.footer-ver{font-size:10.5px;color:var(--text-muted);margin-top:5px}
+
+/* ── Main Area ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:5}
+
+/* ── Topbar ── */
+.topbar{
+  height:54px;min-height:54px;
+  background:rgba(5,6,20,.9);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 22px;
+  backdrop-filter:var(--glass);
+}
+.tb-left{display:flex;align-items:center;gap:14px}
+.tb-breadcrumb{font-size:13px;color:var(--text-muted)}
+.tb-breadcrumb b{color:var(--text-primary);font-weight:600}
+.tb-right{display:flex;align-items:center;gap:8px}
+.pill{
+  display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;
+  font-size:11.5px;font-weight:600;cursor:pointer;transition:all .15s;
+  border:1px solid;
+}
+.pill-green{background:rgba(16,185,129,.08);color:#34d399;border-color:rgba(16,185,129,.2)}
+.pill-green:hover{background:rgba(16,185,129,.14)}
+.pill-amber{background:rgba(245,158,11,.08);color:#fbbf24;border-color:rgba(245,158,11,.2)}
+.pill-blue{background:rgba(99,102,241,.1);color:#818cf8;border-color:rgba(99,102,241,.2)}
+.pill-blue:hover{background:rgba(99,102,241,.16)}
+.topbar-btn{
+  padding:6px 16px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;
+  transition:all .15s;letter-spacing:-.01em;
+}
+.btn-primary{
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;
+  box-shadow:0 0 14px rgba(124,58,237,.3);
+}
+.btn-primary:hover{box-shadow:0 0 20px rgba(124,58,237,.5);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--text-secondary);border:1px solid var(--border);padding:6px 12px}
+.btn-ghost:hover{background:rgba(99,102,241,.08);color:var(--text-primary);border-color:var(--border-bright)}
+.notif-btn{
+  width:34px;height:34px;border-radius:9px;background:rgba(99,102,241,.07);
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;position:relative;transition:all .15s;font-size:15px;
+}
+.notif-btn:hover{background:rgba(99,102,241,.14);border-color:var(--border-bright)}
+.notif-dot{
+  position:absolute;top:5px;right:5px;width:7px;height:7px;
+  background:#7c3aed;border-radius:50%;border:1.5px solid #040610;
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(.85)}}
+.avatar{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,#7c3aed,#3b82f6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#fff;cursor:pointer;
+  box-shadow:0 0 10px rgba(124,58,237,.3);
+}
+
+/* ── Content ── */
+.content{flex:1;overflow-y:auto;padding:20px;background:var(--bg-base)}
+
+/* ── Page Header ── */
+.page-header{margin-bottom:18px}
+.page-title{font-size:18px;font-weight:700;color:var(--text-primary);letter-spacing:-.02em}
+.page-sub{font-size:12.5px;color:var(--text-muted);margin-top:3px}
+
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:18px}
+.kpi-card{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:14px;padding:18px 18px 16px;
+  position:relative;overflow:hidden;cursor:pointer;
+  transition:all .2s;
+  backdrop-filter:blur(10px);
+}
+.kpi-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(139,92,246,.4),transparent);
+}
+.kpi-card:hover{border-color:var(--border-bright);transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(4,6,16,.6),0 0 0 1px rgba(99,102,241,.1)}
+.kpi-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.kpi-icon-wrap{
+  width:42px;height:42px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.ki-purple{background:rgba(124,58,237,.15);box-shadow:0 0 12px rgba(124,58,237,.15)}
+.ki-green{background:rgba(16,185,129,.12);box-shadow:0 0 12px rgba(16,185,129,.12)}
+.ki-blue{background:rgba(59,130,246,.12);box-shadow:0 0 12px rgba(59,130,246,.12)}
+.ki-amber{background:rgba(245,158,11,.12);box-shadow:0 0 12px rgba(245,158,11,.12)}
+.kpi-trend{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:600}
+.trend-up{color:#34d399}.trend-dn{color:#f87171}
+.kpi-val{font-size:28px;font-weight:800;color:var(--text-primary);letter-spacing:-.02em;line-height:1}
+.kpi-label{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.kpi-sub{font-size:10.5px;color:var(--text-muted);margin-top:2px}
+.kpi-bar{height:3px;background:rgba(99,102,241,.08);border-radius:2px;margin-top:14px;overflow:hidden}
+.kpi-bar-fill{height:100%;border-radius:2px;transition:width .8s ease}
+.kpi-bar-purple{background:linear-gradient(90deg,#7c3aed,#a78bfa)}
+.kpi-bar-green{background:linear-gradient(90deg,#059669,#34d399)}
+.kpi-bar-blue{background:linear-gradient(90deg,#2563eb,#60a5fa)}
+.kpi-bar-amber{background:linear-gradient(90deg,#d97706,#fbbf24)}
+
+/* ── 3-Column Grid ── */
+.main-grid{display:grid;grid-template-columns:250px 1fr 292px;gap:14px}
+
+/* ── Glass Panel ── */
+.gpanel{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;
+  backdrop-filter:blur(10px);
+}
+.gpanel-header{
+  padding:13px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(5,6,20,.4);
+}
+.ph-title{font-size:12.5px;font-weight:700;color:var(--text-primary);
+  display:flex;align-items:center;gap:6px;letter-spacing:-.01em}
+.ph-icon{font-size:13px;opacity:.8}
+.ph-action{font-size:11px;color:#7c3aed;background:none;cursor:pointer;
+  padding:3px 8px;border-radius:6px;border:1px solid rgba(124,58,237,.2);
+  transition:all .15s}
+.ph-action:hover{background:rgba(124,58,237,.1);color:#a78bfa}
+.ph-count{font-size:10.5px;color:var(--text-muted);background:rgba(99,102,241,.08);
+  padding:2px 7px;border-radius:8px;border:1px solid var(--border)}
+
+/* ── Service Panel ── */
+.svc-body{padding:10px}
+.svc-row{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;
+  cursor:pointer;transition:all .15s;margin-bottom:3px;border:1px solid transparent;
+}
+.svc-row:hover{background:var(--bg-hover);border-color:var(--border)}
+.svc-ic{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;
+}
+.sic-purple{background:rgba(124,58,237,.15)}
+.sic-green{background:rgba(16,185,129,.12)}
+.sic-blue{background:rgba(59,130,246,.12)}
+.sic-amber{background:rgba(245,158,11,.12)}
+.svc-info{flex:1;min-width:0}
+.svc-name{font-size:12.5px;font-weight:600;color:var(--text-primary)}
+.svc-sub{font-size:10px;color:var(--text-muted);margin-top:1px}
+.svc-right{text-align:right;flex-shrink:0}
+.status-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-block}
+.sb-online{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.2)}
+.sb-deg{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.sb-offline{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.svc-ping{font-size:9.5px;color:var(--text-muted);margin-top:1px}
+
+/* ── Provider Grid ── */
+.prov-section{padding:10px}
+.prov-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.prov-card{
+  display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:9px;
+  background:rgba(5,6,20,.6);border:1px solid var(--border);cursor:pointer;
+  transition:all .15s;
+}
+.prov-card:hover{border-color:var(--border-bright);background:var(--bg-hover)}
+.prov-card.prov-ok{border-left:2px solid #10b981}
+.prov-card.prov-err{border-left:2px solid #ef4444}
+.prov-card.prov-pend{border-left:2px solid #f59e0b}
+.prov-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pd-ok{background:#10b981;box-shadow:0 0 5px rgba(16,185,129,.5)}
+.pd-err{background:#ef4444;box-shadow:0 0 5px rgba(239,68,68,.5)}
+.pd-pend{background:#f59e0b;animation:pulse 1.5s infinite}
+.prov-name{font-size:11px;font-weight:600;color:var(--text-primary);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.prov-ms{font-size:9.5px;color:var(--text-muted)}
+.prov-ping-btn{
+  font-size:9.5px;color:#6366f1;background:none;cursor:pointer;padding:2px 5px;
+  border:1px solid rgba(99,102,241,.2);border-radius:5px;transition:all .15s;
+}
+.prov-ping-btn:hover{background:rgba(99,102,241,.1);color:#a5b4fc}
+
+/* ── Workspace (center) ── */
+.workspace-tabs{
+  display:flex;padding:0 16px;
+  background:rgba(3,4,14,.6);
+  border-bottom:1px solid var(--border);
+  gap:2px;
+}
+.wtab{
+  padding:12px 14px;font-size:12.5px;font-weight:500;color:var(--text-muted);
+  cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;
+  display:flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.wtab:hover{color:var(--text-secondary)}
+.wtab.active{color:#a78bfa;border-bottom-color:#7c3aed}
+.workspace-body{padding:16px;overflow-y:auto;height:calc(100vh - 54px - 200px)}
+
+/* ── Form Styles ── */
+.form-section{margin-bottom:16px}
+.form-label{font-size:10.5px;font-weight:700;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:block}
+.form-input{
+  width:100%;background:rgba(5,6,20,.8);border:1px solid var(--border);
+  border-radius:9px;padding:9px 12px;color:var(--text-primary);
+  font-size:13px;outline:none;transition:all .18s;font-family:inherit;
+}
+.form-input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.form-input::placeholder{color:var(--text-muted)}
+.form-textarea{
+  width:100%;background:rgba(5,6,20,.8);border:1px solid var(--border);
+  border-radius:9px;padding:9px 12px;color:var(--text-primary);
+  font-size:13px;outline:none;transition:all .18s;resize:vertical;
+  font-family:inherit;min-height:80px;
+}
+.form-textarea:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.form-select{
+  width:100%;background:rgba(5,6,20,.8);border:1px solid var(--border);
+  border-radius:9px;padding:8px 32px 8px 12px;color:var(--text-primary);
+  font-size:12.5px;outline:none;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7280'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  transition:all .18s;font-family:inherit;
+}
+.form-select:focus{border-color:#6366f1}
+.form-select option{background:#0d1026}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.inp-with-count{position:relative}
+.inp-count{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  font-size:10px;color:var(--text-muted);pointer-events:none}
+.chip-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.chip{
+  padding:4px 10px;background:rgba(13,16,38,.8);border:1px solid var(--border);
+  border-radius:16px;font-size:11px;color:var(--text-secondary);cursor:pointer;
+  transition:all .15s;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.chip:hover,.chip.active{
+  border-color:#7c3aed;color:#a78bfa;background:rgba(124,58,237,.1);
+}
+.action-row{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;
+  border-top:1px solid var(--border)}
+.btn-generate{
+  flex:1;padding:10px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;
+  box-shadow:0 0 18px rgba(124,58,237,.35);transition:all .18s;letter-spacing:-.01em;
+}
+.btn-generate:hover{box-shadow:0 0 28px rgba(124,58,237,.55);transform:translateY(-1px)}
+.btn-draft{
+  padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;
+  background:rgba(99,102,241,.08);color:#818cf8;border:1px solid rgba(99,102,241,.2);
+  transition:all .15s;
+}
+.btn-draft:hover{background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.35)}
+.progress-ring{
+  padding:14px;display:flex;align-items:center;gap:14px;
+  background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);
+  border-radius:10px;margin-top:10px;
+}
+.pring-icon{font-size:20px;flex-shrink:0}
+.pring-info{flex:1;min-width:0}
+.pring-title{font-size:12.5px;font-weight:600;color:var(--text-primary)}
+.pring-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+.pring-bar{height:4px;background:rgba(99,102,241,.1);border-radius:2px;margin-top:8px;overflow:hidden}
+.pring-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);
+  border-radius:2px;transition:width .5s ease;animation:shimmer 2s infinite}
+@keyframes shimmer{
+  0%{background-position:0% 50%}100%{background-position:100% 50%}
+}
+.pring-pct{font-size:12px;font-weight:700;color:#a78bfa;flex-shrink:0}
+
+/* ── Right Panel ── */
+.rpanel-scroll{overflow-y:auto;max-height:calc(100vh - 54px - 50px)}
+
+/* ── Queue Items ── */
+.queue-list{padding:10px}
+.queue-item{
+  padding:10px 11px;border-radius:10px;margin-bottom:6px;
+  background:rgba(5,6,20,.6);border:1px solid var(--border);
+  cursor:pointer;transition:all .15s;
+}
+.queue-item:hover{border-color:var(--border-bright)}
+.qi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.qi-title{font-size:12px;font-weight:600;color:var(--text-primary);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px}
+.qi-badge{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:8px;flex-shrink:0}
+.qib-process{background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.2)}
+.qib-done{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.2)}
+.qib-queue{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.qib-fail{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.qi-bar{height:3px;background:rgba(99,102,241,.08);border-radius:2px;overflow:hidden}
+.qi-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:2px;transition:width .5s}
+.qi-meta{display:flex;justify-content:space-between;margin-top:5px}
+.qi-time{font-size:10px;color:var(--text-muted)}
+.qi-pct{font-size:10px;color:#7c3aed;font-weight:600}
+.qi-btn-row{display:flex;gap:4px;margin-top:7px}
+.qi-btn{font-size:10px;padding:3px 8px;border-radius:6px;cursor:pointer;border:1px solid;transition:all .15s}
+.qib-view{background:rgba(99,102,241,.08);color:#818cf8;border-color:rgba(99,102,241,.2)}
+.qib-view:hover{background:rgba(99,102,241,.16)}
+.qib-stop{background:rgba(239,68,68,.06);color:#f87171;border-color:rgba(239,68,68,.2)}
+.qib-stop:hover{background:rgba(239,68,68,.12)}
+.qib-upload{background:rgba(16,185,129,.08);color:#34d399;border-color:rgba(16,185,129,.2)}
+.qib-upload:hover{background:rgba(16,185,129,.14)}
+
+/* ── Recent Jobs ── */
+.job-list{padding:10px}
+.job-row{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;
+  cursor:pointer;transition:all .15s;margin-bottom:3px;
+}
+.job-row:hover{background:var(--bg-hover)}
+.job-thumb{
+  width:50px;height:30px;border-radius:6px;flex-shrink:0;overflow:hidden;
+  background:rgba(13,16,38,.9);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:11px;
+}
+.job-info{flex:1;min-width:0}
+.job-title{font-size:11.5px;font-weight:600;color:var(--text-primary);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.job-meta{font-size:10px;color:var(--text-muted);margin-top:1px}
+.job-dur{font-size:10.5px;color:var(--text-secondary);flex-shrink:0}
+
+/* ── Quick Actions ── */
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px}
+.qa-btn{
+  padding:10px 8px;border-radius:10px;background:rgba(5,6,20,.6);
+  border:1px solid var(--border);cursor:pointer;transition:all .15s;
+  text-align:center;
+}
+.qa-btn:hover{background:var(--bg-hover);border-color:var(--border-bright);transform:translateY(-1px)}
+.qa-icon{font-size:18px;display:block;margin-bottom:5px}
+.qa-label{font-size:11px;font-weight:600;color:var(--text-secondary)}
+.qa-btn:hover .qa-label{color:var(--text-primary)}
+
+/* ── Modal ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(2,4,10,.8);z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);
+  animation:fadeIn .2s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-box{
+  background:linear-gradient(180deg,rgba(10,12,30,.98),rgba(7,9,22,.98));
+  border:1px solid var(--border-bright);border-radius:16px;
+  width:680px;max-width:95vw;max-height:90vh;overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.7),0 0 0 1px rgba(99,102,241,.08);
+  animation:slideUp .25s ease;
+}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-head{
+  padding:18px 22px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(5,6,20,.5);
+}
+.modal-title{font-size:15px;font-weight:700;color:var(--text-primary)}
+.modal-close{
+  width:30px;height:30px;border-radius:8px;background:rgba(99,102,241,.08);
+  border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  transition:all .15s;
+}
+.modal-close:hover{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#f87171}
+.modal-body{padding:20px 22px;overflow-y:auto;max-height:calc(90vh - 130px)}
+.modal-prov-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.modal-prov{
+  padding:14px;border-radius:11px;background:rgba(5,6,20,.8);
+  border:1px solid var(--border);transition:all .18s;
+}
+.modal-prov:hover{border-color:var(--border-bright)}
+.modal-prov.mp-ok{border-left:2px solid #10b981}
+.modal-prov.mp-err{border-left:2px solid #ef4444}
+.modal-prov.mp-pend{border-left:2px solid #f59e0b}
+.mp-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.mp-icon{font-size:16px}
+.mp-name{font-size:12px;font-weight:700;color:var(--text-primary);flex:1}
+.mp-status{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px}
+.mps-ok{background:rgba(16,185,129,.1);color:#34d399}
+.mps-err{background:rgba(239,68,68,.1);color:#f87171}
+.mps-pend{background:rgba(245,158,11,.1);color:#fbbf24}
+.mp-model{font-size:10.5px;color:var(--text-muted)}
+.mp-latency{font-size:11px;color:#818cf8;margin-top:3px}
+.mp-error{font-size:10px;color:#f87171;margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal-footer{
+  padding:14px 22px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(5,6,20,.4);
+}
+.mf-stat{font-size:12px;color:var(--text-muted)}
+.mf-stat b{color:var(--text-primary)}
+.modal-recheck{
+  padding:8px 18px;border-radius:9px;background:linear-gradient(135deg,#7c3aed,#4f46e5);
+  color:#fff;border:none;cursor:pointer;font-size:12.5px;font-weight:600;
+  transition:all .15s;box-shadow:0 0 12px rgba(124,58,237,.3);
+}
+.modal-recheck:hover{box-shadow:0 0 20px rgba(124,58,237,.5);transform:translateY(-1px)}
+.loading-spin{
+  display:inline-block;width:14px;height:14px;border:2px solid rgba(167,139,250,.3);
+  border-top-color:#a78bfa;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Toast ── */
+.toast-stack{position:fixed;bottom:22px;right:22px;z-index:999;
+  display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{
+  padding:12px 16px;border-radius:10px;min-width:280px;
+  display:flex;align-items:center;gap:10px;pointer-events:all;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);animation:toastIn .25s ease;
+  backdrop-filter:blur(10px);font-size:13px;
+}
+@keyframes toastIn{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast-success{background:rgba(5,46,22,.9);border:1px solid rgba(16,185,129,.3);color:#34d399}
+.toast-error{background:rgba(28,6,6,.9);border:1px solid rgba(239,68,68,.3);color:#f87171}
+.toast-info{background:rgba(12,26,60,.9);border:1px solid rgba(99,102,241,.3);color:#818cf8}
+.toast-warn{background:rgba(28,18,4,.9);border:1px solid rgba(245,158,11,.3);color:#fbbf24}
+.toast-close{margin-left:auto;cursor:pointer;opacity:.6;font-size:16px}
+.toast-close:hover{opacity:1}
+
+/* ── Page: Queue ── */
+.queue-page-grid{display:grid;grid-template-columns:1fr 340px;gap:14px}
+.queue-table{width:100%;border-collapse:collapse}
+.qt-head th{padding:10px 12px;font-size:10.5px;font-weight:700;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);
+  background:rgba(5,6,20,.5);text-align:left}
+.qt-row{border-bottom:1px solid var(--border);transition:background .12s;cursor:pointer}
+.qt-row:hover{background:rgba(99,102,241,.04)}
+.qt-row td{padding:11px 12px;font-size:12.5px;color:var(--text-secondary);vertical-align:middle}
+.qt-title{color:var(--text-primary);font-weight:600;max-width:240px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qt-prog{width:100px}
+.prog-bar{height:4px;background:rgba(99,102,241,.1);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:2px}
+.qt-actions{display:flex;gap:4px}
+.qt-act-btn{padding:4px 10px;border-radius:6px;font-size:10.5px;font-weight:600;
+  cursor:pointer;border:1px solid;transition:all .15s}
+.qa-view{background:rgba(99,102,241,.08);color:#818cf8;border-color:rgba(99,102,241,.2)}
+.qa-stop{background:rgba(239,68,68,.06);color:#f87171;border-color:rgba(239,68,68,.2)}
+.qa-redo{background:rgba(245,158,11,.06);color:#fbbf24;border-color:rgba(245,158,11,.2)}
+.qa-dl{background:rgba(16,185,129,.08);color:#34d399;border-color:rgba(16,185,129,.2)}
+
+/* ── Page: Providers ── */
+.prov-page-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.prov-page-card{
+  background:var(--bg-card);border:1px solid var(--border);border-radius:14px;
+  padding:18px;cursor:pointer;transition:all .18s;
+}
+.prov-page-card:hover{border-color:var(--border-bright);transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(4,6,16,.5)}
+.prov-page-card.pc-ok{border-top:2px solid #10b981}
+.prov-page-card.pc-err{border-top:2px solid #ef4444}
+.prov-pc-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.prov-pc-icon{font-size:22px;width:44px;height:44px;border-radius:10px;
+  background:rgba(13,16,38,.8);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.prov-pc-name{font-size:14px;font-weight:700;color:var(--text-primary)}
+.prov-pc-model{font-size:11px;color:var(--text-muted);margin-top:2px}
+.prov-pc-status{margin-left:auto;font-size:10.5px;font-weight:700;
+  padding:3px 9px;border-radius:10px}
+.prov-pc-stat{display:flex;align-items:center;gap:14px;
+  padding-top:12px;border-top:1px solid var(--border)}
+.pps-item{text-align:center}
+.pps-val{font-size:16px;font-weight:700;color:var(--text-primary)}
+.pps-lab{font-size:10px;color:var(--text-muted);margin-top:1px}
+
+/* ── Settings ── */
+.settings-grid{display:grid;grid-template-columns:200px 1fr;gap:16px}
+.settings-nav{display:flex;flex-direction:column;gap:2px}
+.snav-item{padding:9px 12px;border-radius:9px;cursor:pointer;transition:all .15s;
+  font-size:13px;color:var(--text-secondary);font-weight:500;display:flex;align-items:center;gap:8px}
+.snav-item:hover{background:rgba(99,102,241,.08);color:var(--text-primary)}
+.snav-item.active{background:rgba(124,58,237,.12);color:#a78bfa;
+  border-left:2px solid #7c3aed;padding-left:10px}
+.settings-section{background:var(--bg-card);border:1px solid var(--border);
+  border-radius:14px;padding:22px}
+.section-title{font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:16px;
+  padding-bottom:12px;border-bottom:1px solid var(--border)}
+.setting-row{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 0;border-bottom:1px solid rgba(99,102,241,.06)}
+.setting-row:last-child{border-bottom:none}
+.sr-info{flex:1}
+.sr-label{font-size:13px;font-weight:600;color:var(--text-primary)}
+.sr-desc{font-size:11.5px;color:var(--text-muted);margin-top:2px}
+.toggle{width:40px;height:22px;border-radius:11px;cursor:pointer;
+  flex-shrink:0;transition:all .25s;position:relative;
+  background:rgba(99,102,241,.12);border:1px solid var(--border)}
+.toggle.on{background:linear-gradient(90deg,#7c3aed,#4f46e5);
+  border-color:#7c3aed;box-shadow:0 0 10px rgba(124,58,237,.3)}
+.toggle-knob{width:16px;height:16px;border-radius:50%;background:#fff;
+  position:absolute;top:2px;left:2px;transition:transform .25s;
+  box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.toggle.on .toggle-knob{transform:translateX(18px)}
+.key-input{
+  background:rgba(5,6,20,.9);border:1px solid var(--border);border-radius:8px;
+  padding:7px 36px 7px 11px;color:var(--text-primary);font-size:12px;
+  outline:none;width:260px;font-family:'SF Mono',monospace;
+  transition:all .18s;
+}
+.key-input:focus{border-color:#6366f1}
+.key-wrap{position:relative;display:inline-block}
+.key-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  font-size:14px;cursor:pointer;color:var(--text-muted);user-select:none}
+.key-eye:hover{color:var(--text-secondary)}
+.save-btn{
+  margin-top:18px;padding:9px 24px;border-radius:9px;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);
+  color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;
+  box-shadow:0 0 14px rgba(124,58,237,.3);transition:all .15s;
+}
+.save-btn:hover{box-shadow:0 0 22px rgba(124,58,237,.5);transform:translateY(-1px)}
+
+/* ── Logs ── */
+.log-controls{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.log-filter{padding:6px 12px;border-radius:8px;font-size:11.5px;font-weight:600;
+  cursor:pointer;border:1px solid;transition:all .15s}
+.lf-all{background:rgba(99,102,241,.1);color:#818cf8;border-color:rgba(99,102,241,.2)}
+.lf-info{background:rgba(59,130,246,.08);color:#60a5fa;border-color:rgba(59,130,246,.2)}
+.lf-warn{background:rgba(245,158,11,.08);color:#fbbf24;border-color:rgba(245,158,11,.2)}
+.lf-err{background:rgba(239,68,68,.08);color:#f87171;border-color:rgba(239,68,68,.2)}
+.lf-active{opacity:1}
+.lf-inactive{opacity:.45}
+.log-box{
+  background:rgba(2,4,10,.9);border:1px solid var(--border);border-radius:12px;
+  padding:14px;font-family:'SF Mono','Cascadia Code',monospace;font-size:11.5px;
+  line-height:1.8;max-height:460px;overflow-y:auto;
+}
+.log-line{display:flex;gap:10px;padding:2px 0}
+.log-ts{color:var(--text-muted);flex-shrink:0;user-select:none}
+.log-lv{font-weight:700;flex-shrink:0;width:36px}
+.lv-info{color:#60a5fa}.lv-warn{color:#fbbf24}.lv-err{color:#f87171}.lv-ok{color:#34d399}
+.log-msg{color:var(--text-secondary);word-break:break-all}
+.log-msg .hl-green{color:#34d399}.log-msg .hl-red{color:#f87171}
+.log-msg .hl-blue{color:#60a5fa}.log-msg .hl-amber{color:#fbbf24}
+
+/* ── Upload Page ── */
+.upload-grid{display:grid;grid-template-columns:1fr 340px;gap:14px}
+.upload-form{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.upload-zone{
+  border:2px dashed rgba(99,102,241,.2);border-radius:12px;padding:30px;
+  text-align:center;cursor:pointer;transition:all .2s;margin-bottom:14px;
+}
+.upload-zone:hover{border-color:rgba(99,102,241,.4);background:rgba(99,102,241,.04)}
+.uz-icon{font-size:32px;margin-bottom:8px}
+.uz-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+.uz-sub{font-size:11px;color:var(--text-muted);margin-top:3px}
+.upload-history{background:var(--bg-card);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden}
+.uh-item{display:flex;align-items:center;gap:10px;padding:11px 14px;
+  border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.uh-item:hover{background:var(--bg-hover)}
+.uh-thumb{width:52px;height:34px;border-radius:6px;flex-shrink:0;
+  background:rgba(13,16,38,.9);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:14px}
+.uh-info{flex:1;min-width:0}
+.uh-title{font-size:12px;font-weight:600;color:var(--text-primary);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uh-meta{font-size:10.5px;color:var(--text-muted);margin-top:2px}
+.uh-stat{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:8px}
+.uhs-ok{background:rgba(16,185,129,.1);color:#34d399}
+.uhs-fail{background:rgba(239,68,68,.1);color:#f87171}
+
+/* ── Responsive adjustments ── */
+@media(max-width:1300px){.main-grid{grid-template-columns:230px 1fr 270px}}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback} = React;
+
+/* ─── Sample Data ─── */
+const INITIAL_PROVIDERS = [
+  {id:'anthropic',name:'Anthropic',icon:'🤖',model:'claude-sonnet-4-6',ok:true,ms:182,err:''},
+  {id:'pexels',name:'Pexels',icon:'📸',model:'Video API v1',ok:true,ms:94,err:''},
+  {id:'pixabay',name:'Pixabay',icon:'🖼️',model:'Search API',ok:true,ms:127,err:''},
+  {id:'elevenlabs',name:'ElevenLabs',icon:'🎙️',model:'TTS v2',ok:false,ms:0,err:'Connection refused'},
+  {id:'openai',name:'OpenAI',icon:'🟢',model:'gpt-4o',ok:true,ms:310,err:''},
+  {id:'stability',name:'Stability',icon:'🎨',model:'SD XL',ok:false,ms:0,err:'401 Unauthorized'},
+  {id:'edgetts',name:'Edge TTS',icon:'🔊',model:'ko-KR-SunHi',ok:true,ms:45,err:''},
+  {id:'youtube',name:'YouTube',icon:'▶️',model:'Data API v3',ok:true,ms:220,err:''},
+  {id:'gemini',name:'Gemini',icon:'✨',model:'gemini-1.5-pro',ok:true,ms:268,err:''},
+];
+
+const INITIAL_QUEUE = [
+  {id:'job_001',title:'한국 역사 탐구: 조선시대 500년',status:'processing',pct:67,eta:'3분 24초',scenes:5,created:'14:23'},
+  {id:'job_002',title:'AI 기술 트렌드 2026 완전 분석',status:'queued',pct:0,eta:'대기중',scenes:5,created:'14:31'},
+  {id:'job_003',title:'제주도 여행 완벽 가이드',status:'done',pct:100,eta:'완료',scenes:5,created:'13:55'},
+  {id:'job_004',title:'건강한 식단 만들기 7가지 방법',status:'failed',pct:34,eta:'실패',scenes:5,created:'13:12'},
+  {id:'job_005',title:'우주 탐험의 역사와 미래',status:'queued',pct:0,eta:'대기중',scenes:5,created:'14:45'},
+];
+
+const RECENT_JOBS = [
+  {id:'j1',title:'서울 야경 감성 브이로그',dur:'12:34',thumb:'🌃'},
+  {id:'j2',title:'파이썬으로 배우는 AI 기초',dur:'8:52',thumb:'🐍'},
+  {id:'j3',title:'부동산 투자 전략 2026',dur:'15:07',thumb:'🏠'},
+  {id:'j4',title:'맛있는 한식 레시피 Top 10',dur:'9:43',thumb:'🍜'},
+];
+
+const LOGS = [
+  {ts:'14:45:02',level:'INFO',msg:'[job_001] 씬 3/5 Ken Burns 효과 적용 중...'},
+  {ts:'14:45:01',level:'INFO',msg:'[job_001] Pexels 자산 다운로드: landscape_sunset_4k.mp4 (18.2MB)'},
+  {ts:'14:44:58',level:'WARN',msg:'[job_001] 클립 normalize_clip() 적용 — Duration:N/A 감지'},
+  {ts:'14:44:55',level:'INFO',msg:'[job_001] TTS 생성 완료: ko-KR-SunHi, 47.3초'},
+  {ts:'14:44:50',level:'INFO',msg:'파이프라인 시작: job_001 — "한국 역사 탐구: 조선시대 500년"'},
+  {ts:'14:44:48',level:'INFO',msg:'job_001 큐 등록 완료. 예상 시간: 5분 12초'},
+  {ts:'14:44:30',level:'OK',msg:'[providers/ping] Anthropic ✓ 182ms, Pexels ✓ 94ms, YouTube ✓ 220ms'},
+  {ts:'14:44:30',level:'ERR',msg:'[providers/ping] ElevenLabs ✗ Connection refused — fallback Edge TTS 적용'},
+  {ts:'14:44:29',level:'ERR',msg:'[providers/ping] Stability AI ✗ 401 Unauthorized — Pixabay fallback'},
+  {ts:'14:44:15',level:'INFO',msg:'컨테이너 lf2_ffmpeg 시작 완료 (v16.4.0, shm=2g)'},
+  {ts:'14:44:10',level:'INFO',msg:'LongForm Factory 서버 초기화 중... port 8002'},
+];
+
+/* ─── Toast ─── */
+function ToastContainer({toasts,remove}){
+  return(
+    <div className="toast-stack">
+      {toasts.map(t=>(
+        <div key={t.id} className={`toast toast-${t.type}`}>
+          <span>{t.icon}</span>
+          <span style={{flex:1}}>{t.msg}</span>
+          <span className="toast-close" onClick={()=>remove(t.id)}>×</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+function useToast(){
+  const [toasts,setToasts]=useState([]);
+  const add=useCallback((msg,type='info',icon='')=>{
+    const id=Date.now();
+    setToasts(p=>[...p,{id,msg,type,icon}]);
+    setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),3800);
+  },[]);
+  const remove=useCallback(id=>setToasts(p=>p.filter(t=>t.id!==id)),[]);
+  return{toasts,add,remove};
+}
+
+/* ─── Toggle ─── */
+function Toggle({on,onToggle}){
+  return(
+    <div className={`toggle ${on?'on':''}`} onClick={onToggle}>
+      <div className="toggle-knob"/>
+    </div>
+  );
+}
+
+/* ─── Sidebar ─── */
+function Sidebar({page,setPage,services}){
+  const navMain=[
+    {id:'dashboard',icon:'⬡',label:'대시보드'},
+    {id:'video',icon:'✦',label:'영상 생성',badge:'NEW'},
+    {id:'queue',icon:'⋮',label:'작업 큐',badge:services.queue},
+    {id:'upload',icon:'↑',label:'YouTube 업로드'},
+  ];
+  const navSystem=[
+    {id:'providers',icon:'◎',label:'AI 프로바이더'},
+    {id:'settings',icon:'⚙',label:'설정'},
+    {id:'logs',icon:'≡',label:'시스템 로그'},
+  ];
+  const svcStatus=[
+    {name:'FFmpeg Worker',ms:'12ms',ok:true},
+    {name:'TTS Service',ms:'8ms',ok:true},
+    {name:'Nginx Gateway',ms:'2ms',ok:true},
+  ];
+  return(
+    <aside className="sidebar">
+      <div className="sidebar-logo">
+        <div className="logo-row">
+          <div className="logo-gem">🎬</div>
+          <div className="logo-text">
+            <h2>LongForm Factory</h2>
+            <span>AI 영상 생성 스튜디오</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="nav-section">
+        <div className="nav-group-label">메인</div>
+        {navMain.map(n=>(
+          <div key={n.id} className={`nav-item ${page===n.id?'active':''}`} onClick={()=>setPage(n.id)}>
+            <span className="nav-icon">{n.icon}</span>
+            <span style={{flex:1}}>{n.label}</span>
+            {n.badge && <span className="nav-badge">{n.badge}</span>}
+          </div>
+        ))}
+        <div className="nav-divider"/>
+        <div className="nav-group-label">시스템</div>
+        {navSystem.map(n=>(
+          <div key={n.id} className={`nav-item ${page===n.id?'active':''}`} onClick={()=>setPage(n.id)}>
+            <span className="nav-icon">{n.icon}</span>
+            <span>{n.label}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="sidebar-footer">
+        {svcStatus.map(s=>(
+          <div key={s.name} className="sys-status-row">
+            <div className={`status-dot ${s.ok?'dot-green':'dot-red'}`}/>
+            <span className="sys-name">{s.name}</span>
+            <span className="sys-ms">{s.ms}</span>
+          </div>
+        ))}
+        <div className="footer-ver">v16.4.0 · WSL2 172.20.143.158</div>
+      </div>
+    </aside>
+  );
+}
+
+/* ─── Topbar ─── */
+function Topbar({page,openProviders,addToast}){
+  const titles={dashboard:'대시보드',video:'영상 생성',queue:'작업 큐',upload:'YouTube 업로드',providers:'AI 프로바이더',settings:'설정',logs:'시스템 로그'};
+  return(
+    <header className="topbar">
+      <div className="tb-left">
+        <span className="tb-breadcrumb">LF Studio / <b>{titles[page]||page}</b></span>
+        <div className="pill pill-green" onClick={()=>addToast('모든 시스템 정상 운영 중','success','✅')}>
+          <span className="status-dot dot-green"/>시스템 정상
+        </div>
+        <div className="pill pill-amber">⚡ 처리중 1건</div>
+      </div>
+      <div className="tb-right">
+        <button className="btn-ghost topbar-btn" onClick={()=>openProviders()}>🔬 AI 상태</button>
+        <button className="btn-primary topbar-btn" onClick={()=>addToast('새 작업 생성 화면으로 이동합니다','info','🎬')}>+ 새 영상</button>
+        <div className="notif-btn" onClick={()=>addToast('알림이 없습니다','info','🔔')}>
+          🔔<div className="notif-dot"/>
+        </div>
+        <div className="avatar">SK</div>
+      </div>
+    </header>
+  );
+}
+
+/* ─── KPI Cards ─── */
+function KpiCards(){
+  const cards=[
+    {val:'127',label:'총 생성 영상',sub:'이번 달 +23편',icon:'🎬',cls:'ki-purple',bar:'kpi-bar-purple',pct:73},
+    {val:'94.2%',label:'파이프라인 성공률',sub:'전월 대비 +1.4%',icon:'✅',cls:'ki-green',bar:'kpi-bar-green',pct:94},
+    {val:'8.3GB',label:'총 출력 용량',sub:'평균 65MB/편',icon:'💾',cls:'ki-blue',bar:'kpi-bar-blue',pct:41},
+    {val:'4분 52초',label:'평균 처리 시간',sub:'씬당 약 58초',icon:'⚡',cls:'ki-amber',bar:'kpi-bar-amber',pct:61},
+  ];
+  const trends=['+18%','+1.4%','+32%','-8%'];
+  return(
+    <div className="kpi-grid">
+      {cards.map((c,i)=>(
+        <div key={i} className="kpi-card">
+          <div className="kpi-top">
+            <div className={`kpi-icon-wrap ${c.cls}`}>{c.icon}</div>
+            <div className={`kpi-trend ${i===3?'trend-dn':'trend-up'}`}>
+              {i===3?'▼':'▲'}{trends[i]}
+            </div>
+          </div>
+          <div className="kpi-val">{c.val}</div>
+          <div className="kpi-label">{c.label}</div>
+          <div className="kpi-sub">{c.sub}</div>
+          <div className="kpi-bar"><div className={`kpi-bar-fill ${c.bar}`} style={{width:`${c.pct}%`}}/></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Service Panel ─── */
+function ServicePanel({addToast}){
+  const svcs=[
+    {name:'FFmpeg Worker',sub:'영상 인코딩·Ken Burns',icon:'🎞️',cls:'sic-purple',status:'online',ms:'12ms'},
+    {name:'TTS Service',sub:'Edge ko-KR-SunHi',icon:'🎙️',cls:'sic-green',status:'online',ms:'8ms'},
+    {name:'Nginx Gateway',sub:'API 라우팅 :8080',icon:'🔀',cls:'sic-blue',status:'online',ms:'2ms'},
+    {name:'YouTube Uploader',sub:'OAuth2 인증됨',icon:'▶️',cls:'sic-amber',status:'online',ms:'220ms'},
+  ];
+  const statusMap={online:'sb-online',degraded:'sb-deg',offline:'sb-offline'};
+  const labelMap={online:'온라인',degraded:'저하',offline:'오프라인'};
+  return(
+    <div className="gpanel" style={{gridRow:'1 / 3'}}>
+      <div className="gpanel-header">
+        <span className="ph-title"><span className="ph-icon">🖥</span> 서비스 상태</span>
+        <button className="ph-action" onClick={()=>addToast('서비스 헬스체크 실행','info','🔍')}>새로고침</button>
+      </div>
+      <div className="svc-body">
+        {svcs.map((s,i)=>(
+          <div key={i} className="svc-row" onClick={()=>addToast(`${s.name} 상세 정보 조회 중...`,'info','📊')}>
+            <div className={`svc-ic ${s.cls}`}>{s.icon}</div>
+            <div className="svc-info">
+              <div className="svc-name">{s.name}</div>
+              <div className="svc-sub">{s.sub}</div>
+            </div>
+            <div className="svc-right">
+              <div className={`status-badge ${statusMap[s.status]}`}>{labelMap[s.status]}</div>
+              <div className="svc-ping">{s.ms}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="gpanel-header" style={{borderTop:'1px solid var(--border)',borderBottom:'none',paddingTop:'11px'}}>
+        <span className="ph-title"><span className="ph-icon">🤖</span> AI 프로바이더</span>
+        <span className="ph-count">9개</span>
+      </div>
+      <div className="prov-section">
+        <div className="prov-grid">
+          {INITIAL_PROVIDERS.slice(0,6).map(p=>(
+            <div key={p.id} className={`prov-card ${p.ok?'prov-ok':'prov-err'}`}>
+              <div className={`prov-dot ${p.ok?'pd-ok':'pd-err'}`}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div className="prov-name">{p.icon} {p.name}</div>
+                <div className="prov-ms">{p.ok?`${p.ms}ms`:'오류'}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Video Workspace ─── */
+function VideoWorkspace({addToast,queue,setQueue}){
+  const [tab,setTab]=useState('generate');
+  const [title,setTitle]=useState('');
+  const [script,setScript]=useState('');
+  const [style,setStyle]=useState('edu');
+  const [duration,setDuration]=useState('5');
+  const [voice,setVoice]=useState('sunhi');
+  const [resolution,setResolution]=useState('1920x1080');
+  const [activeJob,setActiveJob]=useState(null);
+
+  const styles=[
+    {k:'edu',l:'교육·강의'},
+    {k:'vlog',l:'브이로그'},
+    {k:'news',l:'뉴스·다큐'},
+    {k:'short',l:'쇼츠·릴스'},
+    {k:'corp',l:'기업·홍보'},
+    {k:'travel',l:'여행·라이프'},
+  ];
+
+  function handleGenerate(){
+    if(!title.trim()){addToast('제목을 입력해주세요','warn','⚠️');return;}
+    const jobId=`job_${Date.now()}`;
+    const newJob={id:jobId,title:title.trim(),status:'processing',pct:0,eta:'계산중...',scenes:parseInt(duration),created:new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})};
+    setQueue(q=>[newJob,...q]);
+    setActiveJob(jobId);
+    addToast(`"${title}" 생성 시작!`,'success','🎬');
+    // Simulate progress
+    let pct=0;
+    const iv=setInterval(()=>{
+      pct+=Math.floor(Math.random()*4)+1;
+      if(pct>=100){pct=100;clearInterval(iv);
+        setQueue(q=>q.map(j=>j.id===jobId?{...j,status:'done',pct:100,eta:'완료'}:j));
+        addToast(`"${title}" 생성 완료!`,'success','✅');
+        setActiveJob(null);
+      } else {
+        const remaining=Math.floor((100-pct)*2.8);
+        setQueue(q=>q.map(j=>j.id===jobId?{...j,pct,eta:`${remaining}초 남음`}:j));
+      }
+    },600);
+  }
+
+  const curJob=activeJob?queue.find(j=>j.id===activeJob):null;
+
+  return(
+    <div className="gpanel">
+      <div className="workspace-tabs">
+        {[['generate','✦ 영상 생성'],['upload','↑ 업로드 설정'],['patch','🔧 패치 검증']].map(([k,l])=>(
+          <div key={k} className={`wtab ${tab===k?'active':''}`} onClick={()=>setTab(k)}>{l}</div>
+        ))}
+      </div>
+
+      {tab==='generate' && (
+        <div style={{padding:'16px',overflowY:'auto',maxHeight:'calc(100vh - 260px)'}}>
+          <div className="form-section">
+            <label className="form-label">영상 제목</label>
+            <div className="inp-with-count">
+              <input className="form-input" placeholder="예: 한국 역사 탐구: 조선시대 500년" value={title} onChange={e=>setTitle(e.target.value)} maxLength={80}/>
+              <span className="inp-count">{title.length}/80</span>
+            </div>
+          </div>
+          <div className="form-section">
+            <label className="form-label">나레이션 스크립트</label>
+            <textarea className="form-textarea" placeholder="스크립트를 입력하거나 AI가 자동 생성합니다..." value={script} onChange={e=>setScript(e.target.value)} rows={4}/>
+          </div>
+          <div className="form-section">
+            <label className="form-label">영상 스타일</label>
+            <div className="chip-wrap">
+              {styles.map(s=>(
+                <div key={s.k} className={`chip ${style===s.k?'active':''}`} onClick={()=>setStyle(s.k)}>{s.l}</div>
+              ))}
+            </div>
+          </div>
+          <div className="form-grid-3" style={{marginBottom:'12px'}}>
+            <div>
+              <label className="form-label">씬 수</label>
+              <select className="form-select" value={duration} onChange={e=>setDuration(e.target.value)}>
+                {[3,5,7,10].map(n=><option key={n} value={n}>{n}씬</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="form-label">TTS 음성</label>
+              <select className="form-select" value={voice} onChange={e=>setVoice(e.target.value)}>
+                <option value="sunhi">선희 (여성)</option>
+                <option value="hyunsu">현수 (남성)</option>
+                <option value="inah">인아 (여성)</option>
+              </select>
+            </div>
+            <div>
+              <label className="form-label">해상도</label>
+              <select className="form-select" value={resolution} onChange={e=>setResolution(e.target.value)}>
+                <option value="1920x1080">1080p FHD</option>
+                <option value="1280x720">720p HD</option>
+                <option value="3840x2160">4K UHD</option>
+              </select>
+            </div>
+          </div>
+          {curJob && (
+            <div className="progress-ring">
+              <span className="pring-icon">⚙️</span>
+              <div className="pring-info">
+                <div className="pring-title">{curJob.title}</div>
+                <div className="pring-sub">{curJob.eta}</div>
+                <div className="pring-bar"><div className="pring-fill" style={{width:`${curJob.pct}%`}}/></div>
+              </div>
+              <span className="pring-pct">{curJob.pct}%</span>
+            </div>
+          )}
+          <div className="action-row">
+            <button className="btn-draft" onClick={()=>addToast('스크립트 초안을 AI가 생성합니다...','info','✨')}>AI 초안</button>
+            <button className="btn-generate" onClick={handleGenerate} disabled={!!curJob}>
+              {curJob?<><span className="loading-spin"/>생성 중...</>:'🎬 영상 생성 시작'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab==='upload' && (
+        <div style={{padding:'16px'}}>
+          <div className="form-section">
+            <label className="form-label">YouTube 제목</label>
+            <input className="form-input" placeholder="YouTube에 표시될 제목"/>
+          </div>
+          <div className="form-section">
+            <label className="form-label">설명</label>
+            <textarea className="form-textarea" placeholder="영상 설명을 입력하세요..." rows={3}/>
+          </div>
+          <div className="form-grid-2" style={{marginBottom:'12px'}}>
+            <div>
+              <label className="form-label">공개 설정</label>
+              <select className="form-select">
+                <option>비공개</option><option>일부공개</option><option>공개</option>
+              </select>
+            </div>
+            <div>
+              <label className="form-label">카테고리</label>
+              <select className="form-select">
+                <option>교육</option><option>엔터테인먼트</option><option>정보·기술</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-section">
+            <label className="form-label">태그</label>
+            <input className="form-input" placeholder="태그 입력 후 Enter (예: AI, 영상, 자동화)"/>
+          </div>
+          <div className="action-row">
+            <button className="btn-generate" onClick={()=>addToast('YouTube 업로드를 시작합니다...','info','▶️')}>
+              ▶️ YouTube 업로드
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab==='patch' && (
+        <div style={{padding:'16px'}}>
+          <div className="form-section">
+            <label className="form-label">컨테이너</label>
+            <select className="form-select">
+              <option>lf2_ffmpeg (현재: v16.4.0)</option>
+              <option>lf2_tts</option>
+              <option>lf2_uploader</option>
+            </select>
+          </div>
+          <div className="form-section">
+            <label className="form-label">패치 엔드포인트 테스트</label>
+            <input className="form-input" defaultValue="http://localhost:8002/providers/ping"/>
+          </div>
+          <div className="action-row">
+            <button className="btn-draft" onClick={()=>addToast('docker logs lf2_ffmpeg --tail=30','info','📋')}>로그 확인</button>
+            <button className="btn-generate" onClick={()=>addToast('패치 검증 완료 ✓ 모든 엔드포인트 정상','success','🔧')}>
+              🔧 패치 검증
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Right Panel ─── */
+function RightPanel({queue,addToast}){
+  const [section,setSection]=useState('queue');
+  const statusMap={processing:'qib-process',done:'qib-done',queued:'qib-queue',failed:'qib-fail'};
+  const labelMap={processing:'처리중',done:'완료',queued:'대기',failed:'실패'};
+
+  return(
+    <div style={{display:'flex',flexDirection:'column',gap:'14px'}}>
+      {/* Queue */}
+      <div className="gpanel">
+        <div className="gpanel-header">
+          <span className="ph-title">📋 작업 큐</span>
+          <div style={{display:'flex',gap:6}}>
+            <span className="ph-count">{queue.filter(j=>j.status!=='done').length}개 활성</span>
+            <button className="ph-action" onClick={()=>addToast('큐 전체 보기로 이동','info','📋')}>전체보기</button>
+          </div>
+        </div>
+        <div className="queue-list" style={{maxHeight:'280px',overflowY:'auto'}}>
+          {queue.slice(0,4).map(j=>(
+            <div key={j.id} className="queue-item">
+              <div className="qi-top">
+                <span className="qi-title">{j.title}</span>
+                <span className={`qi-badge ${statusMap[j.status]}`}>{labelMap[j.status]}</span>
+              </div>
+              {j.status==='processing' && (
+                <div className="qi-bar"><div className="qi-fill" style={{width:`${j.pct}%`}}/></div>
+              )}
+              <div className="qi-meta">
+                <span className="qi-time">{j.created} · {j.scenes}씬</span>
+                {j.status==='processing' && <span className="qi-pct">{j.pct}%</span>}
+                {j.status==='done' && <span style={{fontSize:'10px',color:'#34d399'}}>✓ 완료</span>}
+              </div>
+              <div className="qi-btn-row">
+                {j.status==='done' && <button className="qi-btn qib-upload" onClick={()=>addToast('YouTube 업로드 시작','info','▶️')}>업로드</button>}
+                {j.status==='processing' && <button className="qi-btn qib-stop" onClick={()=>addToast('작업이 중단되었습니다','warn','🛑')}>중단</button>}
+                <button className="qi-btn qib-view" onClick={()=>addToast(`${j.id} 상세 조회`,'info','🔍')}>상세</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Jobs */}
+      <div className="gpanel">
+        <div className="gpanel-header">
+          <span className="ph-title">🎞 최근 완료</span>
+          <button className="ph-action" onClick={()=>addToast('전체 완료 목록 조회','info','📁')}>더보기</button>
+        </div>
+        <div className="job-list">
+          {RECENT_JOBS.map(j=>(
+            <div key={j.id} className="job-row" onClick={()=>addToast(`"${j.title}" 재생 준비 중...`,'info','▶️')}>
+              <div className="job-thumb">{j.thumb}</div>
+              <div className="job-info">
+                <div className="job-title">{j.title}</div>
+                <div className="job-meta">완료됨 · {j.dur}</div>
+              </div>
+              <span className="job-dur">{j.dur}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="gpanel">
+        <div className="gpanel-header">
+          <span className="ph-title">⚡ 빠른 실행</span>
+        </div>
+        <div className="qa-grid">
+          {[
+            {icon:'🔄',label:'컨테이너 재시작'},
+            {icon:'📊',label:'사용량 분석'},
+            {icon:'🗑️',label:'임시파일 정리'},
+            {icon:'📤',label:'일괄 업로드'},
+          ].map((q,i)=>(
+            <div key={i} className="qa-btn" onClick={()=>addToast(`${q.label} 실행...`,'info',q.icon)}>
+              <span className="qa-icon">{q.icon}</span>
+              <span className="qa-label">{q.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Dashboard Page ─── */
+function DashboardPage({addToast,queue,setQueue,openProviders}){
+  return(
+    <div>
+      <div className="page-header">
+        <div className="page-title">운영 대시보드</div>
+        <div className="page-sub">LongForm Factory AI 영상 생성 파이프라인 · 실시간 모니터링</div>
+      </div>
+      <KpiCards/>
+      <div className="main-grid">
+        <ServicePanel addToast={addToast}/>
+        <VideoWorkspace addToast={addToast} queue={queue} setQueue={setQueue}/>
+        <RightPanel queue={queue} addToast={addToast}/>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Queue Page ─── */
+function QueuePage({queue,setQueue,addToast}){
+  const statusMap={processing:'qib-process',done:'qib-done',queued:'qib-queue',failed:'qib-fail'};
+  const labelMap={processing:'처리중',done:'완료',queued:'대기',failed:'실패'};
+  return(
+    <div>
+      <div className="page-header">
+        <div className="page-title">작업 큐</div>
+        <div className="page-sub">영상 생성 파이프라인 전체 작업 현황</div>
+      </div>
+      <div className="queue-page-grid">
+        <div className="gpanel">
+          <div className="gpanel-header">
+            <span className="ph-title">📋 전체 작업 목록</span>
+            <span className="ph-count">{queue.length}건</span>
+          </div>
+          <table className="queue-table">
+            <thead><tr className="qt-head">
+              <th>제목</th><th>상태</th><th>진행률</th><th>씬</th><th>생성시간</th><th>작업</th>
+            </tr></thead>
+            <tbody>
+              {queue.map(j=>(
+                <tr key={j.id} className="qt-row">
+                  <td className="qt-title">{j.title}</td>
+                  <td><span className={`qi-badge ${statusMap[j.status]}`}>{labelMap[j.status]}</span></td>
+                  <td className="qt-prog">
+                    <div className="prog-bar"><div className="prog-fill" style={{width:`${j.pct}%`}}/></div>
+                    <div style={{fontSize:'10px',color:'var(--text-muted)',marginTop:3}}>{j.pct}%</div>
+                  </td>
+                  <td>{j.scenes}씬</td>
+                  <td>{j.created}</td>
+                  <td><div className="qt-actions">
+                    {j.status==='done'&&<button className="qt-act-btn qa-dl" onClick={()=>addToast('다운로드 시작','success','📥')}>다운로드</button>}
+                    {j.status==='processing'&&<button className="qt-act-btn qa-stop" onClick={()=>addToast('작업 중단됨','warn','🛑')}>중단</button>}
+                    {j.status==='failed'&&<button className="qt-act-btn qa-redo" onClick={()=>addToast('재시도 큐에 추가','info','🔄')}>재시도</button>}
+                    <button className="qt-act-btn qa-view" onClick={()=>addToast(`${j.id} 상세 로그 조회`,'info','🔍')}>상세</button>
+                  </div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <RightPanel queue={queue} addToast={addToast}/>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Providers Page ─── */
+function ProvidersPage({addToast}){
+  const [providers,setProviders]=useState(INITIAL_PROVIDERS);
+  const [pinging,setPinging]=useState(false);
+  function pingAll(){
+    setPinging(true);
+    addToast('전체 프로바이더 핑 테스트 시작...','info','🔬');
+    setTimeout(()=>{
+      setProviders(p=>p.map(pv=>({
+        ...pv,
+        ok:Math.random()>.15,
+        ms:pv.ok?Math.floor(Math.random()*300+50):0,
+        err:Math.random()>.15?'':'Connection timeout'
+      })));
+      setPinging(false);
+      addToast('핑 테스트 완료','success','✅');
+    },2000);
+  }
+  const icons={'anthropic':'🤖','pexels':'📸','pixabay':'🖼️','elevenlabs':'🎙️','openai':'🟢','stability':'🎨','edgetts':'🔊','youtube':'▶️','gemini':'✨'};
+  const okCount=providers.filter(p=>p.ok).length;
+  return(
+    <div>
+      <div className="page-header" style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between'}}>
+        <div>
+          <div className="page-title">AI 프로바이더</div>
+          <div className="page-sub">외부 API 연결 상태 및 응답속도 모니터링</div>
+        </div>
+        <button className="btn-primary topbar-btn" onClick={pingAll} disabled={pinging}>
+          {pinging?<><span className="loading-spin"/>핑 테스트 중...</>:'🔬 전체 핑 테스트'}
+        </button>
+      </div>
+      <div style={{display:'flex',gap:'10px',marginBottom:'16px'}}>
+        {[{l:'전체',v:providers.length,c:'#818cf8'},{l:'정상',v:okCount,c:'#34d399'},{l:'오류',v:providers.length-okCount,c:'#f87171'}].map((s,i)=>(
+          <div key={i} style={{background:'var(--bg-card)',border:'1px solid var(--border)',borderRadius:'10px',padding:'12px 18px',display:'flex',gap:'10px',alignItems:'center'}}>
+            <span style={{fontSize:'20px',fontWeight:'800',color:s.c}}>{s.v}</span>
+            <span style={{fontSize:'12px',color:'var(--text-muted)'}}>{s.l}</span>
+          </div>
+        ))}
+      </div>
+      <div className="prov-page-grid">
+        {providers.map(p=>(
+          <div key={p.id} className={`prov-page-card ${p.ok?'pc-ok':'pc-err'}`} onClick={()=>addToast(`${p.name} 상세 설정 조회`,'info',p.icon)}>
+            <div className="prov-pc-top">
+              <div className="prov-pc-icon">{p.icon}</div>
+              <div style={{flex:1}}>
+                <div className="prov-pc-name">{p.name}</div>
+                <div className="prov-pc-model">{p.model}</div>
+              </div>
+              <div className={`prov-pc-status ${p.ok?'sb-online':'sb-offline'}`}>{p.ok?'정상':'오류'}</div>
+            </div>
+            {!p.ok && <div style={{fontSize:'11px',color:'#f87171',background:'rgba(239,68,68,.07)',border:'1px solid rgba(239,68,68,.15)',borderRadius:'7px',padding:'6px 9px',marginBottom:'10px'}}>❌ {p.err}</div>}
+            <div className="prov-pc-stat">
+              <div className="pps-item"><div className="pps-val" style={{color:p.ok?'#34d399':'var(--text-muted)'}}>{p.ok?p.ms+'ms':'N/A'}</div><div className="pps-lab">응답속도</div></div>
+              <div className="pps-item"><div className="pps-val" style={{color:'#818cf8'}}>{p.ok?'✓':'✗'}</div><div className="pps-lab">연결</div></div>
+              <div className="pps-item"><div className="pps-val" style={{color:'var(--text-secondary)'}}>v2</div><div className="pps-lab">버전</div></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Settings Page ─── */
+function SettingsPage({addToast}){
+  const [section,setSection]=useState('api');
+  const [showKeys,setShowKeys]=useState({});
+  const [toggles,setToggles]=useState({kbEffect:true,autoUpload:false,bgm:true,shorts:false,webhook:true,quality:true});
+  const snav=[
+    {k:'api',icon:'🔑',l:'API 키 설정'},
+    {k:'pipeline',icon:'⚙️',l:'파이프라인 설정'},
+    {k:'quality',icon:'✦',l:'품질 설정'},
+    {k:'notify',icon:'🔔',l:'알림 설정'},
+  ];
+  const toggleSetting=(k)=>setToggles(t=>({...t,[k]:!t[k]}));
+  const toggleShow=(k)=>setShowKeys(s=>({...s,[k]:!s[k]}));
+  return(
+    <div>
+      <div className="page-header">
+        <div className="page-title">설정</div>
+        <div className="page-sub">파이프라인, API 키, 품질 옵션 관리</div>
+      </div>
+      <div className="settings-grid">
+        <div className="gpanel" style={{padding:'12px'}}>
+          <div className="settings-nav">
+            {snav.map(n=>(
+              <div key={n.k} className={`snav-item ${section===n.k?'active':''}`} onClick={()=>setSection(n.k)}>
+                {n.icon} {n.l}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="settings-section">
+          {section==='api' && (<>
+            <div className="section-title">🔑 API 키 설정</div>
+            {[
+              {k:'anthropic',l:'Anthropic API Key',ph:'sk-ant-...'},
+              {k:'pexels',l:'Pexels API Key',ph:'Pexels API 키...'},
+              {k:'pixabay',l:'Pixabay API Key',ph:'Pixabay API 키...'},
+              {k:'openai',l:'OpenAI API Key',ph:'sk-...'},
+            ].map(item=>(
+              <div key={item.k} className="setting-row">
+                <div className="sr-info">
+                  <div className="sr-label">{item.l}</div>
+                  <div className="sr-desc">외부 서비스 인증 키</div>
+                </div>
+                <div className="key-wrap">
+                  <input className="key-input" type={showKeys[item.k]?'text':'password'} placeholder={item.ph} defaultValue="••••••••••••••••"/>
+                  <span className="key-eye" onClick={()=>toggleShow(item.k)}>{showKeys[item.k]?'🙈':'👁'}</span>
+                </div>
+              </div>
+            ))}
+            <button className="save-btn" onClick={()=>addToast('API 키가 저장되었습니다','success','✅')}>변경사항 저장</button>
+          </>)}
+          {section==='pipeline' && (<>
+            <div className="section-title">⚙️ 파이프라인 설정</div>
+            {[
+              {k:'kbEffect',l:'Ken Burns 효과',d:'씬 전환 시 카메라 줌인/아웃 패닝 효과 적용'},
+              {k:'bgm',l:'배경음악 자동 적용',d:'생성된 영상에 BGM 더킹 자동 추가 (볼륨 7%)'},
+              {k:'autoUpload',l:'완료 후 자동 업로드',d:'영상 생성 완료 시 YouTube 자동 업로드'},
+              {k:'shorts',l:'쇼츠 자동 생성',d:'롱폼 영상에서 60초 하이라이트 자동 추출'},
+            ].map(item=>(
+              <div key={item.k} className="setting-row">
+                <div className="sr-info">
+                  <div className="sr-label">{item.l}</div>
+                  <div className="sr-desc">{item.d}</div>
+                </div>
+                <Toggle on={toggles[item.k]} onToggle={()=>toggleSetting(item.k)}/>
+              </div>
+            ))}
+            <button className="save-btn" onClick={()=>addToast('파이프라인 설정 저장됨','success','✅')}>저장</button>
+          </>)}
+          {section==='quality' && (<>
+            <div className="section-title">✦ 품질 설정</div>
+            <div className="setting-row">
+              <div className="sr-info"><div className="sr-label">기본 해상도</div><div className="sr-desc">영상 출력 기본 해상도</div></div>
+              <select className="form-select" style={{width:'180px'}}>
+                <option>1920×1080 (FHD)</option><option>3840×2160 (4K)</option><option>1280×720 (HD)</option>
+              </select>
+            </div>
+            <div className="setting-row">
+              <div className="sr-info"><div className="sr-label">Ken Burns 프리셋</div><div className="sr-desc">카메라 효과 종류</div></div>
+              <select className="form-select" style={{width:'180px'}}>
+                <option>8프리셋 순환 (권장)</option><option>줌인 고정</option><option>랜덤</option>
+              </select>
+            </div>
+            {[
+              {k:'quality',l:'고화질 인코딩',d:'libx264 CRF 18 (파일 크기 증가)'},
+              {k:'webhook',l:'색감 강화',d:'unsharp + eq brightness/contrast/saturation 필터'},
+            ].map(item=>(
+              <div key={item.k} className="setting-row">
+                <div className="sr-info"><div className="sr-label">{item.l}</div><div className="sr-desc">{item.d}</div></div>
+                <Toggle on={toggles[item.k]} onToggle={()=>toggleSetting(item.k)}/>
+              </div>
+            ))}
+            <button className="save-btn" onClick={()=>addToast('품질 설정 저장됨','success','✅')}>저장</button>
+          </>)}
+          {section==='notify' && (<>
+            <div className="section-title">🔔 알림 설정</div>
+            {[
+              {k:'webhook',l:'Webhook 알림',d:'파이프라인 완료 시 URL로 POST 요청'},
+              {k:'quality',l:'오류 알림',d:'파이프라인 실패 시 즉시 알림'},
+            ].map(item=>(
+              <div key={item.k} className="setting-row">
+                <div className="sr-info"><div className="sr-label">{item.l}</div><div className="sr-desc">{item.d}</div></div>
+                <Toggle on={toggles[item.k]} onToggle={()=>toggleSetting(item.k)}/>
+              </div>
+            ))}
+            <div className="setting-row">
+              <div className="sr-info"><div className="sr-label">Webhook URL</div><div className="sr-desc">완료 이벤트를 수신할 엔드포인트</div></div>
+              <input className="form-input" style={{width:'260px'}} placeholder="https://your-server.com/webhook"/>
+            </div>
+            <button className="save-btn" onClick={()=>addToast('알림 설정 저장됨','success','✅')}>저장</button>
+          </>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Logs Page ─── */
+function LogsPage({addToast}){
+  const [filter,setFilter]=useState('all');
+  const [auto,setAuto]=useState(true);
+  const filtered=filter==='all'?LOGS:LOGS.filter(l=>l.level.toLowerCase()===filter);
+  const levelCls={INFO:'lv-info',WARN:'lv-warn',ERR:'lv-err',OK:'lv-ok'};
+  return(
+    <div>
+      <div className="page-header" style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between'}}>
+        <div>
+          <div className="page-title">시스템 로그</div>
+          <div className="page-sub">컨테이너 실시간 로그 스트림</div>
+        </div>
+        <div style={{display:'flex',gap:'8px',alignItems:'center'}}>
+          <Toggle on={auto} onToggle={()=>setAuto(v=>!v)}/>
+          <span style={{fontSize:'12px',color:'var(--text-secondary)'}}>자동 스크롤</span>
+          <button className="btn-ghost topbar-btn btn-sm" onClick={()=>addToast('로그 파일로 내보내기 완료','success','📄')}>내보내기</button>
+        </div>
+      </div>
+      <div className="log-controls">
+        {[['all','전체'],['info','INFO'],['warn','WARN'],['err','ERR'],['ok','OK']].map(([k,l])=>(
+          <button key={k} className={`log-filter lf-${k==='all'?'all':k} ${filter===k?'lf-active':'lf-inactive'}`} onClick={()=>setFilter(k)}>{l}</button>
+        ))}
+      </div>
+      <div className="log-box">
+        {filtered.map((l,i)=>(
+          <div key={i} className="log-line">
+            <span className="log-ts">{l.ts}</span>
+            <span className={`log-lv ${levelCls[l.level]||'lv-info'}`}>{l.level}</span>
+            <span className="log-msg">{l.msg}</span>
+          </div>
+        ))}
+        {auto && <div style={{height:'1px',animation:'none'}}/>}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Upload Page ─── */
+function UploadPage({queue,addToast}){
+  const done=queue.filter(j=>j.status==='done');
+  const history=[
+    {title:'서울 야경 감성 브이로그',date:'2026-04-28 14:23',views:'1.2K',thumb:'🌃',ok:true},
+    {title:'파이썬으로 배우는 AI 기초',date:'2026-04-27 11:10',views:'856',thumb:'🐍',ok:true},
+    {title:'부동산 투자 전략 2026',date:'2026-04-26 09:44',views:'—',thumb:'🏠',ok:false},
+  ];
+  return(
+    <div>
+      <div className="page-header">
+        <div className="page-title">YouTube 업로드</div>
+        <div className="page-sub">생성된 영상을 YouTube 채널에 업로드합니다</div>
+      </div>
+      <div className="upload-grid">
+        <div>
+          <div className="upload-form">
+            <div className="upload-zone" onClick={()=>addToast('파일 선택 다이얼로그 열기','info','📁')}>
+              <div className="uz-icon">☁️</div>
+              <div className="uz-title">영상 파일을 드래그하거나 클릭하여 선택</div>
+              <div className="uz-sub">MP4, MOV · 최대 10GB · FHD/4K 지원</div>
+            </div>
+            {done.length>0 && (
+              <div style={{marginBottom:'14px'}}>
+                <label className="form-label">완료된 영상 선택</label>
+                <select className="form-select">
+                  <option>-- 완료된 영상 선택 --</option>
+                  {done.map(j=><option key={j.id}>{j.title}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="form-section">
+              <label className="form-label">YouTube 제목</label>
+              <input className="form-input" placeholder="YouTube 동영상 제목"/>
+            </div>
+            <div className="form-section">
+              <label className="form-label">설명</label>
+              <textarea className="form-textarea" rows={3} placeholder="영상 설명 입력..."/>
+            </div>
+            <div className="form-grid-2" style={{marginBottom:'14px'}}>
+              <div>
+                <label className="form-label">공개 설정</label>
+                <select className="form-select"><option>비공개</option><option>공개</option><option>일부공개</option></select>
+              </div>
+              <div>
+                <label className="form-label">카테고리</label>
+                <select className="form-select"><option>교육</option><option>엔터테인먼트</option><option>정보·기술</option></select>
+              </div>
+            </div>
+            <button className="btn-generate" style={{width:'100%'}} onClick={()=>addToast('YouTube 업로드 시작...','info','▶️')}>
+              ▶️ YouTube 업로드 시작
+            </button>
+          </div>
+        </div>
+        <div>
+          <div className="upload-history gpanel">
+            <div className="gpanel-header">
+              <span className="ph-title">📺 업로드 기록</span>
+              <span className="ph-count">{history.length}건</span>
+            </div>
+            {history.map((h,i)=>(
+              <div key={i} className="uh-item" onClick={()=>addToast(`"${h.title}" YouTube 페이지 열기`,'info','▶️')}>
+                <div className="uh-thumb">{h.thumb}</div>
+                <div className="uh-info">
+                  <div className="uh-title">{h.title}</div>
+                  <div className="uh-meta">{h.date} · 조회 {h.views}</div>
+                </div>
+                <div className={`uh-stat ${h.ok?'uhs-ok':'uhs-fail'}`}>{h.ok?'업로드됨':'실패'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Provider Modal ─── */
+function ProviderModal({open,onClose,addToast}){
+  const [providers,setProviders]=useState(INITIAL_PROVIDERS);
+  const [pinging,setPinging]=useState(false);
+  function recheck(){
+    setPinging(true);
+    setTimeout(()=>{
+      setProviders(p=>p.map(pv=>({
+        ...pv,
+        ok:['anthropic','pexels','pixabay','edgetts','youtube','gemini','openai'].includes(pv.id),
+        ms:['anthropic','pexels','pixabay','edgetts','youtube','gemini','openai'].includes(pv.id)?Math.floor(Math.random()*250+50):0,
+        err:['elevenlabs','stability'].includes(pv.id)?pv.err:'',
+      })));
+      setPinging(false);
+      addToast('프로바이더 핑 완료 (7/9 정상)','success','✅');
+    },1800);
+  }
+  if(!open) return null;
+  const okCnt=providers.filter(p=>p.ok).length;
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal-box">
+        <div className="modal-head">
+          <span className="modal-title">🔬 AI 프로바이더 상태</span>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="modal-prov-grid">
+            {providers.map(p=>(
+              <div key={p.id} className={`modal-prov ${p.ok?'mp-ok':'mp-err'} ${pinging?'mp-pend':''}`}>
+                <div className="mp-header">
+                  <span className="mp-icon">{p.icon}</span>
+                  <span className="mp-name">{p.name}</span>
+                  <span className={`mp-status ${pinging?'mps-pend':p.ok?'mps-ok':'mps-err'}`}>
+                    {pinging?'확인중..':p.ok?'정상':'오류'}
+                  </span>
+                </div>
+                <div className="mp-model">{p.model}</div>
+                {!pinging && p.ok && <div className="mp-latency">⚡ {p.ms}ms</div>}
+                {!pinging && !p.ok && <div className="mp-error">✗ {p.err}</div>}
+                {pinging && <div style={{height:'3px',background:'rgba(99,102,241,.1)',borderRadius:'2px',marginTop:'8px',overflow:'hidden'}}>
+                  <div style={{height:'100%',background:'linear-gradient(90deg,#7c3aed,#a78bfa)',borderRadius:'2px',width:'60%',animation:'shimmer 1s ease infinite'}}/>
+                </div>}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="modal-footer">
+          <span className="mf-stat"><b>{okCnt}</b>/{providers.length} 프로바이더 정상 · 마지막 체크: 방금 전</span>
+          <button className="modal-recheck" onClick={recheck} disabled={pinging}>
+            {pinging?<><span className="loading-spin"/>재확인 중...</>:'🔄 재확인'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── App ─── */
+function App(){
+  const [page,setPage]=useState('dashboard');
+  const [queue,setQueue]=useState(INITIAL_QUEUE);
+  const [provModal,setProvModal]=useState(false);
+  const {toasts,add:addToast,remove}=useToast();
+
+  const pages={
+    dashboard:<DashboardPage addToast={addToast} queue={queue} setQueue={setQueue} openProviders={()=>setProvModal(true)}/>,
+    video:<div><div className="page-header"><div className="page-title">영상 생성</div><div className="page-sub">AI 영상 생성 워크스페이스</div></div><div className="main-grid" style={{gridTemplateColumns:'1fr 300px'}}><VideoWorkspace addToast={addToast} queue={queue} setQueue={setQueue}/><RightPanel queue={queue} addToast={addToast}/></div></div>,
+    queue:<QueuePage queue={queue} setQueue={setQueue} addToast={addToast}/>,
+    upload:<UploadPage queue={queue} addToast={addToast}/>,
+    providers:<ProvidersPage addToast={addToast}/>,
+    settings:<SettingsPage addToast={addToast}/>,
+    logs:<LogsPage addToast={addToast}/>,
+  };
+
+  return(
+    <div className="app">
+      <Sidebar page={page} setPage={setPage} services={{queue:queue.filter(j=>j.status!=='done').length}}/>
+      <div className="main">
+        <Topbar page={page} openProviders={()=>setProvModal(true)} addToast={addToast}/>
+        <div className="content">{pages[page]||<div>페이지 없음</div>}</div>
+      </div>
+      <ProviderModal open={provModal} onClose={()=>setProvModal(false)} addToast={addToast}/>
+      <ToastContainer toasts={toasts} remove={remove}/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -7197,11 +7197,11 @@ async def ping_providers():
     async def _ping(name: str, url: str, headers: dict, timeout: float = 5.0) -> dict:
         t0 = time.monotonic()
         try:
-            async with aiohttp.ClientSession() as sess:
-                async with sess.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as r:
-                    latency = round((time.monotonic() - t0) * 1000)
-                    ok = r.status in (200, 206, 401, 403)
-                    return {"ok": ok, "status": r.status, "latency_ms": latency}
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                r = await client.get(url, headers=headers)
+                latency = round((time.monotonic() - t0) * 1000)
+                ok = r.status_code in (200, 206, 401, 403)
+                return {"ok": ok, "status": r.status_code, "latency_ms": latency}
         except Exception as e:
             latency = round((time.monotonic() - t0) * 1000)
             return {"ok": False, "status": 0, "latency_ms": latency, "error": str(e)[:80]}

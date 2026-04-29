@@ -4417,7 +4417,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "16.8.0",
+        "job_id": job_id, "version": VERSION,
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -7151,7 +7151,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "16.8.0",
+        "version": VERSION,
         "rounds": {
             "AC": "´Ü°èº° Àç½Ãµµ + resume",
             "AD": "ÅëÇÕ Å¸ÀÓ¶óÀÎ",
@@ -7182,9 +7182,79 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "16.8.0",
+        "version": VERSION,
         "timestamp": datetime.now().isoformat()
     }
+
+
+
+@app.get("/providers/ping", tags=["System"])
+async def ping_providers():
+    """[v16.14] 모든 AI·미디어 API 실시간 핑 테스트"""
+    import time
+    results: dict = {}
+
+    async def _ping(name: str, url: str, headers: dict, timeout: float = 5.0) -> dict:
+        t0 = time.monotonic()
+        try:
+            async with aiohttp.ClientSession() as sess:
+                async with sess.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as r:
+                    latency = round((time.monotonic() - t0) * 1000)
+                    ok = r.status in (200, 206, 401, 403)
+                    return {"ok": ok, "status": r.status, "latency_ms": latency}
+        except Exception as e:
+            latency = round((time.monotonic() - t0) * 1000)
+            return {"ok": False, "status": 0, "latency_ms": latency, "error": str(e)[:80]}
+
+    ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", os.getenv("ANTHROPIC_AUTH_TOKEN", ""))
+    GEMINI_KEY    = os.getenv("GEMINI_API_KEY", "")
+    XAI_KEY       = os.getenv("XAI_API_KEY", "")
+    GROQ_KEY      = os.getenv("GROQ_API_KEY", "")
+    CEREBRAS_KEY  = os.getenv("CEREBRAS_API_KEY", "")
+    SAMBANOVA_KEY = os.getenv("SAMBANOVA_API_KEY", "")
+    PEXELS_KEY    = os.getenv("PEXELS_API_KEY", "")
+    PIXABAY_KEY   = os.getenv("PIXABAY_API_KEY", "")
+    OPENROUTER_KEY= os.getenv("OPENROUTER_API_KEY", "")
+
+    tasks = [
+        ("anthropic",   "https://api.anthropic.com/v1/models",
+         {"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01"} if ANTHROPIC_KEY else {}),
+        ("gemini",      f"https://generativelanguage.googleapis.com/v1beta/models?key={GEMINI_KEY}",
+         {} if not GEMINI_KEY else {"Content-Type": "application/json"}),
+        ("xai",         "https://api.x.ai/v1/models",
+         {"Authorization": f"Bearer {XAI_KEY}"} if XAI_KEY else {}),
+        ("groq",        "https://api.groq.com/openai/v1/models",
+         {"Authorization": f"Bearer {GROQ_KEY}"} if GROQ_KEY else {}),
+        ("cerebras",    "https://api.cerebras.ai/v1/models",
+         {"Authorization": f"Bearer {CEREBRAS_KEY}"} if CEREBRAS_KEY else {}),
+        ("sambanova",   "https://api.sambanova.ai/v1/models",
+         {"Authorization": f"Bearer {SAMBANOVA_KEY}"} if SAMBANOVA_KEY else {}),
+        ("openrouter",  "https://openrouter.ai/api/v1/models",
+         {"Authorization": f"Bearer {OPENROUTER_KEY}"} if OPENROUTER_KEY else {}),
+        ("pexels",      "https://api.pexels.com/videos/popular?per_page=1",
+         {"Authorization": PEXELS_KEY} if PEXELS_KEY else {}),
+        ("pixabay",     f"https://pixabay.com/api/videos/?key={PIXABAY_KEY}&q=nature&per_page=3",
+         {} if not PIXABAY_KEY else {"Content-Type": "application/json"}),
+    ]
+
+    async def _run_all():
+        coros = [_ping(name, url, hdrs) for name, url, hdrs in tasks]
+        return await asyncio.gather(*coros, return_exceptions=True)
+
+    raw = await _run_all()
+    for (name, _, _), res in zip(tasks, raw):
+        if isinstance(res, Exception):
+            results[name] = {"ok": False, "status": 0, "latency_ms": -1, "error": str(res)[:80]}
+        else:
+            results[name] = res
+        key_map = {"anthropic": ANTHROPIC_KEY, "gemini": GEMINI_KEY, "xai": XAI_KEY,
+                   "groq": GROQ_KEY, "cerebras": CEREBRAS_KEY, "sambanova": SAMBANOVA_KEY,
+                   "openrouter": OPENROUTER_KEY, "pexels": PEXELS_KEY, "pixabay": PIXABAY_KEY}
+        if not key_map.get(name):
+            results[name]["no_key"] = True
+            results[name]["ok"] = False
+
+    return {"providers": results, "timestamp": datetime.now().isoformat()}
 
 
 @app.post("/assets/search", response_model=AssetsSearchResponse, tags=["Assets"])

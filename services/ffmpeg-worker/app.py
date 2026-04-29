@@ -882,22 +882,34 @@ def _build_keyword_overlay(keyword: str, scene_idx: int, sub_dur: float) -> str:
 
 
 def _compute_subtitle_style(resolution: str = "1920x1080") -> tuple:
-    """해상도 문자열에서 자막 크기·마진 계산. (font_size, margin_v) 반환."""
+    """[v16.7] 해상도 문자열에서 자막 크기·마진 계산. 세로형(1080x1920) 자동 최적화.
+    Returns (font_size, margin_v).
+    """
     try:
-        w, h = resolution.lower().split("x")
-        height = int(h)
+        w_str, h_str = resolution.lower().split("x")
+        width, height = int(w_str), int(h_str)
     except Exception:
-        height = 1080
+        width, height = 1920, 1080
+
+    is_vertical = height > width  # 세로형 쇼츠 감지
 
     if SUBTITLE_FONT_SIZE > 0:
         font_size = SUBTITLE_FONT_SIZE
     else:
-        font_size = max(16, int(height * SUBTITLE_FONT_SIZE_RATIO))
+        if is_vertical:
+            # 세로형(1080x1920): 화면 너비 기준 7% → 약 75px (가독성 최우선)
+            font_size = max(64, int(width * 0.07))
+        else:
+            font_size = max(16, int(height * SUBTITLE_FONT_SIZE_RATIO))
 
-    if SUBTITLE_MARGIN_V > 0 and SUBTITLE_MARGIN_V != 30:  # 기본 40 아니면 사용자 명시
+    if SUBTITLE_MARGIN_V > 0 and SUBTITLE_MARGIN_V != 30:
         margin_v = SUBTITLE_MARGIN_V
     else:
-        margin_v = max(20, int(height * SUBTITLE_MARGIN_RATIO))
+        if is_vertical:
+            # 세로형: 하단 안전영역 확보 (1920px 기준 ~200px, UI 영역 회피)
+            margin_v = max(160, int(height * 0.105))
+        else:
+            margin_v = max(20, int(height * SUBTITLE_MARGIN_RATIO))
 
     return font_size, margin_v
 
@@ -1182,7 +1194,7 @@ logger.info(f"데이터 디렉토리 초기화 완료: {BASE_DATA_DIR}")
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
     description="롱폼/숏폼 자동화 영상 제작 서비스",
-    version="16.4.0"
+    version="16.8.0"
 )
 
 
@@ -3669,8 +3681,21 @@ def add_subtitles_to_video(
         logger.warning(f"SRT 파일 없음: {srt_path}")
         return False
 
-    # ASS 스타일: 반투명 배경 박스 + 노란 자막 (한국어 폰트)
-    _font_size, _margin_v = _compute_subtitle_style(getattr(request, "resolution", None) if "request" in dir() else "1920x1080")
+    # [v16.7] 입력 영상의 실제 해상도 감지 → 세로형 자동 판별
+    _detected_res = "1920x1080"
+    try:
+        _probe = subprocess.run(
+            ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height", "-of", "csv=p=0",
+             str(input_video)],
+            capture_output=True, text=True, timeout=10
+        )
+        _wh = _probe.stdout.strip().split(",")
+        if len(_wh) == 2:
+            _detected_res = f"{_wh[0].strip()}x{_wh[1].strip()}"
+    except Exception:
+        pass
+    _font_size, _margin_v = _compute_subtitle_style(_detected_res)
     style = (
         f"FontName=Noto Sans CJK KR,fontfile=/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc,"
         f"FontSize={_font_size},"
@@ -4368,7 +4393,7 @@ def save_timeline_report(job_id, timeline, scenes):
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report = {
-        "job_id": job_id, "version": "16.4.0",
+        "job_id": job_id, "version": "16.8.0",
         "generated_at": datetime.now().isoformat(),
         "total_duration": timeline.get("total_duration", 0),
         "scene_count": len(scenes),
@@ -5759,7 +5784,7 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
             "filename": job_id,
             "engine": "edge",
             "edge_voice": "ko-KR-SunHiNeural",
-            "edge_rate": "+10%",    # [v15.81] 130 WPM 최적화 (이전: -5%)
+            "edge_rate": "+15%",    # [v16.8] Voice Director 최대 속도 15% 적용 (이전: +10%)
             "preprocess": True,
         }
         async with _httpx.AsyncClient(timeout=300.0) as _cli:
@@ -7088,7 +7113,7 @@ async def process_video_creation(
 async def list_enhancements():
     """[AL-5] List all enhancement markers present in app.py."""
     return {
-        "version": "16.4.0",
+        "version": "16.8.0",
         "rounds": {
             "AC": "단계별 재시도 + resume",
             "AD": "통합 타임라인",
@@ -7119,7 +7144,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
-        "version": "16.4.0",
+        "version": "16.8.0",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -7504,15 +7529,19 @@ TONE_VOICE_MAP = {
     "calm":                     {"rate": "+2%",  "pitch": "-1Hz"},  # [v15.98] +10%
     "energetic":                {"rate": "+13%", "pitch": "+1Hz"},  # [v15.98] +10%
     "dramatic":                 {"rate": "+5%",  "pitch": "+0Hz"},  # [v15.98]
+    "humorous":                 {"rate": "+15%", "pitch": "+2Hz"},  # [v16.8] 유머 톤: 경쾌한 속도+톤
 }
 
 SCENE_TONE_MAP = {
-    "opening":    {"rate": "+2%", "pitch": "-1Hz", "pause_sentence_ms": 450},  # [v15.98]
-    "main":       {"rate": "+5%", "pitch": "+0Hz", "pause_sentence_ms": 420},  # [v15.98]
-    "stats":      {"rate": "+3%", "pitch": "+0Hz", "pause_sentence_ms": 500},  # [v15.98]
-    "problem":    {"rate": "+4%", "pitch": "-2Hz", "pause_sentence_ms": 460},  # [v15.98]
-    "solution":   {"rate": "+7%", "pitch": "+1Hz", "pause_sentence_ms": 400},  # [v15.98]
-    "closing":    {"rate": "+0%", "pitch": "-2Hz", "pause_sentence_ms": 550},  # [v15.98]
+    "opening":    {"rate": "+2%",  "pitch": "-1Hz", "pause_sentence_ms": 450},  # [v15.98]
+    "main":       {"rate": "+5%",  "pitch": "+0Hz", "pause_sentence_ms": 420},  # [v15.98]
+    "stats":      {"rate": "+3%",  "pitch": "+0Hz", "pause_sentence_ms": 500},  # [v15.98]
+    "problem":    {"rate": "+4%",  "pitch": "-2Hz", "pause_sentence_ms": 460},  # [v15.98]
+    "solution":   {"rate": "+7%",  "pitch": "+1Hz", "pause_sentence_ms": 400},  # [v15.98]
+    "closing":    {"rate": "+0%",  "pitch": "-2Hz", "pause_sentence_ms": 550},  # [v15.98]
+    "humor":      {"rate": "+15%", "pitch": "+2Hz", "pause_sentence_ms": 350},  # [v16.8] 유머 씬: 빠르고 경쾌
+    "joke":       {"rate": "+15%", "pitch": "+2Hz", "pause_sentence_ms": 300},  # [v16.8] 유머
+    "light":      {"rate": "+10%", "pitch": "+1Hz", "pause_sentence_ms": 380},  # [v16.8] 가벼운 톤
 }
 
 
@@ -7970,8 +7999,52 @@ async def auto_generate_script(
     facts_text = "\n".join(f"- {f}" for f in research.get("facts", []))
     msgs_text  = "\n".join(f"- {m}" for m in research.get("key_messages", []))
 
-    prompt = f"""당신은 KBS 시사기획 창 수석 방송작가입니다.
-심층 다큐멘터리 원고를 작성하세요. 시청자가 끝까지 보도록 긴장감과 정보를 교차합니다.
+    # [v16.8] humorous 톤: 유머 전용 프롬프트 분기
+    _is_humorous = tone.lower() in ("humorous", "humor", "funny", "comic", "comedic")
+    _persona = (
+        "당신은 유머 감각 넘치는 유튜브 코미디 나레이터입니다.\n"
+        "시청자를 웃기면서도 핵심 정보를 전달하는 원고를 작성하세요. 예상치 못한 반전, 자조적 유머, 과장법을 활용합니다."
+        if _is_humorous else
+        "당신은 KBS 시사기획 창 수석 방송작가입니다.\n"
+        "심층 다큐멘터리 원고를 작성하세요. 시청자가 끝까지 보도록 긴장감과 정보를 교차합니다."
+    )
+    _hook_guide = (
+        "## [v16.8] 유머 영상 필수 구조\n"
+        "  - **Hook**: 황당한 사실 또는 자기 비하 오프닝 → 공감 유발 (예: '저도 이거 몰랐는데요')\n"
+        "  - **반전 포인트**: 예상 뒤집기 → '그런데 사실은...' 방식으로 웃음+정보 동시 전달\n"
+        "  - **리듬감**: 짧고 끊어지는 문장. 타이밍이 생명.\n"
+        "  - **공감 유머**: 시청자가 '맞아맞아'하는 일상 상황 빗대기\n"
+        "  - **마무리**: 예상 못한 반전 + 공유 유도 멘트"
+        if _is_humorous else
+        "## [v15.81] 100만뷰 필수 구조\n"
+        "  - **Hook (first 5s)**: 충격 수치 선공개 + Bold Promise + 결말 예고 (시청유지율 +25%)\n"
+        "    예: `지금부터 3년 안에 사라질 직업 1위를 공개합니다.`\n"
+        "    예: `이 영상 끝까지 보면 연봉 3000만원 격차 이유를 알게 됩니다.`\n"
+        "  - **오픈루프**: 2~3번째 섹션에서 미해결 질문 → `왜 갑자기 이 현상이? 답은 후반부에.`\n"
+        "  - **재훅 포인트 (매 60~90 (target 70)초)**: `잠깐, 더 놀라운 사실이 있습니다` 류의 긴장 재주입\n\n"
+        "## 방송 다큐 3막 구조 필수\n"
+        "  - 1막(오프닝/도발): 충격적 사실로 시작, \"지금 이 순간~\", \"당신이 모르는~\" 형식. 안녕하세요 금지.\n"
+        "  - 2막(심층분석): 전문가 인용, 통계, 사례, 반전 포인트. 매 60초 새 긴장 요소.\n"
+        "  - 3막(해법/전망): 구체적 결론 + 시청자 행동 촉구"
+    )
+    _style_rules = (
+        "## 유머 나레이션 규칙\n"
+        "  - 한 문장 10~20자. 리듬감 있게 끊어라.\n"
+        "  - 과장법 적극 활용: '진짜로요', '이게 말이 됩니까', '놀라지 마세요'\n"
+        "  - 구체적 수치도 유머로: '무려 1,247번이나. 누가 샌 거야.'\n"
+        "  - [하이라이트: ...] 마커 사용 금지  # [v15.94]\n"
+        "  - 맞춤법·띄어쓰기 엄수.\n"
+        "  - 패턴 인터럽트: 20초마다 반전 개그 포인트"
+        if _is_humorous else
+        "## 나레이션 규칙\n"
+        "  - 한 문장 15~25자. 짧고 힘있게.\n"
+        "  - 숫자/통계를 직접 문장에 포함 (마커 없이): \"전 세계 470조원 규모의 시장이 열리고 있습니다.\"\n"
+        "  - [하이라이트: ...] 마커 사용 금지 — 자막에 깨진 텍스트로 출력됨  # [v15.94]\n"
+        "  - 맞춤법·띄어쓰기 엄수. 오류 발생 시 영상 품질 저하.\n"
+        "  - 패턴 인터럽트: 30초마다 반전 질문/충격 포인트"
+    )
+
+    prompt = f"""{_persona}
 
 주제: {topic}
 톤: {tone}
@@ -7988,24 +8061,9 @@ async def auto_generate_script(
 
 목표 나레이션 길이: 총 {target_total_chars}자 이상 (각 섹션 {min_section_chars}자 이상 필수)
 
-## [v15.81] 100만뷰 필수 구조
-  - **Hook (first 5s)**: 충격 수치 선공개 + Bold Promise + 결말 예고 (시청유지율 +25%)
-    예: `지금부터 3년 안에 사라질 직업 1위를 공개합니다.`
-    예: `이 영상 끝까지 보면 연봉 3000만원 격차 이유를 알게 됩니다.`
-  - **오픈루프**: 2~3번째 섹션에서 미해결 질문 → `왜 갑자기 이 현상이? 답은 후반부에.`
-  - **재훅 포인트 (매 60~90 (target 70)초)**: `잠깐, 더 놀라운 사실이 있습니다` 류의 긴장 재주입
+{_hook_guide}
 
-## 방송 다큐 3막 구조 필수
-  - 1막(오프닝/도발): 충격적 사실로 시작, "지금 이 순간~", "당신이 모르는~" 형식. 안녕하세요 금지.
-  - 2막(심층분석): 전문가 인용, 통계, 사례, 반전 포인트. 매 60초 새 긴장 요소.
-  - 3막(해법/전망): 구체적 결론 + 시청자 행동 촉구
-
-## 나레이션 규칙
-  - 한 문장 15~25자. 짧고 힘있게.
-  - 숫자/통계를 직접 문장에 포함 (마커 없이): "전 세계 470조원 규모의 시장이 열리고 있습니다."
-  - [하이라이트: ...] 마커 사용 금지 — 자막에 깨진 텍스트로 출력됨  # [v15.94]
-  - 맞춤법·띄어쓰기 엄수. 오류 발생 시 영상 품질 저하.
-  - 패턴 인터럽트: 30초마다 반전 질문/충격 포인트
+{_style_rules}
 
 ## 금지 사항
   - "안녕하세요", "오늘은", "~에 대해 알아보겠습니다" 금지
@@ -8030,7 +8088,8 @@ JSON:
   "closing": "강력한 CTA 마무리 (구독/공유 + 핵심 메시지 재강조)",
   "total_estimated_duration_sec": {target_duration_sec}
 }}"""
-    result = await _call_llm_json(prompt, max_tokens=6000, temperature=0.6, quality_first=True)  # [v15.71]
+    _script_temp = 0.85 if _is_humorous else 0.6  # [v16.8] 유머 톤: 창의성 높임
+    result = await _call_llm_json(prompt, max_tokens=6000, temperature=_script_temp, quality_first=True)  # [v15.71]
     if not result:
         result = {
             "title": topic,
@@ -8386,6 +8445,7 @@ _BGM_TONE_QUERIES = {
     "news": "news background music corporate", "tech": "technology electronic ambient",
     "economy": "corporate business background music calm", "uplifting": "uplifting inspiring positive",
     "serious": "dramatic tension documentary", "default": "ambient calm instrumental",
+    "humorous": "funny upbeat comedy background music", "humor": "funny upbeat comedy background music",
 }
 
 async def auto_download_bgm(tone: str, output_path: Path, duration_sec: int = 300) -> bool:
@@ -8429,6 +8489,7 @@ async def auto_download_bgm(tone: str, output_path: Path, duration_sec: int = 30
         _jamendo_tags = {
             "news": "corporate", "tech": "electronic", "economy": "ambient+corporate",
             "uplifting": "happy+upbeat", "serious": "dramatic+cinematic", "default": "ambient",
+            "humorous": "funny+upbeat+comedy", "humor": "funny+upbeat+comedy",
         }.get(tone, "ambient")
         try:
             resp2 = await client.get(
@@ -8920,7 +8981,7 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         # ── 6b. BGM 자동 다운로드 ─────────────────────────────
         _auto_set_status(job_id, "asset_searching", 36, "BGM 자동 다운로드 중")
         bgm_tone = analysis.get("tone", request.tone or "") or "economy"
-        _tone_key = {"news":"news","informative":"news","authoritative":"serious","tech":"tech","educational":"economy","uplifting":"uplifting"}.get(bgm_tone.lower(), "economy")
+        _tone_key = {"news":"news","informative":"news","authoritative":"serious","tech":"tech","educational":"economy","uplifting":"uplifting","humorous":"humorous","humor":"humorous","funny":"humorous"}.get(bgm_tone.lower(), "economy")
         _bgm_path = BGM_DIR / f"auto_bgm_{_tone_key}.mp3"
         try:
             _bgm_ok = await auto_download_bgm(_tone_key, _bgm_path, duration_sec=int(request.target_duration_sec or 180))
@@ -9017,10 +9078,11 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
 
         # ── 10. 렌더링 ──────────────────────────────────
         _auto_set_status(job_id, "rendering", 62, "영상 렌더링 중")
+        _is_shorts_mode = request.video_type == "shorts"
         render_request = VideoCreateRequest(
             job_id=job_id,
-            mode=VideoMode.LONGFORM if request.video_type != "shorts" else VideoMode.SHORTFORM,
-            resolution="1920x1080",
+            mode=VideoMode.SHORTFORM if _is_shorts_mode else VideoMode.LONGFORM,
+            resolution="1080x1920" if _is_shorts_mode else "1920x1080",  # [v16.7] SHORTFORM 해상도 수정
             fps=30,
             add_subtitles=True,
             add_bgm=True,

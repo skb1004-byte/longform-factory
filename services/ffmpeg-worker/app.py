@@ -1,4 +1,4 @@
-﻿# [BC] MARKER v1
+# [BC] MARKER v1
 # [BB] MARKER v1
 # [AY] MARKER v1
 # [AZ] MARKER v1
@@ -9,14 +9,14 @@
 # [AJ] MARKER v1
 # [AI-pack2] MARKER v1
 """
-LongForm Factory - FFmpeg Worker v16.1.0 (자산다양화+싱크)
-롱폼/숏폼 자동화 영상 제작 서비스
+LongForm Factory - FFmpeg Worker v16.1.0 (ÀÚ»ê´Ù¾çÈ­+½ÌÅ©)
+·ÕÆû/¼ôÆû ÀÚµ¿È­ ¿µ»ó Á¦ÀÛ ¼­ºñ½º
 
-주요 기능:
-- Pexels/Pixabay 영상 자산 검색 및 다운로드
-- FFmpeg 기반 영상 합성 (장편/숏폼)
-- 썸네일 생성 및 자막 처리
-- 배경음악 믹싱
+ÁÖ¿ä ±â´É:
+- Pexels/Pixabay ¿µ»ó ÀÚ»ê °Ë»ö ¹× ´Ù¿î·Îµå
+- FFmpeg ±â¹Ý ¿µ»ó ÇÕ¼º (ÀåÆí/¼ôÆû)
+- ½æ³×ÀÏ »ý¼º ¹× ÀÚ¸· Ã³¸®
+- ¹è°æÀ½¾Ç ¹Í½Ì
 """
 
 import os
@@ -48,7 +48,7 @@ import uvicorn
 
 
 # ============================================================================
-# 로깅 설정
+# ·Î±ë ¼³Á¤
 # ============================================================================
 import json as _json_log
 
@@ -79,7 +79,7 @@ def _log(level, msg, job_id=None, step=None, error_code=None, exc_info=False):
     getattr(logger, level)(msg, extra=extra, exc_info=exc_info)
 
 def _pick_xfade_transition(idx: int = 0) -> str:
-    """[O] 씬 인덱스 기반 또는 랜덤으로 xfade transition 타입 선택."""
+    """[O] ¾À ÀÎµ¦½º ±â¹Ý ¶Ç´Â ·£´ýÀ¸·Î xfade transition Å¸ÀÔ ¼±ÅÃ."""
     if not TRANSITION_POOL:
         return "fade"
     if TRANSITION_RANDOMIZE:
@@ -90,79 +90,79 @@ def _pick_xfade_transition(idx: int = 0) -> str:
 
 # [v15.78] KOREAN_GENERAL_MAP
 KOREAN_GENERAL_MAP = {
-    "인공지능": "artificial intelligence AI robot technology",
-    "기계학습": "machine learning AI neural network",
-    "머신러닝": "machine learning AI neural network",
-    "딥러닝":   "deep learning AI neural network server",
-    "자동화":   "automation robot factory industrial",
-    "알고리즘": "algorithm computer code programming",
-    "데이터":   "data analytics computer chart server",
-    "빅데이터": "big data server analytics dashboard",
-    "디지털":   "digital technology computer modern",
-    "소프트웨어": "software code programming computer",
-    "하드웨어": "hardware electronic circuit board",
-    "반도체":   "semiconductor chip manufacturing",
-    "로봇":     "robot automation industrial arm factory",
-    "드론":     "drone aerial sky technology",
-    "플랫폼":   "platform app technology mobile",
-    "네트워크": "network server data center cables",
-    "클라우드": "cloud computing server technology",
-    "메타버스": "virtual reality digital immersive",
-    "블록체인": "blockchain cryptocurrency digital",
-    "경제":     "economy business finance stock market",
-    "금융":     "finance banking stock market money",
-    "투자":     "investment stock market business",
-    "시장":     "market stock exchange business",
-    "산업":     "industry factory manufacturing",
-    "기업":     "company business office corporate",
-    "스타트업": "startup office technology entrepreneur",
-    "혁신":     "innovation technology startup modern",
-    "성장":     "growth chart business success",
-    "무역":     "trade business international shipping",
-    "사회":     "society people urban city community",
-    "정치":     "politics government parliament",
-    "정부":     "government capitol building official",
-    "정책":     "policy government document official",
-    "교육":     "education school classroom students",
-    "의료":     "medical hospital doctor healthcare",
-    "환경":     "environment nature green ecology",
-    "기후":     "climate change environment weather",
-    "에너지":   "energy solar wind power renewable",
-    "태양광":   "solar panel renewable energy green",
-    "전기차":   "electric vehicle car charging",
-    "오염":     "pollution smog city environment",
-    "미래":     "future technology smart city innovation",
-    "변화":     "change transformation progress",
-    "혁명":     "revolution transformation innovation",
-    "위기":     "crisis emergency warning problem",
-    "도전":     "challenge competition achievement",
-    "기회":     "opportunity success business growth",
-    "일자리":   "employment job work office career",
-    "노동":     "labor work factory employee",
-    "도시":     "city urban skyline buildings modern",
-    "서울":     "Seoul South Korea city modern",
-    "한국":     "South Korea Seoul city modern",
-    "연구":     "research laboratory scientist",
-    "과학":     "science laboratory research experiment",
-    "기술":     "technology innovation research lab",
-    "발전":     "development progress technology",
-    "글로벌":   "global world international business",
-    "세계":     "world global earth international",
-    "이후":     "future forward progress timeline",
-    "현재":     "present current now modern",
-    "미디어":   "media news broadcast journalism",
-    "문화":     "culture art creative performance",
-    "인구":     "population people crowd demographic",
-    "사람":     "people crowd urban street",
-    "국민":     "people community society crowd",
+    "ÀÎ°øÁö´É": "artificial intelligence AI robot technology",
+    "±â°èÇÐ½À": "machine learning AI neural network",
+    "¸Ó½Å·¯´×": "machine learning AI neural network",
+    "µö·¯´×":   "deep learning AI neural network server",
+    "ÀÚµ¿È­":   "automation robot factory industrial",
+    "¾Ë°í¸®Áò": "algorithm computer code programming",
+    "µ¥ÀÌÅÍ":   "data analytics computer chart server",
+    "ºòµ¥ÀÌÅÍ": "big data server analytics dashboard",
+    "µðÁöÅÐ":   "digital technology computer modern",
+    "¼ÒÇÁÆ®¿þ¾î": "software code programming computer",
+    "ÇÏµå¿þ¾î": "hardware electronic circuit board",
+    "¹ÝµµÃ¼":   "semiconductor chip manufacturing",
+    "·Îº¿":     "robot automation industrial arm factory",
+    "µå·Ð":     "drone aerial sky technology",
+    "ÇÃ·§Æû":   "platform app technology mobile",
+    "³×Æ®¿öÅ©": "network server data center cables",
+    "Å¬¶ó¿ìµå": "cloud computing server technology",
+    "¸ÞÅ¸¹ö½º": "virtual reality digital immersive",
+    "ºí·ÏÃ¼ÀÎ": "blockchain cryptocurrency digital",
+    "°æÁ¦":     "economy business finance stock market",
+    "±ÝÀ¶":     "finance banking stock market money",
+    "ÅõÀÚ":     "investment stock market business",
+    "½ÃÀå":     "market stock exchange business",
+    "»ê¾÷":     "industry factory manufacturing",
+    "±â¾÷":     "company business office corporate",
+    "½ºÅ¸Æ®¾÷": "startup office technology entrepreneur",
+    "Çõ½Å":     "innovation technology startup modern",
+    "¼ºÀå":     "growth chart business success",
+    "¹«¿ª":     "trade business international shipping",
+    "»çÈ¸":     "society people urban city community",
+    "Á¤Ä¡":     "politics government parliament",
+    "Á¤ºÎ":     "government capitol building official",
+    "Á¤Ã¥":     "policy government document official",
+    "±³À°":     "education school classroom students",
+    "ÀÇ·á":     "medical hospital doctor healthcare",
+    "È¯°æ":     "environment nature green ecology",
+    "±âÈÄ":     "climate change environment weather",
+    "¿¡³ÊÁö":   "energy solar wind power renewable",
+    "ÅÂ¾ç±¤":   "solar panel renewable energy green",
+    "Àü±âÂ÷":   "electric vehicle car charging",
+    "¿À¿°":     "pollution smog city environment",
+    "¹Ì·¡":     "future technology smart city innovation",
+    "º¯È­":     "change transformation progress",
+    "Çõ¸í":     "revolution transformation innovation",
+    "À§±â":     "crisis emergency warning problem",
+    "µµÀü":     "challenge competition achievement",
+    "±âÈ¸":     "opportunity success business growth",
+    "ÀÏÀÚ¸®":   "employment job work office career",
+    "³ëµ¿":     "labor work factory employee",
+    "µµ½Ã":     "city urban skyline buildings modern",
+    "¼­¿ï":     "Seoul South Korea city modern",
+    "ÇÑ±¹":     "South Korea Seoul city modern",
+    "¿¬±¸":     "research laboratory scientist",
+    "°úÇÐ":     "science laboratory research experiment",
+    "±â¼ú":     "technology innovation research lab",
+    "¹ßÀü":     "development progress technology",
+    "±Û·Î¹ú":   "global world international business",
+    "¼¼°è":     "world global earth international",
+    "ÀÌÈÄ":     "future forward progress timeline",
+    "ÇöÀç":     "present current now modern",
+    "¹Ìµð¾î":   "media news broadcast journalism",
+    "¹®È­":     "culture art creative performance",
+    "ÀÎ±¸":     "population people crowd demographic",
+    "»ç¶÷":     "people crowd urban street",
+    "±¹¹Î":     "people community society crowd",
 }
 
 def _strip_korean_particles(kw: str) -> str:
     _PARTICLES = [
-        "이후에는","이후에도","에서는","에서도","으로는","으로도","으로서",
-        "에게는","에게도","에서","부터는","까지는","에는","에도","로는",
-        "이고","이며","이나","이지","이야","이다","이라","의해",
-        "에서","에","로","을","를","은","는","이","가","와","과","도","만","의",
+        "ÀÌÈÄ¿¡´Â","ÀÌÈÄ¿¡µµ","¿¡¼­´Â","¿¡¼­µµ","À¸·Î´Â","À¸·Îµµ","À¸·Î¼­",
+        "¿¡°Ô´Â","¿¡°Ôµµ","¿¡¼­","ºÎÅÍ´Â","±îÁö´Â","¿¡´Â","¿¡µµ","·Î´Â",
+        "ÀÌ°í","ÀÌ¸ç","ÀÌ³ª","ÀÌÁö","ÀÌ¾ß","ÀÌ´Ù","ÀÌ¶ó","ÀÇÇØ",
+        "¿¡¼­","¿¡","·Î","À»","¸¦","Àº","´Â","ÀÌ","°¡","¿Í","°ú","µµ","¸¸","ÀÇ",
     ]
     result = kw.strip()
     for p in _PARTICLES:
@@ -171,83 +171,83 @@ def _strip_korean_particles(kw: str) -> str:
             break
     return result
 
-# ==================== [Y2] 도메인 키워드 치환 + 부정 필터 ====================
-# 전문용어는 Pexels 가 이해하는 표현으로 자동 치환
+# ==================== [Y2] µµ¸ÞÀÎ Å°¿öµå Ä¡È¯ + ºÎÁ¤ ÇÊÅÍ ====================
+# Àü¹®¿ë¾î´Â Pexels °¡ ÀÌÇØÇÏ´Â Ç¥ÇöÀ¸·Î ÀÚµ¿ Ä¡È¯
 DOMAIN_KEYWORD_MAP = {
     # [BR-1] MARKER v6
-    # [BR-1] BP 한국어 항목 제거 (수렴 원인) — 이하 위성·우주·금융 등만 유지
-    # 위성·우주
+    # [BR-1] BP ÇÑ±¹¾î Ç×¸ñ Á¦°Å (¼ö·Å ¿øÀÎ) ? ÀÌÇÏ À§¼º¡¤¿ìÁÖ¡¤±ÝÀ¶ µî¸¸ À¯Áö
+    # À§¼º¡¤¿ìÁÖ
     "cubesat": "nanosatellite small satellite space",
     "cube sat": "nanosatellite small satellite space",
-    "큐브샛": "nanosatellite small satellite space",
-    "큐브셋": "nanosatellite small satellite space",
+    "Å¥ºê»û": "nanosatellite small satellite space",
+    "Å¥ºê¼Â": "nanosatellite small satellite space",
 
-    # ─── 항공우주 시험 장비 (실제 equipment 영상 확보) ───
-    "진공": "vacuum chamber laboratory equipment",
-    "진공 시험": "vacuum chamber thermal vacuum testing spacecraft",
-    "진공 챔버": "vacuum chamber thermal vacuum testing spacecraft",
+    # ¦¡¦¡¦¡ Ç×°ø¿ìÁÖ ½ÃÇè Àåºñ (½ÇÁ¦ equipment ¿µ»ó È®º¸) ¦¡¦¡¦¡
+    "Áø°ø": "vacuum chamber laboratory equipment",
+    "Áø°ø ½ÃÇè": "vacuum chamber thermal vacuum testing spacecraft",
+    "Áø°ø Ã¨¹ö": "vacuum chamber thermal vacuum testing spacecraft",
     "vacuum": "vacuum chamber laboratory equipment",
     "vacuum test": "vacuum chamber thermal vacuum testing spacecraft",
     "vacuum chamber": "vacuum chamber thermal vacuum testing spacecraft",
     "thermal vacuum": "vacuum chamber thermal vacuum testing spacecraft",
 
-    "진동": "vibration testing shaker table laboratory",
-    "진동 시험": "vibration testing shaker table aerospace",
+    "Áøµ¿": "vibration testing shaker table laboratory",
+    "Áøµ¿ ½ÃÇè": "vibration testing shaker table aerospace",
     "vibration": "vibration testing shaker table laboratory",
     "vibration test": "vibration testing shaker table aerospace",
     "shaker": "vibration testing shaker table aerospace",
 
-    "열": "thermal chamber testing temperature laboratory",
-    "열 시험": "thermal chamber testing temperature satellite",
+    "¿­": "thermal chamber testing temperature laboratory",
+    "¿­ ½ÃÇè": "thermal chamber testing temperature satellite",
     "thermal": "thermal chamber testing temperature laboratory",
     "thermal test": "thermal chamber testing temperature satellite",
 
-    "방사선": "radiation testing laboratory shielding aerospace",
-    "방사선 시험": "radiation testing laboratory shielding aerospace",
+    "¹æ»ç¼±": "radiation testing laboratory shielding aerospace",
+    "¹æ»ç¼± ½ÃÇè": "radiation testing laboratory shielding aerospace",
     "radiation": "radiation testing laboratory shielding aerospace",
     "radiation test": "radiation testing laboratory shielding aerospace",
 
     "emc": "EMC testing anechoic chamber electronics",
-    "전자파": "EMC testing anechoic chamber electronics",
+    "ÀüÀÚÆÄ": "EMC testing anechoic chamber electronics",
 
-    "클린룸": "clean room spacecraft assembly white suit",
+    "Å¬¸°·ë": "clean room spacecraft assembly white suit",
     "clean room": "clean room spacecraft assembly white suit",
     "cleanroom": "clean room spacecraft assembly white suit",
-    "조립": "clean room spacecraft assembly engineer",
+    "Á¶¸³": "clean room spacecraft assembly engineer",
     "assembly": "clean room spacecraft assembly engineer",
 
-    "환경 시험": "environmental testing aerospace laboratory equipment",
+    "È¯°æ ½ÃÇè": "environmental testing aerospace laboratory equipment",
     "environmental test": "environmental testing aerospace laboratory equipment",
 
-    "인증": "certification engineer laboratory documentation",
+    "ÀÎÁõ": "certification engineer laboratory documentation",
     "certification": "certification engineer laboratory documentation",
 
-    "검증": "engineer inspecting spacecraft laboratory",
+    "°ËÁõ": "engineer inspecting spacecraft laboratory",
     "verification": "engineer inspecting spacecraft laboratory",
     "validation": "engineer inspecting spacecraft laboratory",
 
-    "시험": "aerospace testing laboratory equipment engineer",
+    "½ÃÇè": "aerospace testing laboratory equipment engineer",
     "test": "aerospace testing laboratory equipment engineer",
 
-    # 설계 단계
-    "설계": "engineering blueprint CAD design aerospace",
+    # ¼³°è ´Ü°è
+    "¼³°è": "engineering blueprint CAD design aerospace",
     "design": "engineering blueprint CAD design aerospace",
     "blueprint": "engineering blueprint CAD design aerospace",
     "cad": "engineering blueprint CAD design aerospace",
 
-    # 제조 단계
-    "제조": "satellite manufacturing factory precision",
+    # Á¦Á¶ ´Ü°è
+    "Á¦Á¶": "satellite manufacturing factory precision",
     "manufacturing": "satellite manufacturing factory precision",
-    "생산": "satellite manufacturing factory precision",
+    "»ý»ê": "satellite manufacturing factory precision",
     "production": "satellite manufacturing factory precision",
 
-    # 추상·기술 용어 → 시각화 가능한 영상
+    # Ãß»ó¡¤±â¼ú ¿ë¾î ¡æ ½Ã°¢È­ °¡´ÉÇÑ ¿µ»ó
     "quantum": "optical fiber laser laboratory",
     "quantum optical": "optical fiber laser laboratory equipment",
     "ai": "server data center hardware",
     "artificial intelligence": "server data center hardware robot",
     "machine learning": "computer neural network visualization",
-    # 일반 추상 → 실제 장면
+    # ÀÏ¹Ý Ãß»ó ¡æ ½ÇÁ¦ Àå¸é
     "engineering": "engineer working blueprint laboratory",
     "design phase": "engineering blueprint CAD design",
     "design stage": "engineering blueprint CAD design",
@@ -261,7 +261,7 @@ DOMAIN_KEYWORD_MAP = {
     "space economy": "satellite industry manufacturing",
     "future of space industry": "rocket launch earth orbit future",
 
-    # ─── [AM-1] 추상 단어 → 구체 시각 객체 (Pexels 텍스트 영상 회피) ───
+    # ¦¡¦¡¦¡ [AM-1] Ãß»ó ´Ü¾î ¡æ ±¸Ã¼ ½Ã°¢ °´Ã¼ (Pexels ÅØ½ºÆ® ¿µ»ó È¸ÇÇ) ¦¡¦¡¦¡
     "concept": "satellite nanosatellite spacecraft clean room engineer",
     "concept design": "satellite model spacecraft hardware engineer",
     "mission": "astronaut spacecraft earth orbit rocket",
@@ -285,84 +285,84 @@ DOMAIN_KEYWORD_MAP = {
     "innovation": "satellite orbit earth space rocket",
     "solution": "satellite solar panel space technology",
 
-    # ─── [AF-13] 제작·개발 단계 (영상 매칭 정확도) ───
-    "제작": "manufacturing factory assembly production aerospace",
-    "제작 단계": "manufacturing factory assembly production aerospace",
-    "제작 및 테스트": "manufacturing testing laboratory aerospace engineer",
-    "테스트": "laboratory testing equipment engineer aerospace",
-    "테스트 단계": "laboratory testing equipment engineer aerospace",
-    "개념": "engineer blueprint mission planning diagram",
-    "개념 설계": "engineering blueprint CAD design aerospace",
-    "개념 단계": "engineer blueprint mission planning diagram",
-    "상세": "engineer detailed technical drawing",
-    "상세 설계": "engineer detailed technical drawing CAD",
-    "상세 설계 단계": "engineer detailed technical drawing CAD",
-    "부품": "electronic components circuit board aerospace parts",
-    "부품 선택": "electronic components circuit board aerospace parts",
-    "시스템": "spacecraft system integration engineer laboratory",
-    "시스템 구성": "spacecraft system integration engineer laboratory",
-    "시스템 통합": "spacecraft system integration engineer laboratory",
-    "완료": "engineer laboratory inspection aerospace",
-    "정의": "satellite orbit mission planning spacecraft",
-    "목표": "rocket launch mission satellite space",
-    "기능": "spacecraft function engineer laboratory",
-    "임무": "satellite mission launch spacecraft planning",
-    "명확히": "satellite hardware engineer inspection",
-    "단계": "engineer workflow process diagram",
-    "첫째": "number one sign",
-    "둘째": "number two sign",
-    "셋째": "number three sign",
+    # ¦¡¦¡¦¡ [AF-13] Á¦ÀÛ¡¤°³¹ß ´Ü°è (¿µ»ó ¸ÅÄª Á¤È®µµ) ¦¡¦¡¦¡
+    "Á¦ÀÛ": "manufacturing factory assembly production aerospace",
+    "Á¦ÀÛ ´Ü°è": "manufacturing factory assembly production aerospace",
+    "Á¦ÀÛ ¹× Å×½ºÆ®": "manufacturing testing laboratory aerospace engineer",
+    "Å×½ºÆ®": "laboratory testing equipment engineer aerospace",
+    "Å×½ºÆ® ´Ü°è": "laboratory testing equipment engineer aerospace",
+    "°³³ä": "engineer blueprint mission planning diagram",
+    "°³³ä ¼³°è": "engineering blueprint CAD design aerospace",
+    "°³³ä ´Ü°è": "engineer blueprint mission planning diagram",
+    "»ó¼¼": "engineer detailed technical drawing",
+    "»ó¼¼ ¼³°è": "engineer detailed technical drawing CAD",
+    "»ó¼¼ ¼³°è ´Ü°è": "engineer detailed technical drawing CAD",
+    "ºÎÇ°": "electronic components circuit board aerospace parts",
+    "ºÎÇ° ¼±ÅÃ": "electronic components circuit board aerospace parts",
+    "½Ã½ºÅÛ": "spacecraft system integration engineer laboratory",
+    "½Ã½ºÅÛ ±¸¼º": "spacecraft system integration engineer laboratory",
+    "½Ã½ºÅÛ ÅëÇÕ": "spacecraft system integration engineer laboratory",
+    "¿Ï·á": "engineer laboratory inspection aerospace",
+    "Á¤ÀÇ": "satellite orbit mission planning spacecraft",
+    "¸ñÇ¥": "rocket launch mission satellite space",
+    "±â´É": "spacecraft function engineer laboratory",
+    "ÀÓ¹«": "satellite mission launch spacecraft planning",
+    "¸íÈ®È÷": "satellite hardware engineer inspection",
+    "´Ü°è": "engineer workflow process diagram",
+    "Ã¹Â°": "number one sign",
+    "µÑÂ°": "number two sign",
+    "¼ÂÂ°": "number three sign",
 
-    # ─── 비용·경제·시장·돈 (Pexels 가 town·village 로 해석하는 문제 방지) ───
+    # ¦¡¦¡¦¡ ºñ¿ë¡¤°æÁ¦¡¤½ÃÀå¡¤µ· (Pexels °¡ town¡¤village ·Î ÇØ¼®ÇÏ´Â ¹®Á¦ ¹æÁö) ¦¡¦¡¦¡
     "cost": "money dollar calculator budget chart",
-    "비용": "money dollar calculator budget chart",
+    "ºñ¿ë": "money dollar calculator budget chart",
     "price": "money dollar calculator price tag",
-    "가격": "money dollar calculator price tag",
+    "°¡°Ý": "money dollar calculator price tag",
     "budget": "money dollar calculator budget chart",
-    "예산": "money dollar calculator budget chart",
+    "¿¹»ê": "money dollar calculator budget chart",
     "economy": "stock market chart business finance",
-    "경제": "stock market chart business finance",
+    "°æÁ¦": "stock market chart business finance",
     "market": "stock market trading chart screen",
-    "시장": "stock market trading chart screen",
+    "½ÃÀå": "stock market trading chart screen",
     "revenue": "money growth chart business profit",
-    "매출": "money growth chart business profit",
+    "¸ÅÃâ": "money growth chart business profit",
     "finance": "money growth chart business bank",
-    "재정": "money growth chart business bank",
+    "ÀçÁ¤": "money growth chart business bank",
     "investment": "money stock chart investor business",
-    "투자": "money stock chart investor business",
+    "ÅõÀÚ": "money stock chart investor business",
     "profit": "money growth chart business profit",
-    "수익": "money growth chart business profit",
+    "¼öÀÍ": "money growth chart business profit",
     "billion": "money stack cash finance",
     "million": "money stack cash finance",
-    "조원": "money stack cash finance",
-    "억원": "money stack cash finance",
+    "Á¶¿ø": "money stack cash finance",
+    "¾ï¿ø": "money stack cash finance",
     "dollar": "money dollar cash bill",
-    "달러": "money dollar cash bill",
+    "´Þ·¯": "money dollar cash bill",
     "won": "money cash korean currency",
-    "원": "money cash currency bill",
+    "¿ø": "money cash currency bill",
 
-    # ─── 산업·비즈니스 (town/village 방지) ───
+    # ¦¡¦¡¦¡ »ê¾÷¡¤ºñÁî´Ï½º (town/village ¹æÁö) ¦¡¦¡¦¡
     "space industry": "rocket launch satellite factory manufacturing",
-    "우주 산업": "rocket launch satellite factory manufacturing",
+    "¿ìÁÖ »ê¾÷": "rocket launch satellite factory manufacturing",
     "industry": "factory manufacturing industrial machinery",
-    "산업": "factory manufacturing industrial machinery",
+    "»ê¾÷": "factory manufacturing industrial machinery",
     "business": "office meeting corporate professional",
-    "비즈니스": "office meeting corporate professional",
+    "ºñÁî´Ï½º": "office meeting corporate professional",
     "startup": "office team laptop computer meeting",
-    "스타트업": "office team laptop computer meeting",
+    "½ºÅ¸Æ®¾÷": "office team laptop computer meeting",
 
-    # 부정 키워드 (검색 결과 필터)
+    # ºÎÁ¤ Å°¿öµå (°Ë»ö °á°ú ÇÊÅÍ)
 }
 
 NEGATIVE_TERMS = [
-    # 기술 영상에 방해되는 일반 요소
+    # ±â¼ú ¿µ»ó¿¡ ¹æÇØµÇ´Â ÀÏ¹Ý ¿ä¼Ò
     "toy", "cartoon", "animation", "animated", "illustration",
     "drawing", "clipart", "plastic toy", "puzzle cube",
     "rubik", "rubiks", "rubik's",
 ]
 
-# 주제 맥락 부정 키워드 (키워드 확장 결과에 따라 동적 적용)
-# "비용/경제/산업" 맥락에 등장하면 제외할 태그
+# ÁÖÁ¦ ¸Æ¶ô ºÎÁ¤ Å°¿öµå (Å°¿öµå È®Àå °á°ú¿¡ µû¶ó µ¿Àû Àû¿ë)
+# "ºñ¿ë/°æÁ¦/»ê¾÷" ¸Æ¶ô¿¡ µîÀåÇÏ¸é Á¦¿ÜÇÒ ÅÂ±×
 BUSINESS_NEGATIVE_TERMS = [
     "village", "suburb", "residential", "countryside", "farm",
     "rural", "traditional village", "old town", "vintage house",
@@ -371,34 +371,34 @@ BUSINESS_NEGATIVE_TERMS = [
 
 
 def _expand_domain_keyword(kw: str) -> str:
-    """도메인 용어 → Pexels 친화적 구문으로 치환."""
+    """µµ¸ÞÀÎ ¿ë¾î ¡æ Pexels Ä£È­Àû ±¸¹®À¸·Î Ä¡È¯."""
     # [BQ-2] MARKER v5
     if not kw:
         return kw
     lower = kw.lower().strip()
-    # 정확히 일치
+    # Á¤È®È÷ ÀÏÄ¡
     if lower in DOMAIN_KEYWORD_MAP:
         return DOMAIN_KEYWORD_MAP[lower]
-    # 부분 포함 치환 (단어 단위)
+    # ºÎºÐ Æ÷ÇÔ Ä¡È¯ (´Ü¾î ´ÜÀ§)
     for key, val in DOMAIN_KEYWORD_MAP.items():
         if key in lower:
             replaced = lower.replace(key, val)
-            # [BQ-2] 한국어(AC00-D7AF) 잔류면 치환값만 사용
+            # [BQ-2] ÇÑ±¹¾î(AC00-D7AF) ÀÜ·ù¸é Ä¡È¯°ª¸¸ »ç¿ë
             has_hangul = any(0xAC00 <= ord(c) <= 0xD7AF for c in replaced)
             if has_hangul:
                 return val
             return replaced
     # [BR-2] MARKER v7
-    # [BR-2] 한국어 포함이고 매핑 없으면 한국어만 스트립하고 영어 토큰 반환
+    # [BR-2] ÇÑ±¹¾î Æ÷ÇÔÀÌ°í ¸ÅÇÎ ¾øÀ¸¸é ÇÑ±¹¾î¸¸ ½ºÆ®¸³ÇÏ°í ¿µ¾î ÅäÅ« ¹ÝÈ¯
     if any(0xAC00 <= ord(c) <= 0xD7AF for c in kw):
         ascii_only = "".join(c for c in kw if ord(c) < 128).strip()
-        # 공백 정리
+        # °ø¹é Á¤¸®
         while "  " in ascii_only:
             ascii_only = ascii_only.replace("  ", " ")
         ascii_only = ascii_only.strip()
         if len(ascii_only.split()) >= 2:
             return ascii_only
-        # [v15.78] KOREAN_GENERAL_MAP 재조회
+        # [v15.78] KOREAN_GENERAL_MAP ÀçÁ¶È¸
         _base = _strip_korean_particles(kw.lower().strip())
         if _base in KOREAN_GENERAL_MAP:
             return KOREAN_GENERAL_MAP[_base]
@@ -410,18 +410,18 @@ def _expand_domain_keyword(kw: str) -> str:
 
 
 def _is_negative(video_info: dict, context_keyword: str = "") -> bool:
-    """Pexels/Pixabay 응답 객체 내 negative term 포함 여부.
-    context_keyword 에 business/money 맥락이 있으면 village 류도 제외."""
+    """Pexels/Pixabay ÀÀ´ä °´Ã¼ ³» negative term Æ÷ÇÔ ¿©ºÎ.
+    context_keyword ¿¡ business/money ¸Æ¶ôÀÌ ÀÖÀ¸¸é village ·ùµµ Á¦¿Ü."""
     text = " ".join(str(v).lower() for v in [
         video_info.get("user", {}).get("name", "") if isinstance(video_info.get("user"), dict) else "",
         video_info.get("tags", ""),
         video_info.get("url", ""),
         " ".join(video_info.get("tags", [])) if isinstance(video_info.get("tags"), list) else "",
     ])
-    # 기본 부정 키워드
+    # ±âº» ºÎÁ¤ Å°¿öµå
     if any(neg in text for neg in NEGATIVE_TERMS):
         return True
-    # 비용·비즈니스 맥락이면 village/rural 류도 차단
+    # ºñ¿ë¡¤ºñÁî´Ï½º ¸Æ¶ôÀÌ¸é village/rural ·ùµµ Â÷´Ü
     ctx = (context_keyword or "").lower()
     is_biz = any(b in ctx for b in ["money", "dollar", "budget", "market", "chart",
                                       "business", "office", "factory", "industry"])
@@ -431,24 +431,24 @@ def _is_negative(video_info: dict, context_keyword: str = "") -> bool:
 
 
 
-# ==================== [P] Fallback 비주얼 생성기 ====================
+# ==================== [P] Fallback ºñÁÖ¾ó »ý¼º±â ====================
 FALLBACK_COLOR_POOL = [
     # (top_hex, bottom_hex, text_color)
-    ("#1a2a6c", "#b21f1f", "#ffffff"),  # 딥블루 → 크림슨
-    ("#0f2027", "#2c5364", "#e0f7fa"),  # 블랙블루 → 시안
-    ("#134e5e", "#71b280", "#ffffff"),  # 틸 → 민트
-    ("#c94b4b", "#4b134f", "#fff1f1"),  # 레드 → 퍼플
-    ("#ff512f", "#dd2476", "#ffffff"),  # 오렌지 → 핑크
-    ("#2c3e50", "#4ca1af", "#f0f8ff"),  # 슬레이트 → 시안
-    ("#11998e", "#38ef7d", "#0a2e24"),  # 에메랄드
-    ("#8e2de2", "#4a00e0", "#ffffff"),  # 퍼플 그라디언트
-    ("#f953c6", "#b91d73", "#ffffff"),  # 핑크 그라디언트
-    ("#ee0979", "#ff6a00", "#fff3e0"),  # 선셋
+    ("#1a2a6c", "#b21f1f", "#ffffff"),  # µöºí·ç ¡æ Å©¸²½¼
+    ("#0f2027", "#2c5364", "#e0f7fa"),  # ºí·¢ºí·ç ¡æ ½Ã¾È
+    ("#134e5e", "#71b280", "#ffffff"),  # Æ¿ ¡æ ¹ÎÆ®
+    ("#c94b4b", "#4b134f", "#fff1f1"),  # ·¹µå ¡æ ÆÛÇÃ
+    ("#ff512f", "#dd2476", "#ffffff"),  # ¿À·»Áö ¡æ ÇÎÅ©
+    ("#2c3e50", "#4ca1af", "#f0f8ff"),  # ½½·¹ÀÌÆ® ¡æ ½Ã¾È
+    ("#11998e", "#38ef7d", "#0a2e24"),  # ¿¡¸Þ¶öµå
+    ("#8e2de2", "#4a00e0", "#ffffff"),  # ÆÛÇÃ ±×¶óµð¾ðÆ®
+    ("#f953c6", "#b91d73", "#ffffff"),  # ÇÎÅ© ±×¶óµð¾ðÆ®
+    ("#ee0979", "#ff6a00", "#fff3e0"),  # ¼±¼Â
 ]
 
 
 def _hex_to_ass_bgr(hex_color: str) -> str:
-    """#RRGGBB → ASS &HAABBGGRR& (알파 00)"""
+    """#RRGGBB ¡æ ASS &HAABBGGRR& (¾ËÆÄ 00)"""
     h = hex_color.lstrip("#")
     if len(h) != 6:
         h = "ffffff"
@@ -463,7 +463,7 @@ INTRO_DURATION = float(os.getenv("INTRO_DURATION", "1.5"))
 OUTRO_DURATION = float(os.getenv("OUTRO_DURATION", "2.0"))
 INTRO_BG_COLOR = os.getenv("INTRO_BG_COLOR", "#0B1E3F")  # deep blue
 OUTRO_BG_COLOR = os.getenv("OUTRO_BG_COLOR", "#0B1E3F")
-OUTRO_CTA_TEXT = os.getenv("OUTRO_CTA_TEXT", "구독 & 좋아요")
+OUTRO_CTA_TEXT = os.getenv("OUTRO_CTA_TEXT", "±¸µ¶ & ÁÁ¾Æ¿ä")
 
 
 def _make_intro_clip(title: str, output_path: Path, resolution: str = "1920x1080") -> bool:
@@ -491,7 +491,7 @@ def _make_intro_clip(title: str, output_path: Path, resolution: str = "1920x1080
         ]
         return run_ffmpeg_command(cmd, timeout=30.0) and output_path.exists()
     except Exception as e:
-        logger.warning(f"[AJ-1] intro 생성 실패: {e}")
+        logger.warning(f"[AJ-1] intro »ý¼º ½ÇÆÐ: {e}")
         return False
 
 
@@ -519,14 +519,14 @@ def _make_outro_clip(output_path: Path, resolution: str = "1920x1080") -> bool:
         ]
         return run_ffmpeg_command(cmd, timeout=30.0) and output_path.exists()
     except Exception as e:
-        logger.warning(f"[AJ-2] outro 생성 실패: {e}")
+        logger.warning(f"[AJ-2] outro »ý¼º ½ÇÆÐ: {e}")
         return False
 
 
 def _make_fallback_clip(scene_index: int, duration_sec: float, output_path: Path,
                         keyword: str = "", description: str = "",
                         resolution: str = "1920x1080") -> bool:
-    """[P] 자산 없을 때 그라디언트 + 키워드 카드 + 슬로우 zoompan 클립 생성."""
+    """[P] ÀÚ»ê ¾øÀ» ¶§ ±×¶óµð¾ðÆ® + Å°¿öµå Ä«µå + ½½·Î¿ì zoompan Å¬¸³ »ý¼º."""
     try:
         w, h = resolution.lower().split("x")
         W, H = int(w), int(h)
@@ -542,13 +542,13 @@ def _make_fallback_clip(scene_index: int, duration_sec: float, output_path: Path
     _has_hangul = any("\uac00" <= ch <= "\ud7a3" for ch in desc)
     kw = desc if _has_hangul else ""  # [AH-5] MARKER v1
 
-    # 그라디언트 배경 → 키워드 → 부제 → zoompan 으로 완성
-    # ffmpeg: color src 2개 + vstack + overlay 대신, gradients filter 사용
-    # 단순하게: color1 로 전체 채우고 radial/linear 그라디언트는 drawbox + geq 복잡하니
-    # 여기선 "color=top:half" "color=bot:half" vstack 으로 2색 split
-    # 더 나은 옵션: gradients filter (ffmpeg 5+) → c0=top:c1=bot
+    # ±×¶óµð¾ðÆ® ¹è°æ ¡æ Å°¿öµå ¡æ ºÎÁ¦ ¡æ zoompan À¸·Î ¿Ï¼º
+    # ffmpeg: color src 2°³ + vstack + overlay ´ë½Å, gradients filter »ç¿ë
+    # ´Ü¼øÇÏ°Ô: color1 ·Î ÀüÃ¼ Ã¤¿ì°í radial/linear ±×¶óµð¾ðÆ®´Â drawbox + geq º¹ÀâÇÏ´Ï
+    # ¿©±â¼± "color=top:half" "color=bot:half" vstack À¸·Î 2»ö split
+    # ´õ ³ªÀº ¿É¼Ç: gradients filter (ffmpeg 5+) ¡æ c0=top:c1=bot
 
-    # gradients filter 가 있으면 가장 깔끔
+    # gradients filter °¡ ÀÖÀ¸¸é °¡Àå ±ò²û
     filter_expr = (
         f"color=black:size={W}x{H}:duration={duration_sec:.2f}:rate=30,"
         f"geq='"
@@ -560,11 +560,11 @@ def _make_fallback_clip(scene_index: int, duration_sec: float, output_path: Path
         f"({int(top[5:7], 16)}-{int(bot[5:7], 16)})*Y/(H/2)))'"
     )
 
-    # 텍스트 오버레이 + 슬로우 zoompan
-    # drawtext 로 키워드 + 부제
+    # ÅØ½ºÆ® ¿À¹ö·¹ÀÌ + ½½·Î¿ì zoompan
+    # drawtext ·Î Å°¿öµå + ºÎÁ¦
     font_file = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
     if not Path(font_file).exists():
-        # Noto 없으면 DejaVu fallback
+        # Noto ¾øÀ¸¸é DejaVu fallback
         font_file = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
     # [AH-5] Only draw text if we have Korean text; otherwise clean gradient.
@@ -579,10 +579,10 @@ def _make_fallback_clip(scene_index: int, duration_sec: float, output_path: Path
             f"box=0:shadowcolor=black@0.5:shadowx=2:shadowy=2"
         )
     else:
-        # Clean fallback — no text, pure gradient + zoom
+        # Clean fallback ? no text, pure gradient + zoom
         filter_full = filter_expr
 
-    # slow zoompan 효과: z 는 천천히 증가, x/y 는 center 고정
+    # slow zoompan È¿°ú: z ´Â ÃµÃµÈ÷ Áõ°¡, x/y ´Â center °íÁ¤
     zp_frames = max(30, int(duration_sec * 30))
     filter_full += (
         f",zoompan=z='min(zoom+0.0008,1.08)':"
@@ -593,7 +593,7 @@ def _make_fallback_clip(scene_index: int, duration_sec: float, output_path: Path
     cmd = [
         "ffmpeg", "-y",
         "-f", "lavfi",
-        "-i", filter_expr,  # 색 생성용 lavfi 입력
+        "-i", filter_expr,  # »ö »ý¼º¿ë lavfi ÀÔ·Â
         "-t", str(duration_sec),
         "-vf", filter_full.replace(filter_expr + ",", "", 1),
         "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
@@ -603,12 +603,12 @@ def _make_fallback_clip(scene_index: int, duration_sec: float, output_path: Path
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         if proc.returncode == 0 and output_path.exists() and output_path.stat().st_size > 1024:
-            logger.info(f"[P] fallback 비주얼: {output_path.name} ({keyword[:20]}, {top}→{bot})")
+            logger.info(f"[P] fallback ºñÁÖ¾ó: {output_path.name} ({keyword[:20]}, {top}¡æ{bot})")
             return True
-        logger.warning(f"[P] fallback 생성 실패: {proc.stderr[-300:]}")
+        logger.warning(f"[P] fallback »ý¼º ½ÇÆÐ: {proc.stderr[-300:]}")
         return False
     except Exception as e:
-        logger.error(f"[P] fallback 예외: {e}")
+        logger.error(f"[P] fallback ¿¹¿Ü: {e}")
         return False
 
 
@@ -617,8 +617,8 @@ def _make_fallback_clip(scene_index: int, duration_sec: float, output_path: Path
 # [AU-1] Resolution config - 1080p / 4K support
 OUTPUT_RESOLUTION = os.getenv("OUTPUT_RESOLUTION", "1920x1080")  # or "3840x2160" for 4K
 VF_W, VF_H = [int(x) for x in OUTPUT_RESOLUTION.split("x")]
-VIDEO_CRF = int(os.getenv("VIDEO_CRF", "15"))  # [AW-2] 18→15 higher quality
-VIDEO_PRESET = os.getenv("VIDEO_PRESET", "medium")  # [AW-2] slow=최고 fast=빠름 medium=균형
+VIDEO_CRF = int(os.getenv("VIDEO_CRF", "15"))  # [AW-2] 18¡æ15 higher quality
+VIDEO_PRESET = os.getenv("VIDEO_PRESET", "medium")  # [AW-2] slow=ÃÖ°í fast=ºü¸§ medium=±ÕÇü
 # [AU-3] Template presets
 VIDEO_TEMPLATE = os.getenv("VIDEO_TEMPLATE", "info")  # info|news|edu|ad|story
 TEMPLATE_CONFIGS = {
@@ -630,7 +630,7 @@ TEMPLATE_CONFIGS = {
 }
 TEMPLATE = TEMPLATE_CONFIGS.get(VIDEO_TEMPLATE, TEMPLATE_CONFIGS["info"])
 # [AU-5] Watermark config
-# [AX] Watermark disabled permanently - 그림 오버레이 사용 안함
+# [AX] Watermark disabled permanently - ±×¸² ¿À¹ö·¹ÀÌ »ç¿ë ¾ÈÇÔ
 WATERMARK_PATH = ""
 WATERMARK_OPACITY = 0.0
 
@@ -653,10 +653,10 @@ SCENE_LAYOUTS = [
 SCENE_ACCENT_COLORS = ["#FFE27A", "#B6EDF2", "#FFB4A2", "#C6B6FF", "#8CE6B1"]
 
 
-# [v15.77] ══════════════════════════════════════════════════════
-# 로워서드(Lower-Third) 방송 그래픽 — KBS 시사기획 스타일
-# 숫자/통계/[하이라이트:] 마커 → 하단 ASS 오버레이
-# ══════════════════════════════════════════════════════════════
+# [v15.77] ??????????????????????????????????????????????????????
+# ·Î¿ö¼­µå(Lower-Third) ¹æ¼Û ±×·¡ÇÈ ? KBS ½Ã»ç±âÈ¹ ½ºÅ¸ÀÏ
+# ¼ýÀÚ/Åë°è/[ÇÏÀÌ¶óÀÌÆ®:] ¸¶Ä¿ ¡æ ÇÏ´Ü ASS ¿À¹ö·¹ÀÌ
+# ??????????????????????????????????????????????????????????????
 
 def _extract_lower_third_events_from_narration(
     scenes: list,
@@ -664,8 +664,8 @@ def _extract_lower_third_events_from_narration(
     video_duration: float = 300.0,
 ) -> list:
     """
-    나레이션에서 로워서드 이벤트 추출.
-    우선순위: [하이라이트: TEXT] 마커 > 숫자+단위 패턴
+    ³ª·¹ÀÌ¼Ç¿¡¼­ ·Î¿ö¼­µå ÀÌº¥Æ® ÃßÃâ.
+    ¿ì¼±¼øÀ§: [ÇÏÀÌ¶óÀÌÆ®: TEXT] ¸¶Ä¿ > ¼ýÀÚ+´ÜÀ§ ÆÐÅÏ
     Returns: [{"start": float, "end": float, "text": str, "style": str}]
     """
     import re as _re77
@@ -676,8 +676,8 @@ def _extract_lower_third_events_from_narration(
         narr = scene.narration or scene.description or ""
         dur = max(scene.duration_seconds or 5.0, 1.0)
 
-        # 1) [하이라이트: TEXT] 마커 우선 추출
-        for m in _re77.finditer(r"\[하이라이트:\s*([^\]]{2,30})\]", narr):
+        # 1) [ÇÏÀÌ¶óÀÌÆ®: TEXT] ¸¶Ä¿ ¿ì¼± ÃßÃâ
+        for m in _re77.finditer(r"\[ÇÏÀÌ¶óÀÌÆ®:\s*([^\]]{2,30})\]", narr):
             ratio = m.start() / max(len(narr), 1)
             t_start = cumulative + ratio * dur
             events.append({
@@ -687,17 +687,17 @@ def _extract_lower_third_events_from_narration(
                 "style": "Stat",
             })
 
-        # 2) 마커 없는 씬: 숫자+단위 패턴 자동 감지
+        # 2) ¸¶Ä¿ ¾ø´Â ¾À: ¼ýÀÚ+´ÜÀ§ ÆÐÅÏ ÀÚµ¿ °¨Áö
         scene_has_marker = any(
             cumulative <= e["start"] < cumulative + dur for e in events
         )
         if not scene_has_marker:
-            num_re = r"\d+[\.,]?\d*\s*(?:조|억|만|천|%|배|명|개|위|년|월|일|km|달러|원|번|회|개국|곳)"
+            num_re = r"\d+[\.,]?\d*\s*(?:Á¶|¾ï|¸¸|Ãµ|%|¹è|¸í|°³|À§|³â|¿ù|ÀÏ|km|´Þ·¯|¿ø|¹ø|È¸|°³±¹|°÷)"
             for m in _re77.finditer(num_re, narr):
                 ctx_s = max(0, m.start() - 4)
                 ctx_e = min(len(narr), m.end() + 10)
                 display = narr[ctx_s:ctx_e].strip()
-                display = _re77.sub(r"\[하이라이트:[^\]]*\]", "", display).strip()[:22]
+                display = _re77.sub(r"\[ÇÏÀÌ¶óÀÌÆ®:[^\]]*\]", "", display).strip()[:22]
                 if not display:
                     display = m.group(0)
                 ratio = m.start() / max(len(narr), 1)
@@ -711,7 +711,7 @@ def _extract_lower_third_events_from_narration(
 
         cumulative += dur
 
-    # 정렬 + 최소 2초 간격 필터
+    # Á¤·Ä + ÃÖ¼Ò 2ÃÊ °£°Ý ÇÊÅÍ
     events.sort(key=lambda e: e["start"])
     filtered, last_end = [], -3.0
     for ev in events:
@@ -719,11 +719,11 @@ def _extract_lower_third_events_from_narration(
             filtered.append(ev)
             last_end = ev["end"]
 
-    return filtered[:18]  # 최대 18개
+    return filtered[:18]  # ÃÖ´ë 18°³
 
 
 def create_lower_third_ass(events: list, output_path: "Path") -> bool:
-    """KBS 스타일 로워서드 ASS 파일 생성 (Alignment=1: 좌하단, Layer=1)."""
+    """KBS ½ºÅ¸ÀÏ ·Î¿ö¼­µå ASS ÆÄÀÏ »ý¼º (Alignment=1: ÁÂÇÏ´Ü, Layer=1)."""
     if not events:
         return False
     try:
@@ -737,9 +737,9 @@ def create_lower_third_ass(events: list, output_path: "Path") -> bool:
             "",
             "[V4+ Styles]",
             "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-            # Stat: 노란 텍스트, 반투명 남색 박스, 좌하단
+            # Stat: ³ë¶õ ÅØ½ºÆ®, ¹ÝÅõ¸í ³²»ö ¹Ú½º, ÁÂÇÏ´Ü
             f"Style: Stat,{LOWER_FONT},48,&H0000FFFF,&H000000FF,&H00000000,&HAA001133,-1,0,0,0,100,100,1,0,3,0,0,1,80,80,185,1",
-            # Term: 청록 텍스트, 좌하단
+            # Term: Ã»·Ï ÅØ½ºÆ®, ÁÂÇÏ´Ü
             f"Style: Term,{LOWER_FONT},44,&H00FFFF00,&H000000FF,&H00000000,&HAA001133,-1,0,0,0,100,100,1,0,3,0,0,1,80,80,185,1",
             "",
             "[Events]",
@@ -753,21 +753,21 @@ def create_lower_third_ass(events: list, output_path: "Path") -> bool:
             return f"{h}:{m:02d}:{s:05.2f}"
 
         for ev in events:
-            text = ev["text"].replace("\n", " ").replace(",", "，")
+            text = ev["text"].replace("\n", " ").replace(",", "£¬")
             style = ev.get("style", "Stat")
             lines_out.append(
                 f"Dialogue: 1,{_fmt(ev['start'])},{_fmt(ev['end'])},{style},,80,80,185,,{text}"
             )
 
         output_path.write_text("\n".join(lines_out), encoding="utf-8-sig")
-        logger.info(f"[v15.77] 로워서드 ASS 생성: {len(events)}개 이벤트 → {output_path.name}")
+        logger.info(f"[v15.77] ·Î¿ö¼­µå ASS »ý¼º: {len(events)}°³ ÀÌº¥Æ® ¡æ {output_path.name}")
         return True
     except Exception as e:
-        logger.error(f"[v15.77] 로워서드 ASS 실패: {e}")
+        logger.error(f"[v15.77] ·Î¿ö¼­µå ASS ½ÇÆÐ: {e}")
         return False
 
 
-# [v15.78] 중앙 키워드 배너 (지식인사이드 스타일)
+# [v15.78] Áß¾Ó Å°¿öµå ¹è³Ê (Áö½ÄÀÎ»çÀÌµå ½ºÅ¸ÀÏ)
 def _extract_center_banner_events(scenes: list, video_duration: float = 300.0) -> list:
     import re as _re78
     candidates = []
@@ -775,10 +775,10 @@ def _extract_center_banner_events(scenes: list, video_duration: float = 300.0) -
     for scene in scenes:
         narr = scene.narration or scene.description or ""
         dur = max(scene.duration_seconds or 5.0, 1.0)
-        for m in _re78.finditer(r"\[하이라이트:\s*([^\]]{2,30})\]", narr):
+        for m in _re78.finditer(r"\[ÇÏÀÌ¶óÀÌÆ®:\s*([^\]]{2,30})\]", narr):
             text = m.group(1).strip()
             has_num = bool(_re78.search(r"\d", text))
-            has_unit = bool(_re78.search(r"[%억조만명위]", text))
+            has_unit = bool(_re78.search(r"[%¾ïÁ¶¸¸¸íÀ§]", text))
             weight = 3 if (has_num and has_unit) else (2 if has_num else 1)
             ratio = m.start() / max(len(narr), 1)
             t_start = cumulative + ratio * dur
@@ -817,17 +817,17 @@ def create_center_banner_ass(events: list, output_path) -> bool:
             h=int(s//3600); m=int((s%3600)//60); sec=s%60
             return f"{h}:{m:02d}:{sec:05.2f}"
         for ev in events:
-            text = ev["text"].replace("\n"," ").replace(",","，")
-            style = "Accent" if _r.search(r"\d+.*[%억조만명위]|[%억조만명위].*\d+", text) else "Banner"
+            text = ev["text"].replace("\n"," ").replace(",","£¬")
+            style = "Accent" if _r.search(r"\d+.*[%¾ïÁ¶¸¸¸íÀ§]|[%¾ïÁ¶¸¸¸íÀ§].*\d+", text) else "Banner"
             lines.append(f"Dialogue: 2,{_fmt(ev['start'])},{_fmt(ev['end'])},{style},,80,80,0,,{text}")
         output_path.write_text("\n".join(lines), encoding="utf-8-sig")
-        logger.info(f"[v15.78] 중앙배너 ASS: {len(events)}개")
+        logger.info(f"[v15.78] Áß¾Ó¹è³Ê ASS: {len(events)}°³")
         return True
     except Exception as e:
-        logger.error(f"[v15.78] 중앙배너 실패: {e}")
+        logger.error(f"[v15.78] Áß¾Ó¹è³Ê ½ÇÆÐ: {e}")
         return False
 
-# ─────────────────────────────────────────────────────────────────
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 
 def _escape_drawtext(txt: str) -> str:
     if not txt:
@@ -882,7 +882,7 @@ def _build_keyword_overlay(keyword: str, scene_idx: int, sub_dur: float) -> str:
 
 
 def _compute_subtitle_style(resolution: str = "1920x1080") -> tuple:
-    """[v16.7] 해상도 문자열에서 자막 크기·마진 계산. 세로형(1080x1920) 자동 최적화.
+    """[v16.7] ÇØ»óµµ ¹®ÀÚ¿­¿¡¼­ ÀÚ¸· Å©±â¡¤¸¶Áø °è»ê. ¼¼·ÎÇü(1080x1920) ÀÚµ¿ ÃÖÀûÈ­.
     Returns (font_size, margin_v).
     """
     try:
@@ -891,13 +891,13 @@ def _compute_subtitle_style(resolution: str = "1920x1080") -> tuple:
     except Exception:
         width, height = 1920, 1080
 
-    is_vertical = height > width  # 세로형 쇼츠 감지
+    is_vertical = height > width  # ¼¼·ÎÇü ¼îÃ÷ °¨Áö
 
     if SUBTITLE_FONT_SIZE > 0:
         font_size = SUBTITLE_FONT_SIZE
     else:
         if is_vertical:
-            # 세로형(1080x1920): 화면 너비 기준 7% → 약 75px (가독성 최우선)
+            # ¼¼·ÎÇü(1080x1920): È­¸é ³Êºñ ±âÁØ 7% ¡æ ¾à 75px (°¡µ¶¼º ÃÖ¿ì¼±)
             font_size = max(64, int(width * 0.07))
         else:
             font_size = max(16, int(height * SUBTITLE_FONT_SIZE_RATIO))
@@ -906,7 +906,7 @@ def _compute_subtitle_style(resolution: str = "1920x1080") -> tuple:
         margin_v = SUBTITLE_MARGIN_V
     else:
         if is_vertical:
-            # 세로형: 하단 안전영역 확보 (1920px 기준 ~200px, UI 영역 회피)
+            # ¼¼·ÎÇü: ÇÏ´Ü ¾ÈÀü¿µ¿ª È®º¸ (1920px ±âÁØ ~200px, UI ¿µ¿ª È¸ÇÇ)
             margin_v = max(160, int(height * 0.105))
         else:
             margin_v = max(20, int(height * SUBTITLE_MARGIN_RATIO))
@@ -920,17 +920,17 @@ def _compute_subtitle_style(resolution: str = "1920x1080") -> tuple:
 
 
 # ============================================================================
-# 열거형 정의
+# ¿­°ÅÇü Á¤ÀÇ
 # ============================================================================
 class VideoMode(str, Enum):
-    """영상 제작 모드"""
-    LONGFORM = "longform"  # 1920x1080 가로형
-    SHORTFORM = "shortform"  # 1080x1920 세로형
-    MUSIC_VIDEO = "music_video"  # BGM + 자막 뮤직비디오
+    """¿µ»ó Á¦ÀÛ ¸ðµå"""
+    LONGFORM = "longform"  # 1920x1080 °¡·ÎÇü
+    SHORTFORM = "shortform"  # 1080x1920 ¼¼·ÎÇü
+    MUSIC_VIDEO = "music_video"  # BGM + ÀÚ¸· ¹ÂÁ÷ºñµð¿À
 
 
 class JobStatus(str, Enum):
-    """작업 상태 [v15.59.0 확장]"""
+    """ÀÛ¾÷ »óÅÂ [v15.59.0 È®Àå]"""
     PENDING              = "pending"
     QUEUED               = "queued"
     TTS_GENERATING       = "tts_generating"
@@ -945,58 +945,58 @@ class JobStatus(str, Enum):
 
 
 class AssetType(str, Enum):
-    """자산 유형"""
+    """ÀÚ»ê À¯Çü"""
     VIDEO = "video"
     IMAGE = "image"
     AUDIO = "audio"
 
 
 # ============================================================================
-# 리듬 컷 · 자막 선행 파라미터 (환경변수로 override 가능)
+# ¸®µë ÄÆ ¡¤ ÀÚ¸· ¼±Çà ÆÄ¶ó¹ÌÅÍ (È¯°æº¯¼ö·Î override °¡´É)
 # ============================================================================
 import os as _rhythm_os
-SUBTITLE_LEAD_SEC   = float(_rhythm_os.getenv("SUBTITLE_LEAD_SEC", "0.15"))   # 자막 선행 시간
+SUBTITLE_LEAD_SEC   = float(_rhythm_os.getenv("SUBTITLE_LEAD_SEC", "0.15"))   # ÀÚ¸· ¼±Çà ½Ã°£
 SCENE_LEAD_SEC      = float(_rhythm_os.getenv("SCENE_LEAD_SEC", "0.0"))  # [AH-1] MARKER v1 AH-2
 BGM_AUTO_DUCK       = _rhythm_os.getenv("BGM_AUTO_DUCK", "true").lower() in ("1","true","yes","on")
-BGM_DUCK_DB         = float(_rhythm_os.getenv("BGM_DUCK_DB", "15"))  # [AF-5] BGM sidechain 감쇠 (dB)      # [AD] 씬이 자막보다 먼저 나오는 버퍼
+BGM_DUCK_DB         = float(_rhythm_os.getenv("BGM_DUCK_DB", "15"))  # [AF-5] BGM sidechain °¨¼è (dB)      # [AD] ¾ÀÀÌ ÀÚ¸·º¸´Ù ¸ÕÀú ³ª¿À´Â ¹öÆÛ
 UNIFIED_TIMELINE    = _rhythm_os.getenv("UNIFIED_TIMELINE", "true").lower() in ("1","true","yes","on")   # [AD] MARKER v1
-SCENE_MIN_SEC       = float(_rhythm_os.getenv("SCENE_MIN_SEC", "2.0"))        # 씬 최소 길이
-SCENE_MAX_SEC       = float(_rhythm_os.getenv("SCENE_MAX_SEC", "2.5"))  # [BF] 더 쪼개기        # 씬 최대 길이 (초과 시 분할)
-SUBTITLE_MAX_CHARS  = int(_rhythm_os.getenv("SUBTITLE_MAX_CHARS", "15"))      # 자막 한 줄 최대 글자
+SCENE_MIN_SEC       = float(_rhythm_os.getenv("SCENE_MIN_SEC", "2.0"))        # ¾À ÃÖ¼Ò ±æÀÌ
+SCENE_MAX_SEC       = float(_rhythm_os.getenv("SCENE_MAX_SEC", "2.5"))  # [BF] ´õ ÂÉ°³±â        # ¾À ÃÖ´ë ±æÀÌ (ÃÊ°ú ½Ã ºÐÇÒ)
+SUBTITLE_MAX_CHARS  = int(_rhythm_os.getenv("SUBTITLE_MAX_CHARS", "15"))      # ÀÚ¸· ÇÑ ÁÙ ÃÖ´ë ±ÛÀÚ
 
-# [N] 자막 스타일
+# [N] ÀÚ¸· ½ºÅ¸ÀÏ
 SUBTITLE_FONT_NAME   = _rhythm_os.getenv("SUBTITLE_FONT_NAME", "Noto Sans CJK KR")
 SUBTITLE_FONT_FILE   = _rhythm_os.getenv("SUBTITLE_FONT_FILE", "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc")
-SUBTITLE_FONT_SIZE   = int(_rhythm_os.getenv("SUBTITLE_FONT_SIZE", "0"))             # 0=비율 자동 계산, >0 고정 px
-SUBTITLE_FONT_SIZE_RATIO = float(_rhythm_os.getenv("SUBTITLE_FONT_SIZE_RATIO", "0.018"))  # 높이×0.03 (1080p→32, 720p→22)
-SUBTITLE_MARGIN_RATIO = float(_rhythm_os.getenv("SUBTITLE_MARGIN_RATIO", "0.030"))    # 높이×0.04 (1080p→43, 720p→29)
+SUBTITLE_FONT_SIZE   = int(_rhythm_os.getenv("SUBTITLE_FONT_SIZE", "0"))             # 0=ºñÀ² ÀÚµ¿ °è»ê, >0 °íÁ¤ px
+SUBTITLE_FONT_SIZE_RATIO = float(_rhythm_os.getenv("SUBTITLE_FONT_SIZE_RATIO", "0.018"))  # ³ôÀÌ¡¿0.03 (1080p¡æ32, 720p¡æ22)
+SUBTITLE_MARGIN_RATIO = float(_rhythm_os.getenv("SUBTITLE_MARGIN_RATIO", "0.030"))    # ³ôÀÌ¡¿0.04 (1080p¡æ43, 720p¡æ29)
 SUBTITLE_BOLD        = int(_rhythm_os.getenv("SUBTITLE_BOLD", "1"))                  # 0/1
-SUBTITLE_FONT_COLOR  = _rhythm_os.getenv("SUBTITLE_FONT_COLOR", "&H00FFFFFF&")       # 흰색 기본 (BGR + AA)
-SUBTITLE_OUTLINE_COLOR = _rhythm_os.getenv("SUBTITLE_OUTLINE_COLOR", "&H00000000&")  # 검정 테두리
-SUBTITLE_BACK_COLOR  = _rhythm_os.getenv("SUBTITLE_BACK_COLOR", "&H80000000&")       # 반투명 검정 박스
+SUBTITLE_FONT_COLOR  = _rhythm_os.getenv("SUBTITLE_FONT_COLOR", "&H00FFFFFF&")       # Èò»ö ±âº» (BGR + AA)
+SUBTITLE_OUTLINE_COLOR = _rhythm_os.getenv("SUBTITLE_OUTLINE_COLOR", "&H00000000&")  # °ËÁ¤ Å×µÎ¸®
+SUBTITLE_BACK_COLOR  = _rhythm_os.getenv("SUBTITLE_BACK_COLOR", "&H80000000&")       # ¹ÝÅõ¸í °ËÁ¤ ¹Ú½º
 SUBTITLE_BORDER_STYLE = int(_rhythm_os.getenv("SUBTITLE_BORDER_STYLE", "1"))         # 1=outline, 3=opaque box
-SUBTITLE_OUTLINE_PX  = int(_rhythm_os.getenv("SUBTITLE_OUTLINE_PX", "2"))            # outline 두께
+SUBTITLE_OUTLINE_PX  = int(_rhythm_os.getenv("SUBTITLE_OUTLINE_PX", "2"))            # outline µÎ²²
 SUBTITLE_SHADOW_PX   = int(_rhythm_os.getenv("SUBTITLE_SHADOW_PX", "1"))
-SUBTITLE_MARGIN_V    = int(_rhythm_os.getenv("SUBTITLE_MARGIN_V", "30"))             # 하단 여백
-SUBTITLE_ALIGNMENT   = int(_rhythm_os.getenv("SUBTITLE_ALIGNMENT", "2"))             # 2=하단중앙
+SUBTITLE_MARGIN_V    = int(_rhythm_os.getenv("SUBTITLE_MARGIN_V", "30"))             # ÇÏ´Ü ¿©¹é
+SUBTITLE_ALIGNMENT   = int(_rhythm_os.getenv("SUBTITLE_ALIGNMENT", "2"))             # 2=ÇÏ´ÜÁß¾Ó
 
-# [O] Transition 다양화 — xfade 타입 pool (None 넘기면 기본 fade)
-# 사용 가능: fade, wiperight, wipeleft, slideup, slidedown, circleopen, circleclose,
+# [O] Transition ´Ù¾çÈ­ ? xfade Å¸ÀÔ pool (None ³Ñ±â¸é ±âº» fade)
+# »ç¿ë °¡´É: fade, wiperight, wipeleft, slideup, slidedown, circleopen, circleclose,
 #            radial, pixelize, dissolve, smoothleft, smoothright, diagbl, diagbr
 TRANSITION_POOL = [t.strip() for t in _rhythm_os.getenv(
     "TRANSITION_POOL",
     "fade,wiperight,slideup,circleopen,radial,pixelize,dissolve,smoothleft,smoothright,diagbl,diagbr,coverright,rectcrop"
 ).split(",") if t.strip()]
 TRANSITION_RANDOMIZE = _rhythm_os.getenv("TRANSITION_RANDOMIZE", "true").lower() in ("true", "1", "yes")
-FADE_DUR = float(_rhythm_os.getenv("FADE_DUR", "0.18"))                          # xfade 기본 길이
-FADE_DUR_MIN = float(_rhythm_os.getenv("FADE_DUR_MIN", "0.15"))                       # [Z] 랜덤 최소
-FADE_DUR_MAX = float(_rhythm_os.getenv("FADE_DUR_MAX", "0.30"))                       # [Z] 랜덤 최대
+FADE_DUR = float(_rhythm_os.getenv("FADE_DUR", "0.18"))                          # xfade ±âº» ±æÀÌ
+FADE_DUR_MIN = float(_rhythm_os.getenv("FADE_DUR_MIN", "0.15"))                       # [Z] ·£´ý ÃÖ¼Ò
+FADE_DUR_MAX = float(_rhythm_os.getenv("FADE_DUR_MAX", "0.30"))                       # [Z] ·£´ý ÃÖ´ë
 FADE_DUR_RANDOMIZE = _rhythm_os.getenv("FADE_DUR_RANDOMIZE", "true").lower() in ("true", "1", "yes")
 
-# [R] 모션 절제 (눈에 안 띄는 정도)
-KENBURNS_MAX_ZOOM   = float(_rhythm_os.getenv("KENBURNS_MAX_ZOOM", "1.06"))      # 100→106% (기존 1.6→1.06)
-KENBURNS_PAN_PX     = int(_rhythm_os.getenv("KENBURNS_PAN_PX", "30"))            # 좌우 이동 px
-KENBURNS_TILT_PX    = int(_rhythm_os.getenv("KENBURNS_TILT_PX", "16"))           # 상하 이동 px
+# [R] ¸ð¼Ç ÀýÁ¦ (´«¿¡ ¾È ¶ç´Â Á¤µµ)
+KENBURNS_MAX_ZOOM   = float(_rhythm_os.getenv("KENBURNS_MAX_ZOOM", "1.06"))      # 100¡æ106% (±âÁ¸ 1.6¡æ1.06)
+KENBURNS_PAN_PX     = int(_rhythm_os.getenv("KENBURNS_PAN_PX", "30"))            # ÁÂ¿ì ÀÌµ¿ px
+KENBURNS_TILT_PX    = int(_rhythm_os.getenv("KENBURNS_TILT_PX", "16"))           # »óÇÏ ÀÌµ¿ px
 
 # [v15.60.0] Narration-First Timeline Engine ENV
 PAUSE_COMMA_MS          = int(float(_rhythm_os.getenv("PAUSE_COMMA_MS", "180")))
@@ -1007,73 +1007,73 @@ BGM_VOLUME_DEFAULT      = float(_rhythm_os.getenv("BGM_VOLUME_DEFAULT", "0.10"))
 BGM_VOLUME_DURING_VOICE = float(_rhythm_os.getenv("BGM_VOLUME_DURING_VOICE", "0.045"))
 NTL_ENABLED             = _rhythm_os.getenv("NTL_ENABLED", "true").lower() in ("true", "1", "yes")
 
-# 장면 길이 분산
-SCENE_LEN_VARIANCE = float(_rhythm_os.getenv("SCENE_LEN_VARIANCE", "0.5"))       # ±0.5s 랜덤
-PAUSE_THRESHOLD_SEC = float(_rhythm_os.getenv("PAUSE_THRESHOLD_SEC", "0.3"))  # [Q2] 쉼으로 인정할 단어 간격
+# Àå¸é ±æÀÌ ºÐ»ê
+SCENE_LEN_VARIANCE = float(_rhythm_os.getenv("SCENE_LEN_VARIANCE", "0.5"))       # ¡¾0.5s ·£´ý
+PAUSE_THRESHOLD_SEC = float(_rhythm_os.getenv("PAUSE_THRESHOLD_SEC", "0.3"))  # [Q2] ½°À¸·Î ÀÎÁ¤ÇÒ ´Ü¾î °£°Ý
 
-# [Q3] 복합어 보호: 자막 줄바꿈 금지 N-그램
+# [Q3] º¹ÇÕ¾î º¸È£: ÀÚ¸· ÁÙ¹Ù²Þ ±ÝÁö N-±×·¥
 _NO_BREAK_DEFAULT = [
-    "진공 챔버", "열 시험", "진동 시험", "우주 환경", "위성 테스트",
-    "궤도 진입", "발사체 성능", "지상국 관제", "모듈러 프리팹",
-    "딥러닝 모델", "머신러닝 모델", "양자 통신", "양자 광통신",
-    "인공지능", "AI", "API", "IoT",
+    "Áø°ø Ã¨¹ö", "¿­ ½ÃÇè", "Áøµ¿ ½ÃÇè", "¿ìÁÖ È¯°æ", "À§¼º Å×½ºÆ®",
+    "±Ëµµ ÁøÀÔ", "¹ß»çÃ¼ ¼º´É", "Áö»ó±¹ °üÁ¦", "¸ðµâ·¯ ÇÁ¸®ÆÕ",
+    "µö·¯´× ¸ðµ¨", "¸Ó½Å·¯´× ¸ðµ¨", "¾çÀÚ Åë½Å", "¾çÀÚ ±¤Åë½Å",
+    "ÀÎ°øÁö´É", "AI", "API", "IoT",
 ]
 _NO_BREAK_ENV = _rhythm_os.getenv("NO_BREAK_TERMS", "")
 NO_BREAK_TERMS = _NO_BREAK_DEFAULT + [t.strip() for t in _NO_BREAK_ENV.split(",") if t.strip()]
-_NBSP = "\u00a0"  # 줄바꿈 금지용 non-breaking space
+_NBSP = "\u00a0"  # ÁÙ¹Ù²Þ ±ÝÁö¿ë non-breaking space
 
 
 # ============================================================================
-# Pydantic 데이터 모델
+# Pydantic µ¥ÀÌÅÍ ¸ðµ¨
 # ============================================================================
 class Scene(BaseModel):
-    """영상 장면 정의"""
-    scene_id: str = Field(..., description="장면 고유 ID")
-    keyword: str = Field(..., description="검색 키워드")
-    duration_seconds: float = Field(..., ge=0.5, le=3600, description="장면 길이(초)")
-    description: Optional[str] = Field(None, description="장면 설명")
-    asset_url: Optional[str] = Field(None, description="다운로드된 자산 URL")
-    asset_type: AssetType = Field(default=AssetType.VIDEO, description="자산 유형")
-    # [v15.60.0] Narration-First 확장 필드
-    narration: Optional[str] = Field(None, description="씬 나레이션 텍스트")
-    visual_intent: Optional[str] = Field(None, description="시각적 의도 (dynamic/calm/dramatic/educational/uplifting)")
-    visual_keywords: Optional[List[str]] = Field(default_factory=list, description="비주얼 검색 키워드 목록")
-    tone_profile: Optional[str] = Field(None, description="톤 (info/news/edu/ad/story)")
-    visual_pacing: Optional[str] = Field(None, description="페이싱 (fast/normal/slow)")
-    timing: Optional[Dict[str, float]] = Field(None, description="타임라인 타이밍")
-    alt_asset_url: Optional[str] = Field(None, description="[v15.68] 2번째 소스 영상 경로 (서브클립 다양화)")
-    alt_keywords: List[str] = Field(default_factory=list, description="[v15.68] 대체 검색 키워드")
-    narration_en: Optional[str] = Field(None, description="[v15.69] Kling T2V용 영어 비주얼 프롬프트")
+    """¿µ»ó Àå¸é Á¤ÀÇ"""
+    scene_id: str = Field(..., description="Àå¸é °íÀ¯ ID")
+    keyword: str = Field(..., description="°Ë»ö Å°¿öµå")
+    duration_seconds: float = Field(..., ge=0.5, le=3600, description="Àå¸é ±æÀÌ(ÃÊ)")
+    description: Optional[str] = Field(None, description="Àå¸é ¼³¸í")
+    asset_url: Optional[str] = Field(None, description="´Ù¿î·ÎµåµÈ ÀÚ»ê URL")
+    asset_type: AssetType = Field(default=AssetType.VIDEO, description="ÀÚ»ê À¯Çü")
+    # [v15.60.0] Narration-First È®Àå ÇÊµå
+    narration: Optional[str] = Field(None, description="¾À ³ª·¹ÀÌ¼Ç ÅØ½ºÆ®")
+    visual_intent: Optional[str] = Field(None, description="½Ã°¢Àû ÀÇµµ (dynamic/calm/dramatic/educational/uplifting)")
+    visual_keywords: Optional[List[str]] = Field(default_factory=list, description="ºñÁÖ¾ó °Ë»ö Å°¿öµå ¸ñ·Ï")
+    tone_profile: Optional[str] = Field(None, description="Åæ (info/news/edu/ad/story)")
+    visual_pacing: Optional[str] = Field(None, description="ÆäÀÌ½Ì (fast/normal/slow)")
+    timing: Optional[Dict[str, float]] = Field(None, description="Å¸ÀÓ¶óÀÎ Å¸ÀÌ¹Ö")
+    alt_asset_url: Optional[str] = Field(None, description="[v15.68] 2¹øÂ° ¼Ò½º ¿µ»ó °æ·Î (¼­ºêÅ¬¸³ ´Ù¾çÈ­)")
+    alt_keywords: List[str] = Field(default_factory=list, description="[v15.68] ´ëÃ¼ °Ë»ö Å°¿öµå")
+    narration_en: Optional[str] = Field(None, description="[v15.69] Kling T2V¿ë ¿µ¾î ºñÁÖ¾ó ÇÁ·ÒÇÁÆ®")
 
 
 class AssetsSearchRequest(BaseModel):
-    """자산 검색 요청"""
-    job_id: str = Field(..., description="작업 ID")
-    scenes: List[Scene] = Field(..., min_items=1, description="검색할 장면 목록")
-    sources: str = Field(default="pexels,pixabay", description="검색 소스 (쉼표 구분)")
+    """ÀÚ»ê °Ë»ö ¿äÃ»"""
+    job_id: str = Field(..., description="ÀÛ¾÷ ID")
+    scenes: List[Scene] = Field(..., min_items=1, description="°Ë»öÇÒ Àå¸é ¸ñ·Ï")
+    sources: str = Field(default="pexels,pixabay", description="°Ë»ö ¼Ò½º (½°Ç¥ ±¸ºÐ)")
 
 
 class VideoCreateRequest(BaseModel):
-    """영상 생성 요청"""
-    job_id: str = Field(..., description="작업 ID")
-    mode: VideoMode = Field(default=VideoMode.LONGFORM, description="제작 모드")
-    resolution: str = Field(default="1920x1080", description="출력 해상도")
-    fps: int = Field(default=30, ge=24, le=60, description="프레임률")
-    add_subtitles: bool = Field(default=False, description="자막 추가 여부")
-    add_bgm: bool = Field(default=True, description="배경음악 추가 여부")
-    bgm_volume: float = Field(default=0.3, ge=0.0, le=1.0, description="배경음악 볼륨(0-1)")
-    generate_thumbnail: bool = Field(default=True, description="썸네일 생성")
-    generate_shorts: bool = Field(default=True, description="숏폼 생성")
-    title: Optional[str] = Field(None, description="썸네일에 표시할 제목")
-    subtitle_text: Optional[str] = Field(None, description="뮤직비디오 자막 텍스트")
-    audio_url: Optional[str] = Field(None, description="TTS 오디오 경로 (절대경로 또는 /data/tmp/...)")
-    output_filename: Optional[str] = Field(None, description="출력 파일명 (기본: job_id.mp4)")
-    transition: str = Field(default="fade", description="클립 전환 효과")
-    scenes: Optional[list] = Field(None, description="씬 목록 (없으면 scenes.json 로드)")
+    """¿µ»ó »ý¼º ¿äÃ»"""
+    job_id: str = Field(..., description="ÀÛ¾÷ ID")
+    mode: VideoMode = Field(default=VideoMode.LONGFORM, description="Á¦ÀÛ ¸ðµå")
+    resolution: str = Field(default="1920x1080", description="Ãâ·Â ÇØ»óµµ")
+    fps: int = Field(default=30, ge=24, le=60, description="ÇÁ·¹ÀÓ·ü")
+    add_subtitles: bool = Field(default=False, description="ÀÚ¸· Ãß°¡ ¿©ºÎ")
+    add_bgm: bool = Field(default=True, description="¹è°æÀ½¾Ç Ãß°¡ ¿©ºÎ")
+    bgm_volume: float = Field(default=0.3, ge=0.0, le=1.0, description="¹è°æÀ½¾Ç º¼·ý(0-1)")
+    generate_thumbnail: bool = Field(default=True, description="½æ³×ÀÏ »ý¼º")
+    generate_shorts: bool = Field(default=True, description="¼ôÆû »ý¼º")
+    title: Optional[str] = Field(None, description="½æ³×ÀÏ¿¡ Ç¥½ÃÇÒ Á¦¸ñ")
+    subtitle_text: Optional[str] = Field(None, description="¹ÂÁ÷ºñµð¿À ÀÚ¸· ÅØ½ºÆ®")
+    audio_url: Optional[str] = Field(None, description="TTS ¿Àµð¿À °æ·Î (Àý´ë°æ·Î ¶Ç´Â /data/tmp/...)")
+    output_filename: Optional[str] = Field(None, description="Ãâ·Â ÆÄÀÏ¸í (±âº»: job_id.mp4)")
+    transition: str = Field(default="fade", description="Å¬¸³ ÀüÈ¯ È¿°ú")
+    scenes: Optional[list] = Field(None, description="¾À ¸ñ·Ï (¾øÀ¸¸é scenes.json ·Îµå)")
 
 
 class JobInfo(BaseModel):
-    """작업 상태 정보"""
+    """ÀÛ¾÷ »óÅÂ Á¤º¸"""
     job_id: str
     status: JobStatus
     progress: float = Field(default=0.0, ge=0.0, le=100.0)
@@ -1085,7 +1085,7 @@ class JobInfo(BaseModel):
 
 
 class AssetsSearchResponse(BaseModel):
-    """자산 검색 응답"""
+    """ÀÚ»ê °Ë»ö ÀÀ´ä"""
     job_id: str
     status: str
     scenes: List[Scene]
@@ -1094,7 +1094,7 @@ class AssetsSearchResponse(BaseModel):
 
 
 class VideoCreateResponse(BaseModel):
-    """영상 생성 응답"""
+    """¿µ»ó »ý¼º ÀÀ´ä"""
     success: bool
     job_id: str
     status: str
@@ -1104,7 +1104,7 @@ class VideoCreateResponse(BaseModel):
 
 
 # ============================================================================
-# 환경 변수 및 경로 설정
+# È¯°æ º¯¼ö ¹× °æ·Î ¼³Á¤
 # ============================================================================
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY", "")
@@ -1113,53 +1113,53 @@ LF_API_KEY = os.getenv("LF_API_KEY", "")
 STORYBLOCKS_PRIVATE_KEY = os.getenv("STORYBLOCKS_PRIVATE_KEY", "")
 STORYBLOCKS_PUBLIC_KEY  = os.getenv("STORYBLOCKS_PUBLIC_KEY", "")
 _ASSET_CACHE_DB = Path("/data/jobs/asset_cache.db")
-# [v15.66.0] 공통 API Key 검증 Depends 함수
+# [v15.66.0] °øÅë API Key °ËÁõ Depends ÇÔ¼ö
 def verify_api_key(x_lf_api_key: str = Header(None, alias="X-LF-API-Key")):
-    """X-LF-API-Key 헤더 검증. 키 미설정 환경에서는 통과."""
+    """X-LF-API-Key Çì´õ °ËÁõ. Å° ¹Ì¼³Á¤ È¯°æ¿¡¼­´Â Åë°ú."""
     if LF_API_KEY and x_lf_api_key != LF_API_KEY:
         raise HTTPException(status_code=403, detail="Invalid API Key")
     return x_lf_api_key or ""
 
-# 데이터 디렉토리 설정
+# µ¥ÀÌÅÍ µð·ºÅä¸® ¼³Á¤
 BASE_DATA_DIR = Path("/data")
 JOBS_DIR = BASE_DATA_DIR / "jobs"
 TMP_DIR = BASE_DATA_DIR / "tmp"
 OUTPUT_DIR = BASE_DATA_DIR / "output"
 BGM_DIR = BASE_DATA_DIR / "bgm"
 
-# 출력 디렉토리 구분
+# Ãâ·Â µð·ºÅä¸® ±¸ºÐ
 LONGFORM_DIR = OUTPUT_DIR / "longform"
 SHORTS_DIR = OUTPUT_DIR / "shorts"
 THUMBNAILS_DIR = OUTPUT_DIR / "thumbnails"
 
-# ─── 국가명 → 국기 이모지 매핑 v15.67.0 ──────────────────────────────
+# ¦¡¦¡¦¡ ±¹°¡¸í ¡æ ±¹±â ÀÌ¸ðÁö ¸ÅÇÎ v15.67.0 ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 _COUNTRY_FLAG_MAP: dict = {
-    "미국": "🇺🇸", "미합중국": "🇺🇸", "아메리카": "🇺🇸", "usa": "🇺🇸", "us ": "🇺🇸",
-    "중국": "🇨🇳", "중화인민공화국": "🇨🇳", "차이나": "🇨🇳", "china": "🇨🇳",
-    "일본": "🇯🇵", "일본국": "🇯🇵", "japan": "🇯🇵",
-    "한국": "🇰🇷", "대한민국": "🇰🇷", "남한": "🇰🇷", "korea": "🇰🇷",
-    "영국": "🇬🇧", "uk": "🇬🇧", "britain": "🇬🇧",
-    "독일": "🇩🇪", "germany": "🇩🇪",
-    "프랑스": "🇫🇷", "france": "🇫🇷",
-    "러시아": "🇷🇺", "russia": "🇷🇺",
-    "캐나다": "🇨🇦", "canada": "🇨🇦",
-    "인도": "🇮🇳", "india": "🇮🇳",
-    "호주": "🇦🇺", "australia": "🇦🇺",
-    "유럽": "🇪🇺", "유럽연합": "🇪🇺",
-    "이스라엘": "🇮🇱",
-    "북한": "🇰🇵",
-    "대만": "🇹🇼",
-    "이탈리아": "🇮🇹",
-    "스페인": "🇪🇸",
-    "브라질": "🇧🇷",
-    "사우디": "🇸🇦", "사우디아라비아": "🇸🇦",
-    "싱가포르": "🇸🇬",
-    "우크라이나": "🇺🇦",
-    "스웨덴": "🇸🇪",
+    "¹Ì±¹": "????", "¹ÌÇÕÁß±¹": "????", "¾Æ¸Þ¸®Ä«": "????", "usa": "????", "us ": "????",
+    "Áß±¹": "????", "ÁßÈ­ÀÎ¹Î°øÈ­±¹": "????", "Â÷ÀÌ³ª": "????", "china": "????",
+    "ÀÏº»": "????", "ÀÏº»±¹": "????", "japan": "????",
+    "ÇÑ±¹": "????", "´ëÇÑ¹Î±¹": "????", "³²ÇÑ": "????", "korea": "????",
+    "¿µ±¹": "????", "uk": "????", "britain": "????",
+    "µ¶ÀÏ": "????", "germany": "????",
+    "ÇÁ¶û½º": "????", "france": "????",
+    "·¯½Ã¾Æ": "????", "russia": "????",
+    "Ä³³ª´Ù": "????", "canada": "????",
+    "ÀÎµµ": "????", "india": "????",
+    "È£ÁÖ": "????", "australia": "????",
+    "À¯·´": "????", "À¯·´¿¬ÇÕ": "????",
+    "ÀÌ½º¶ó¿¤": "????",
+    "ºÏÇÑ": "????",
+    "´ë¸¸": "????",
+    "ÀÌÅ»¸®¾Æ": "????",
+    "½ºÆäÀÎ": "????",
+    "ºê¶óÁú": "????",
+    "»ç¿ìµð": "????", "»ç¿ìµð¾Æ¶óºñ¾Æ": "????",
+    "½Ì°¡Æ÷¸£": "????",
+    "¿ìÅ©¶óÀÌ³ª": "????",
+    "½º¿þµ§": "????",
 }
 
 def detect_countries_in_text(text: str) -> list:
-    """텍스트에서 국가 감지 → 국기 이모지 리스트 (중복 제거, 순서 유지)"""
+    """ÅØ½ºÆ®¿¡¼­ ±¹°¡ °¨Áö ¡æ ±¹±â ÀÌ¸ðÁö ¸®½ºÆ® (Áßº¹ Á¦°Å, ¼ø¼­ À¯Áö)"""
     found, seen = [], set()
     tl = text.lower()
     for name, flag in _COUNTRY_FLAG_MAP.items():
@@ -1169,37 +1169,37 @@ def detect_countries_in_text(text: str) -> list:
     return found
 
 def inject_flags_in_word(word: str) -> str:
-    """단어에 국가명 포함 시 국기 이모지 앞에 삽입"""
+    """´Ü¾î¿¡ ±¹°¡¸í Æ÷ÇÔ ½Ã ±¹±â ÀÌ¸ðÁö ¾Õ¿¡ »ðÀÔ"""
     import re as _re2
     for name, flag in _COUNTRY_FLAG_MAP.items():
         if name.lower() in word.lower() and flag not in word:
             word = _re2.sub(
                 _re2.escape(name), flag + name, word, flags=_re2.IGNORECASE, count=1
             )
-            break  # 단어 1개에 이모지 1개만
+            break  # ´Ü¾î 1°³¿¡ ÀÌ¸ðÁö 1°³¸¸
     return word
 
 COMPLETE_DIR = BASE_DATA_DIR / "complete"
 
-# 디렉토리 생성
+# µð·ºÅä¸® »ý¼º
 for directory in [JOBS_DIR, TMP_DIR, OUTPUT_DIR, LONGFORM_DIR, SHORTS_DIR, THUMBNAILS_DIR, BGM_DIR, COMPLETE_DIR, COMPLETE_DIR / 'longform', COMPLETE_DIR / 'shorts', COMPLETE_DIR / 'thumbnails']:
     directory.mkdir(parents=True, exist_ok=True)
 
-logger.info(f"데이터 디렉토리 초기화 완료: {BASE_DATA_DIR}")
+logger.info(f"µ¥ÀÌÅÍ µð·ºÅä¸® ÃÊ±âÈ­ ¿Ï·á: {BASE_DATA_DIR}")
 
 
 # ============================================================================
-# FastAPI 앱 초기화
+# FastAPI ¾Û ÃÊ±âÈ­
 # ============================================================================
 app = FastAPI(
     title="LongForm Factory - FFmpeg Worker",
-    description="롱폼/숏폼 자동화 영상 제작 서비스",
-    version="16.8.0"
+    description="·ÕÆû/¼ôÆû ÀÚµ¿È­ ¿µ»ó Á¦ÀÛ ¼­ºñ½º",
+    VERSION = "16.9.0"
 )
 
 
 
-# ==================== CORS (브라우저 UI 직접 호출 허용) ====================
+# ==================== CORS (ºê¶ó¿ìÀú UI Á÷Á¢ È£Ãâ Çã¿ë) ====================
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
@@ -1209,13 +1209,13 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
-# 동시 영상 생성 제한 — Redis lock 우선, 없으면 global fallback
+# µ¿½Ã ¿µ»ó »ý¼º Á¦ÇÑ ? Redis lock ¿ì¼±, ¾øÀ¸¸é global fallback
 _CURRENT_JOB: Optional[str] = None
 
-# 작업 상태 저장소 (인메모리 + Redis 이중)
+# ÀÛ¾÷ »óÅÂ ÀúÀå¼Ò (ÀÎ¸Þ¸ð¸® + Redis ÀÌÁß)
 jobs: Dict[str, JobInfo] = {}
 
-# ── Redis 클라이언트 (선택적)
+# ¦¡¦¡ Redis Å¬¶óÀÌ¾ðÆ® (¼±ÅÃÀû)
 _redis_client = None
 
 async def _get_redis():
@@ -1229,9 +1229,9 @@ async def _get_redis():
             _redis_client = aioredis.from_url(
                 redis_url, decode_responses=True, socket_connect_timeout=2)
             await _redis_client.ping()
-            logger.info("Redis 연결 성공")
+            logger.info("Redis ¿¬°á ¼º°ø")
         except Exception as _re:
-            logger.warning(f"Redis 미연결 (인메모리 fallback): {_re}")
+            logger.warning(f"Redis ¹Ì¿¬°á (ÀÎ¸Þ¸ð¸® fallback): {_re}")
             _redis_client = None
     return _redis_client
 
@@ -1259,7 +1259,7 @@ async def _redis_set_job(job_id, status, progress=0, step=None,
         ttl = 86400 if status in ("completed","failed","cancelled") else 7200
         await r.expire(key, ttl)
     except Exception as _e:
-        logger.debug(f"Redis 저장 실패(무시): {_e}")
+        logger.debug(f"Redis ÀúÀå ½ÇÆÐ(¹«½Ã): {_e}")
 
 async def _redis_acquire_lock(job_id, timeout_sec=3600):
     r = await _get_redis()
@@ -1286,7 +1286,7 @@ else return 0 end"""
 
 
 # ============================================================================
-# 헬퍼 함수들
+# ÇïÆÛ ÇÔ¼öµé
 # ============================================================================
 
 async def update_job_status(
@@ -1297,7 +1297,7 @@ async def update_job_status(
     output_files: Dict[str, str] = None,
     duration_seconds: float = None
 ) -> None:
-    """작업 상태 업데이트"""
+    """ÀÛ¾÷ »óÅÂ ¾÷µ¥ÀÌÆ®"""
     if job_id not in jobs:
         jobs[job_id] = JobInfo(
             job_id=job_id,
@@ -1318,7 +1318,7 @@ async def update_job_status(
             job.duration_seconds = duration_seconds
         job.updated_at = datetime.now()
     
-    logger.info(f"작업 상태 업데이트: {job_id} -> {status.value} (진행률: {jobs[job_id].progress}%)")
+    logger.info(f"ÀÛ¾÷ »óÅÂ ¾÷µ¥ÀÌÆ®: {job_id} -> {status.value} (ÁøÇà·ü: {jobs[job_id].progress}%)")
 
 
 # [AL-2+AY] Pexels cache with 1h TTL + job diversification
@@ -1326,7 +1326,7 @@ _PEXELS_CACHE: dict = {}  # key -> (timestamp, data)
 _PEXELS_CACHE_MAX = 64
 _PEXELS_CACHE_TTL = 3600  # 1 hour
 
-# [AY-C] Global seen URLs — persist across jobs (last 300)
+# [AY-C] Global seen URLs ? persist across jobs (last 300)
 _GLOBAL_SEEN_URLS_FILE = Path("/data/seen_urls.txt")
 _GLOBAL_SEEN_URLS: set = set()
 
@@ -1340,7 +1340,7 @@ def _load_global_seen():
         pass
 
 def _save_global_seen(new_urls: set):
-    global _GLOBAL_SEEN_URLS  # [v15.93] UnboundLocalError 방지
+    global _GLOBAL_SEEN_URLS  # [v15.93] UnboundLocalError ¹æÁö
     try:
         _GLOBAL_SEEN_URLS.update(new_urls)
         # Keep last 300 only (FIFO-ish)
@@ -1355,36 +1355,36 @@ _load_global_seen()
 
 
 async def get_pexels_videos(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
-    """[BK] 다단어 phrase 검색 결과 부족 시 자동 단축 재검색.
-    - full phrase → 결과 < 3개면 앞 3단어 → 여전히 부족하면 앞 2단어로 fallback.
+    """[BK] ´Ù´Ü¾î phrase °Ë»ö °á°ú ºÎÁ· ½Ã ÀÚµ¿ ´ÜÃà Àç°Ë»ö.
+    - full phrase ¡æ °á°ú < 3°³¸é ¾Õ 3´Ü¾î ¡æ ¿©ÀüÈ÷ ºÎÁ·ÇÏ¸é ¾Õ 2´Ü¾î·Î fallback.
     """
     if not keyword:
         return []
     words = keyword.split()
-    # 1차: 원본 phrase
+    # 1Â÷: ¿øº» phrase
     results = await _get_pexels_videos_raw(keyword, per_page)
     if len(results) >= 3 or len(words) <= 2:
         return results
-    # 2차: 앞 3단어
+    # 2Â÷: ¾Õ 3´Ü¾î
     if len(words) > 3:
         short3 = " ".join(words[:3])
-        logger.info(f"[BK] Pexels 결과 부족 ({len(results)}) — '{short3}'로 재검색")
+        logger.info(f"[BK] Pexels °á°ú ºÎÁ· ({len(results)}) ? '{short3}'·Î Àç°Ë»ö")
         r3 = await _get_pexels_videos_raw(short3, per_page)
         if len(r3) > len(results):
             results = r3
     if len(results) >= 3 or len(words) < 2:
         return results
-    # 3차: 앞 2단어
+    # 3Â÷: ¾Õ 2´Ü¾î
     short2 = " ".join(words[:2])
-    logger.info(f"[BK] 여전히 부족 ({len(results)}) — '{short2}'로 재검색")
+    logger.info(f"[BK] ¿©ÀüÈ÷ ºÎÁ· ({len(results)}) ? '{short2}'·Î Àç°Ë»ö")
     r2 = await _get_pexels_videos_raw(short2, per_page)
     return r2 if len(r2) > len(results) else results
 
 
 async def _get_pexels_videos_raw(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
-    """Pexels API에서 영상 검색"""
+    """Pexels API¿¡¼­ ¿µ»ó °Ë»ö"""
     if not PEXELS_API_KEY:
-        logger.warning("Pexels API 키가 없습니다")
+        logger.warning("Pexels API Å°°¡ ¾ø½À´Ï´Ù")
         return []
     
     url = "https://api.pexels.com/videos/search"
@@ -1401,17 +1401,17 @@ async def _get_pexels_videos_raw(keyword: str, per_page: int = 5) -> List[Dict[s
             response.raise_for_status()
             data = response.json()
             videos = data.get("videos", [])
-            logger.info(f"Pexels에서 '{keyword}' 검색: {len(videos)}개 결과")
+            logger.info(f"Pexels¿¡¼­ '{keyword}' °Ë»ö: {len(videos)}°³ °á°ú")
             return videos
     except Exception as e:
-        logger.error(f"Pexels 검색 오류 ({keyword}): {e}")
+        logger.error(f"Pexels °Ë»ö ¿À·ù ({keyword}): {e}")
         return []
 
 
 async def get_pixabay_videos(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
-    """Pixabay API에서 영상 검색"""
+    """Pixabay API¿¡¼­ ¿µ»ó °Ë»ö"""
     if not PIXABAY_API_KEY:
-        logger.warning("Pixabay API 키가 없습니다")
+        logger.warning("Pixabay API Å°°¡ ¾ø½À´Ï´Ù")
         return []
     
     url = "https://pixabay.com/api/videos/"
@@ -1429,36 +1429,36 @@ async def get_pixabay_videos(keyword: str, per_page: int = 5) -> List[Dict[str, 
             response.raise_for_status()
             data = response.json()
             videos = data.get("hits", [])
-            logger.info(f"Pixabay에서 '{keyword}' 검색: {len(videos)}개 결과")
+            logger.info(f"Pixabay¿¡¼­ '{keyword}' °Ë»ö: {len(videos)}°³ °á°ú")
             return videos
     except Exception as e:
-        logger.error(f"Pixabay 검색 오류 ({keyword}): {e}")
+        logger.error(f"Pixabay °Ë»ö ¿À·ù ({keyword}): {e}")
         return []
 
 
-# ─────────────────────────────────────────────
-# [PATCH J / v15.83] Storyblocks + SQLite 캐시
-# ─────────────────────────────────────────────
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+# [PATCH J / v15.83] Storyblocks + SQLite Ä³½Ã
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 import hmac as _hmac, hashlib as _hashlib, sqlite3 as _sqlite3, time as _time_j
 
 
-# ─────────────────────────────────────────────
-# [PATCH V / v15.87] Coverr.co + Mixkit 무료 스톡
-# ─────────────────────────────────────────────
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+# [PATCH V / v15.87] Coverr.co + Mixkit ¹«·á ½ºÅå
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 async def get_coverr_videos(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
-    """Coverr.co - API 키 필요, 비활성화 [PATCH V-fix]"""
+    """Coverr.co - API Å° ÇÊ¿ä, ºñÈ°¼ºÈ­ [PATCH V-fix]"""
     return []
 
 
 
 async def get_mixkit_videos(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
-    """Mixkit - 공개 API 없음, 비활성화 [PATCH V-fix]"""
+    """Mixkit - °ø°³ API ¾øÀ½, ºñÈ°¼ºÈ­ [PATCH V-fix]"""
     return []
 
 
 
 def _init_asset_cache():
-    """SQLite 자산 캐시 초기화."""
+    """SQLite ÀÚ»ê Ä³½Ã ÃÊ±âÈ­."""
     try:
         _ASSET_CACHE_DB.parent.mkdir(parents=True, exist_ok=True)
         conn = _sqlite3.connect(str(_ASSET_CACHE_DB))
@@ -1468,10 +1468,10 @@ def _init_asset_cache():
         )""")
         conn.commit(); conn.close()
     except Exception as _e:
-        logger.warning(f"[J] SQLite 초기화 실패: {_e}")
+        logger.warning(f"[J] SQLite ÃÊ±âÈ­ ½ÇÆÐ: {_e}")
 
 def _cache_lookup(keyword: str) -> Optional[str]:
-    """캐시에서 로컬 경로 반환 (파일 존재 시만)."""
+    """Ä³½Ã¿¡¼­ ·ÎÄÃ °æ·Î ¹ÝÈ¯ (ÆÄÀÏ Á¸Àç ½Ã¸¸)."""
     try:
         conn = _sqlite3.connect(str(_ASSET_CACHE_DB))
         cur = conn.execute(
@@ -1486,7 +1486,7 @@ def _cache_lookup(keyword: str) -> Optional[str]:
     return None
 
 def _cache_write(keyword: str, url: str, local_path: str):
-    """자산 캐시에 기록."""
+    """ÀÚ»ê Ä³½Ã¿¡ ±â·Ï."""
     try:
         conn = _sqlite3.connect(str(_ASSET_CACHE_DB))
         conn.execute(
@@ -1497,7 +1497,7 @@ def _cache_write(keyword: str, url: str, local_path: str):
         pass
 
 async def get_storyblocks_videos(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
-    """[PATCH J] Storyblocks API 검색 (HMAC 인증 또는 API Key 방식)."""
+    """[PATCH J] Storyblocks API °Ë»ö (HMAC ÀÎÁõ ¶Ç´Â API Key ¹æ½Ä)."""
     if not STORYBLOCKS_PRIVATE_KEY or not STORYBLOCKS_PUBLIC_KEY:
         return []
     try:
@@ -1535,10 +1535,10 @@ async def get_storyblocks_videos(keyword: str, per_page: int = 5) -> List[Dict[s
                         "height": item.get("frame_height", 1080),
                         "duration": item.get("duration", 10),
                     })
-            logger.info(f"[Storyblocks] '{keyword}': {len(videos)}개")
+            logger.info(f"[Storyblocks] '{keyword}': {len(videos)}°³")
             return videos
     except Exception as e:
-        logger.warning(f"[Storyblocks] 오류: {e}")
+        logger.warning(f"[Storyblocks] ¿À·ù: {e}")
         return []
 
 _init_asset_cache()
@@ -1547,8 +1547,8 @@ def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict],
                        scene_index: int = 0,
                        exclude_urls: set = None,
                        query_keyword: str = "") -> Optional[str]:
-    """[O] 씬 인덱스 라운드로빈으로 다양한 영상 선택 (같은 키워드라도 다른 결과).
-    해상도 상위 후보들 중에서 scene_index 로 순환."""
+    """[O] ¾À ÀÎµ¦½º ¶ó¿îµå·ÎºóÀ¸·Î ´Ù¾çÇÑ ¿µ»ó ¼±ÅÃ (°°Àº Å°¿öµå¶óµµ ´Ù¸¥ °á°ú).
+    ÇØ»óµµ »óÀ§ ÈÄº¸µé Áß¿¡¼­ scene_index ·Î ¼øÈ¯."""
     candidates = []
     
     # [AN-3] Filter videos whose URL/user suggests text overlay content
@@ -1556,7 +1556,7 @@ def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict],
                        "infographic", "presentation", "slide", "sketch", "diagram",
                        "concept", "mindmap", "notes", "writing", "drawing")
     # [BN] MARKER v1
-    # 한국 컨텐츠에서 배제할 서양 식별자 (query_keyword 에 asian/korean/seoul 이면 자동 적용)
+    # ÇÑ±¹ ÄÁÅÙÃ÷¿¡¼­ ¹èÁ¦ÇÒ ¼­¾ç ½Äº°ÀÚ (query_keyword ¿¡ asian/korean/seoul ÀÌ¸é ÀÚµ¿ Àû¿ë)
     _WESTERN_BLACKLIST = ("american-flag", "us-flag", "usa-flag", "star-and-stripes",
                           "american_flag", "us_flag",
                           "britain", "british-flag", "union-jack", "uk-flag",
@@ -1579,7 +1579,7 @@ def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict],
             uname = (user.get("name") or "").lower()
             if any(b in uname for b in _TEXT_BLACKLIST):
                 return True
-        # [BN+BN2] 한국 주제 + 서양 국기/장소 → 거절
+        # [BN+BN2] ÇÑ±¹ ÁÖÁ¦ + ¼­¾ç ±¹±â/Àå¼Ò ¡æ °ÅÀý
         _PODIUM_STOCK_TOKENS = ("speaking-at-a-podium", "woman-at-a-podium",
                                 "politician-speech", "podium-speech",
                                 "news-conference", "press-briefing",
@@ -1601,13 +1601,13 @@ def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict],
                     return True
         return False
 
-    # Pexels 영상 처리
+    # Pexels ¿µ»ó Ã³¸®
     for video in pexels_videos:
         if _has_text_indicator(video):
             continue  # [AN] MARKER v1
         video_files = video.get("video_files", [])
         if video_files:
-            # 가장 높은 해상도의 파일 선택
+            # °¡Àå ³ôÀº ÇØ»óµµÀÇ ÆÄÀÏ ¼±ÅÃ
             best_file = max(
                 video_files,
                 key=lambda f: int(f.get("width", 0)) * int(f.get("height", 0))
@@ -1619,10 +1619,10 @@ def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict],
                     "height": best_file.get("height", 0)
                 })
     
-    # Pixabay 영상 처리
+    # Pixabay ¿µ»ó Ã³¸®
     for video in pixabay_videos:
         video_files = video.get("videos", {})
-        # large, medium, small 중에서 large 선택
+        # large, medium, small Áß¿¡¼­ large ¼±ÅÃ
         if "large" in video_files:
             url = video_files["large"].get("url")
             if url:
@@ -1633,8 +1633,8 @@ def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict],
                 })
     
     if candidates:
-        # [AW-4+BG-2] 4K 우선 + 키워드 매칭 재정렬
-        # query 키워드의 명사를 추출해서 URL/page_url 에 포함된 후보 우선
+        # [AW-4+BG-2] 4K ¿ì¼± + Å°¿öµå ¸ÅÄª ÀçÁ¤·Ä
+        # query Å°¿öµåÀÇ ¸í»ç¸¦ ÃßÃâÇØ¼­ URL/page_url ¿¡ Æ÷ÇÔµÈ ÈÄº¸ ¿ì¼±
         import re as _rescore
         _query_nouns = []
         try:
@@ -1645,13 +1645,13 @@ def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict],
         def _res_score(c):
             w, h = int(c.get("width", 0) or 0), int(c.get("height", 0) or 0)
             pixels = w * h
-            # 해상도 스코어
+            # ÇØ»óµµ ½ºÄÚ¾î
             res_score = 0
             if h >= 2000: res_score = pixels + 10_000_000
             elif h >= 1400: res_score = pixels + 5_000_000
             elif h >= 1000: res_score = pixels
             else: res_score = pixels - 5_000_000
-            # [BG-2] URL·user 이름에 키워드 명사 포함되면 큰 보너스
+            # [BG-2] URL¡¤user ÀÌ¸§¿¡ Å°¿öµå ¸í»ç Æ÷ÇÔµÇ¸é Å« º¸³Ê½º
             url = (c.get("url") or "").lower()
             bonus = 0
             for noun in _query_nouns:
@@ -1666,7 +1666,7 @@ def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict],
         effective = filtered if filtered else pool  # fall back if all excluded
         picked = effective[(scene_index * 7 + scene_index // 2) % len(effective)]
         logger.info(
-            f"영상 선택: {picked['width']}x{picked['height']} "
+            f"¿µ»ó ¼±ÅÃ: {picked['width']}x{picked['height']} "
             f"(idx={scene_index}, pool={len(pool)}/{len(candidates)})"
         )
         return picked["url"]
@@ -1675,12 +1675,12 @@ def select_best_video(pexels_videos: List[Dict], pixabay_videos: List[Dict],
 
 
 async def download_video(video_url: str, output_path: Path, timeout: float = 120.0, max_duration: float = 60.0) -> bool:
-    """영상 다운로드 — ffmpeg으로 직접 다운로드 + 60초 자동 트리밍 (908MB 방지)"""
+    """¿µ»ó ´Ù¿î·Îµå ? ffmpegÀ¸·Î Á÷Á¢ ´Ù¿î·Îµå + 60ÃÊ ÀÚµ¿ Æ®¸®¹Ö (908MB ¹æÁö)"""
     try:
-        logger.info(f"영상 다운로드 시작 (최대 {max_duration}초): {video_url} -> {output_path}")
+        logger.info(f"¿µ»ó ´Ù¿î·Îµå ½ÃÀÛ (ÃÖ´ë {max_duration}ÃÊ): {video_url} -> {output_path}")
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # 1차: ffmpeg으로 스트림 다운로드 + 트리밍
+        # 1Â÷: ffmpegÀ¸·Î ½ºÆ®¸² ´Ù¿î·Îµå + Æ®¸®¹Ö
         cmd = [
             "ffmpeg", "-y",
             "-t", str(max_duration),
@@ -1694,32 +1694,32 @@ async def download_video(video_url: str, output_path: Path, timeout: float = 120
         result = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=180)
         if result.returncode == 0 and output_path.exists() and output_path.stat().st_size > 10000:
             file_size = output_path.stat().st_size
-            logger.info(f"영상 다운로드 완료 (ffmpeg): {output_path} ({file_size/(1024*1024):.2f}MB)")
+            logger.info(f"¿µ»ó ´Ù¿î·Îµå ¿Ï·á (ffmpeg): {output_path} ({file_size/(1024*1024):.2f}MB)")
             return True
 
-        # 2차 fallback: httpx 스트리밍 (최대 30MB)
-        logger.warning("ffmpeg 다운로드 실패 — httpx fallback")
+        # 2Â÷ fallback: httpx ½ºÆ®¸®¹Ö (ÃÖ´ë 30MB)
+        logger.warning("ffmpeg ´Ù¿î·Îµå ½ÇÆÐ ? httpx fallback")
         async with httpx.AsyncClient(timeout=timeout) as client:
             async with client.stream("GET", video_url) as response:
                 response.raise_for_status()
                 downloaded = 0
-                max_bytes = 30 * 1024 * 1024  # 30MB 제한
+                max_bytes = 30 * 1024 * 1024  # 30MB Á¦ÇÑ
                 async with aiofiles.open(output_path, "wb") as f:
                     async for chunk in response.aiter_bytes(chunk_size=65536):
                         await f.write(chunk)
                         downloaded += len(chunk)
                         if downloaded >= max_bytes:
-                            logger.info("30MB 제한 도달 — 다운로드 중단")
+                            logger.info("30MB Á¦ÇÑ µµ´Þ ? ´Ù¿î·Îµå Áß´Ü")
                             break
         file_size = output_path.stat().st_size if output_path.exists() else 0
-        logger.info(f"영상 다운로드 완료 (fallback): {output_path} ({file_size/(1024*1024):.2f}MB)")
+        logger.info(f"¿µ»ó ´Ù¿î·Îµå ¿Ï·á (fallback): {output_path} ({file_size/(1024*1024):.2f}MB)")
         return file_size > 10000
     except Exception as e:
-        logger.error(f"영상 다운로드 실패: {e}")
+        logger.error(f"¿µ»ó ´Ù¿î·Îµå ½ÇÆÐ: {e}")
         return False
 
 
-# ========== [v15.69] 키워드 Sanitizer =========================================
+# ========== [v15.69] Å°¿öµå Sanitizer =========================================
 _CAMERA_DIRECTIVES = {
     "wide shot","close up","close-up","side angle","panning","zoom in","zoom out",
     "aerial shot","tracking shot","dolly shot","tilt","crane shot","establishing shot",
@@ -1730,13 +1730,13 @@ _CAMERA_DIRECTIVES = {
 }
 
 _KO_STOPWORDS = {
-    "이","그","저","의","가","은","는","을","를","에","에서","로","으로",
-    "와","과","도","만","이다","있다","하다","되다","않다","때","후","전","중",
-    "또한","따라서","그리고","하지만","그러나","그래서","즉","곧","이후",
+    "ÀÌ","±×","Àú","ÀÇ","°¡","Àº","´Â","À»","¸¦","¿¡","¿¡¼­","·Î","À¸·Î",
+    "¿Í","°ú","µµ","¸¸","ÀÌ´Ù","ÀÖ´Ù","ÇÏ´Ù","µÇ´Ù","¾Ê´Ù","¶§","ÈÄ","Àü","Áß",
+    "¶ÇÇÑ","µû¶ó¼­","±×¸®°í","ÇÏÁö¸¸","±×·¯³ª","±×·¡¼­","Áï","°ð","ÀÌÈÄ",
 }
 
 def _is_camera_directive(kw: str) -> bool:
-    """카메라 방향/기법 키워드 판별"""
+    """Ä«¸Þ¶ó ¹æÇâ/±â¹ý Å°¿öµå ÆÇº°"""
     if not kw or not kw.strip():
         return True
     lower = kw.lower().strip()
@@ -1749,12 +1749,12 @@ def _is_camera_directive(kw: str) -> bool:
 
 
 def _sanitize_keyword_for_search(kw: str, narration: str = "", fallback: str = "") -> str:
-    """[v15.69] 카메라 디렉티브/빈 키워드를 나레이션 기반 키워드로 복구"""
+    """[v15.69] Ä«¸Þ¶ó µð·ºÆ¼ºê/ºó Å°¿öµå¸¦ ³ª·¹ÀÌ¼Ç ±â¹Ý Å°¿öµå·Î º¹±¸"""
     if not _is_camera_directive(kw):
         return kw
     if narration:
         import re as _re
-        ko_words = _re.findall(r'[가-힣]{2,}', narration)
+        ko_words = _re.findall(r'[°¡-ÆR]{2,}', narration)
         en_words = _re.findall(r'[A-Za-z]{3,}', narration)
         useful = [w for w in ko_words if w not in _KO_STOPWORDS][:3]
         if en_words:
@@ -1767,7 +1767,7 @@ def _sanitize_keyword_for_search(kw: str, narration: str = "", fallback: str = "
 # ========== END sanitizer ====================================================
 
 def _get_topic_fallback(keyword: str, topic_hint: str = "") -> str:
-    """[v15.75.0] 토픽 카테고리 기반 폴백 쿼리."""
+    """[v15.75.0] ÅäÇÈ Ä«Å×°í¸® ±â¹Ý Æú¹é Äõ¸®."""
     c = (keyword + " " + topic_hint).lower()
     if any(t in c for t in ["economy","finance","stock","bank","market","money","gdp"]):
         return "business finance city"
@@ -1789,64 +1789,64 @@ def _get_topic_fallback(keyword: str, topic_hint: str = "") -> str:
 
 
 def _ko_narration_to_visual_query(text: str, orig_keyword: str = "", topic: str = "") -> str:
-    """[v16.4] 한국어 나레이션 세그먼트 → 영어 시각 검색 쿼리 변환.
-    ws_ 씬의 keyword를 나레이션 내용과 매칭시키기 위해 사용."""
+    """[v16.4] ÇÑ±¹¾î ³ª·¹ÀÌ¼Ç ¼¼±×¸ÕÆ® ¡æ ¿µ¾î ½Ã°¢ °Ë»ö Äõ¸® º¯È¯.
+    ws_ ¾ÀÀÇ keyword¸¦ ³ª·¹ÀÌ¼Ç ³»¿ë°ú ¸ÅÄª½ÃÅ°±â À§ÇØ »ç¿ë."""
     import re as _re
     if not text:
         return orig_keyword or "technology people"
 
-    # 1. 영어 단어 먼저 추출 (AI, ChatGPT 등)
+    # 1. ¿µ¾î ´Ü¾î ¸ÕÀú ÃßÃâ (AI, ChatGPT µî)
     en_words = _re.findall(r"\b[A-Za-z][A-Za-z0-9]{2,}\b", text)
     en_words = [w for w in en_words if w.lower() not in ("the","and","for","this","that","with","from","are","was","were","has","have","will","can","its","our","not")]
     if en_words:
         return " ".join(en_words[:3]) + " footage"
 
-    # 2. 한국어 → 영어 시각 쿼리 매핑
+    # 2. ÇÑ±¹¾î ¡æ ¿µ¾î ½Ã°¢ Äõ¸® ¸ÅÇÎ
     _KO_VISUAL = [
-        (["인공지능","AI","머신러닝","딥러닝","신경망","알고리즘"], "artificial intelligence AI technology"),
-        (["로봇","자동화","드론","기계"], "robot automation machine"),
-        (["의료","병원","의사","환자","헬스케어","수술"], "hospital medical doctor patient"),
-        (["교육","학교","학생","학습","강의","수업"], "education classroom student learning"),
-        (["일자리","직업","취업","고용","실업","근로자"], "job employment office worker career"),
-        (["경제","금융","주식","시장","투자","돈"], "business finance stock market"),
-        (["데이터","분석","빅데이터","통계"], "data analytics computer screen"),
-        (["스마트폰","모바일","앱","소셜미디어"], "smartphone mobile app social media"),
-        (["공장","제조","생산","산업"], "factory manufacturing industrial"),
-        (["환경","기후","에너지","탄소"], "environment nature green energy"),
-        (["서울","한국","도시","거리"], "seoul korea city urban street"),
-        (["미래","혁신","첨단"], "future technology innovation"),
-        (["창업","스타트업","벤처","기업가"], "startup entrepreneur business meeting"),
-        (["연구","개발","실험","과학"], "laboratory research scientist"),
-        (["정치","정부","선거","정책"], "government building politics"),
-        (["군사","안보","방어"], "military defense security"),
-        (["우주","위성","로켓"], "space satellite rocket launch"),
-        (["음식","요리","식당"], "food restaurant cooking"),
-        (["건강","운동","스포츠"], "health fitness exercise sport"),
-        (["예술","문화","음악"], "art culture music performance"),
-        (["부동산","건물","건설"], "building construction real estate"),
-        (["교통","자동차","차량"], "car vehicle traffic road"),
-        (["통신","네트워크","인터넷"], "network internet communication"),
-        (["반도체","칩","전자"], "semiconductor chip electronics"),
-        (["사람들","회의","협력"], "people meeting collaboration office"),
-        (["글로벌","세계","국제"], "global world international"),
-        (["변화","성장","발전"], "growth change progress"),
-        (["소비자","고객","서비스"], "customer service consumer"),
+        (["ÀÎ°øÁö´É","AI","¸Ó½Å·¯´×","µö·¯´×","½Å°æ¸Á","¾Ë°í¸®Áò"], "artificial intelligence AI technology"),
+        (["·Îº¿","ÀÚµ¿È­","µå·Ð","±â°è"], "robot automation machine"),
+        (["ÀÇ·á","º´¿ø","ÀÇ»ç","È¯ÀÚ","Çï½ºÄÉ¾î","¼ö¼ú"], "hospital medical doctor patient"),
+        (["±³À°","ÇÐ±³","ÇÐ»ý","ÇÐ½À","°­ÀÇ","¼ö¾÷"], "education classroom student learning"),
+        (["ÀÏÀÚ¸®","Á÷¾÷","Ãë¾÷","°í¿ë","½Ç¾÷","±Ù·ÎÀÚ"], "job employment office worker career"),
+        (["°æÁ¦","±ÝÀ¶","ÁÖ½Ä","½ÃÀå","ÅõÀÚ","µ·"], "business finance stock market"),
+        (["µ¥ÀÌÅÍ","ºÐ¼®","ºòµ¥ÀÌÅÍ","Åë°è"], "data analytics computer screen"),
+        (["½º¸¶Æ®Æù","¸ð¹ÙÀÏ","¾Û","¼Ò¼È¹Ìµð¾î"], "smartphone mobile app social media"),
+        (["°øÀå","Á¦Á¶","»ý»ê","»ê¾÷"], "factory manufacturing industrial"),
+        (["È¯°æ","±âÈÄ","¿¡³ÊÁö","Åº¼Ò"], "environment nature green energy"),
+        (["¼­¿ï","ÇÑ±¹","µµ½Ã","°Å¸®"], "seoul korea city urban street"),
+        (["¹Ì·¡","Çõ½Å","Ã·´Ü"], "future technology innovation"),
+        (["Ã¢¾÷","½ºÅ¸Æ®¾÷","º¥Ã³","±â¾÷°¡"], "startup entrepreneur business meeting"),
+        (["¿¬±¸","°³¹ß","½ÇÇè","°úÇÐ"], "laboratory research scientist"),
+        (["Á¤Ä¡","Á¤ºÎ","¼±°Å","Á¤Ã¥"], "government building politics"),
+        (["±º»ç","¾Èº¸","¹æ¾î"], "military defense security"),
+        (["¿ìÁÖ","À§¼º","·ÎÄÏ"], "space satellite rocket launch"),
+        (["À½½Ä","¿ä¸®","½Ä´ç"], "food restaurant cooking"),
+        (["°Ç°­","¿îµ¿","½ºÆ÷Ã÷"], "health fitness exercise sport"),
+        (["¿¹¼ú","¹®È­","À½¾Ç"], "art culture music performance"),
+        (["ºÎµ¿»ê","°Ç¹°","°Ç¼³"], "building construction real estate"),
+        (["±³Åë","ÀÚµ¿Â÷","Â÷·®"], "car vehicle traffic road"),
+        (["Åë½Å","³×Æ®¿öÅ©","ÀÎÅÍ³Ý"], "network internet communication"),
+        (["¹ÝµµÃ¼","Ä¨","ÀüÀÚ"], "semiconductor chip electronics"),
+        (["»ç¶÷µé","È¸ÀÇ","Çù·Â"], "people meeting collaboration office"),
+        (["±Û·Î¹ú","¼¼°è","±¹Á¦"], "global world international"),
+        (["º¯È­","¼ºÀå","¹ßÀü"], "growth change progress"),
+        (["¼ÒºñÀÚ","°í°´","¼­ºñ½º"], "customer service consumer"),
     ]
     text_clean = text.replace(" ","")
     for ko_words, en_query in _KO_VISUAL:
         if any(kw in text_clean for kw in ko_words):
             return en_query
 
-    # 3. orig_keyword가 영어면 그대로
+    # 3. orig_keyword°¡ ¿µ¾î¸é ±×´ë·Î
     if orig_keyword and _re.search(r"[A-Za-z]{3,}", orig_keyword):
         return orig_keyword
 
-    # 4. 토픽 기반 폴백
+    # 4. ÅäÇÈ ±â¹Ý Æú¹é
     return _get_topic_fallback(orig_keyword or text, topic)
 
 
 # ============================================================
-# [v15.69] Kling T2V 통합
+# [v15.69] Kling T2V ÅëÇÕ
 # ============================================================
 _KLING_ACCESS_KEY = os.getenv("KLING_ACCESS_KEY", "")
 _KLING_SECRET_KEY = os.getenv("KLING_SECRET_KEY", "")
@@ -1855,7 +1855,7 @@ _AI_VIDEO_ENABLED = os.getenv("AI_VIDEO_ENABLED", "false").lower() in ("1","true
 _AI_VIDEO_PROVIDER = os.getenv("AI_VIDEO_PROVIDER", "").lower()
 
 def _kling_jwt() -> str:
-    """HS256 JWT 생성 (30분 유효)"""
+    """HS256 JWT »ý¼º (30ºÐ À¯È¿)"""
     try:
         import jwt as _jwt
         now = int(time.time())
@@ -1863,7 +1863,7 @@ def _kling_jwt() -> str:
         token = _jwt.encode(payload, _KLING_SECRET_KEY, algorithm="HS256")
         return token if isinstance(token, str) else token.decode("utf-8")
     except Exception as e:
-        logger.warning(f"[Kling] JWT 생성 실패: {e}")
+        logger.warning(f"[Kling] JWT »ý¼º ½ÇÆÐ: {e}")
         return ""
 
 
@@ -1876,9 +1876,9 @@ async def generate_kling_video(
     model: str = "kling-v2.0-std",
     max_wait_sec: float = 300.0,
 ) -> bool:
-    """[v15.69] Kling T2V API로 씬 영상 생성 → output_path에 저장"""
+    """[v15.69] Kling T2V API·Î ¾À ¿µ»ó »ý¼º ¡æ output_path¿¡ ÀúÀå"""
     if not _KLING_ACCESS_KEY or not _KLING_SECRET_KEY:
-        logger.warning("[Kling] API 키 미설정 — 스킵")
+        logger.warning("[Kling] API Å° ¹Ì¼³Á¤ ? ½ºÅµ")
         return False
     token = _kling_jwt()
     if not token:
@@ -1896,12 +1896,12 @@ async def generate_kling_video(
         async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(f"{_KLING_BASE_URL}/v1/videos/text2video", json=body, headers=headers)
             if resp.status_code not in (200, 201):
-                logger.warning(f"[Kling] 생성 실패 {resp.status_code}: {resp.text[:200]}")
+                logger.warning(f"[Kling] »ý¼º ½ÇÆÐ {resp.status_code}: {resp.text[:200]}")
                 return False
             data = resp.json()
         task_id = (data.get("data") or {}).get("task_id", "") or data.get("task_id", "")
         if not task_id:
-            logger.warning(f"[Kling] task_id 없음: {data}")
+            logger.warning(f"[Kling] task_id ¾øÀ½: {data}")
             return False
         logger.info(f"[Kling] task_id={task_id} scene={scene_id}")
         waited, poll_interval, video_url = 0.0, 10.0, ""
@@ -1923,36 +1923,36 @@ async def generate_kling_video(
                         video_url = vids[0].get("url", "")
                     break
                 elif status in ("failed", "cancelled"):
-                    logger.warning(f"[Kling] 실패: {td}")
+                    logger.warning(f"[Kling] ½ÇÆÐ: {td}")
                     return False
             except Exception as pe:
-                logger.warning(f"[Kling] 폴링 오류: {pe}")
+                logger.warning(f"[Kling] Æú¸µ ¿À·ù: {pe}")
         if not video_url:
-            logger.warning(f"[Kling] video_url 없음 (waited={waited:.0f}s)")
+            logger.warning(f"[Kling] video_url ¾øÀ½ (waited={waited:.0f}s)")
             return False
-        logger.info(f"[Kling] 다운로드: {video_url[:80]}")
+        logger.info(f"[Kling] ´Ù¿î·Îµå: {video_url[:80]}")
         async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as dl:
             r = await dl.get(video_url)
             if r.status_code == 200:
                 output_path.write_bytes(r.content)
                 sz = output_path.stat().st_size
-                logger.info(f"[Kling] ✅ 저장: {output_path} ({sz//1024}KB)")
+                logger.info(f"[Kling] ? ÀúÀå: {output_path} ({sz//1024}KB)")
                 return sz > 4096
-            logger.warning(f"[Kling] 다운로드 실패 {r.status_code}")
+            logger.warning(f"[Kling] ´Ù¿î·Îµå ½ÇÆÐ {r.status_code}")
             return False
     except Exception as e:
-        logger.warning(f"[Kling] 예외: {e}", exc_info=True)
+        logger.warning(f"[Kling] ¿¹¿Ü: {e}", exc_info=True)
         return False
 
 
-# ─────────────────────────────────────────────
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 # [PATCH K / v15.83] WAN 2.6 T2V via PiAPI
-# 스톡 실패 시 \.08/sec 무워터마크 B-roll 생성
-# ─────────────────────────────────────────────
+# ½ºÅå ½ÇÆÐ ½Ã \.08/sec ¹«¿öÅÍ¸¶Å© B-roll »ý¼º
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 _WAN_API_KEY = os.getenv("PIAPI_KEY", "")  # https://piapi.ai
-_AIML_API_KEY = os.getenv("AIMLAPI_KEY", "")  # https://aimlapi.com — WAN 2.6 T2V 대안
-_REPLICATE_API_KEY = os.getenv("REPLICATE_API_TOKEN", "")  # https://replicate.com — WAN 2.1 @$0.20/영상
-_WAVESPEED_API_KEY = os.getenv("WAVESPEED_API_KEY", "")  # https://wavespeed.ai — $0.01/sec (신규 $1 무료)
+_AIML_API_KEY = os.getenv("AIMLAPI_KEY", "")  # https://aimlapi.com ? WAN 2.6 T2V ´ë¾È
+_REPLICATE_API_KEY = os.getenv("REPLICATE_API_TOKEN", "")  # https://replicate.com ? WAN 2.1 @$0.20/¿µ»ó
+_WAVESPEED_API_KEY = os.getenv("WAVESPEED_API_KEY", "")  # https://wavespeed.ai ? $0.01/sec (½Å±Ô $1 ¹«·á)
 
 async def generate_wan_video(
     prompt_en: str,
@@ -1961,7 +1961,7 @@ async def generate_wan_video(
     output_path: Path,
     max_wait_sec: float = 180.0,
 ) -> bool:
-    "'''[PATCH K] WAN 2.6 T2V (PiAPI) — 무워터마크 B-roll 생성.'''"
+    "'''[PATCH K] WAN 2.6 T2V (PiAPI) ? ¹«¿öÅÍ¸¶Å© B-roll »ý¼º.'''"
     if not _WAN_API_KEY:
         return False
     try:
@@ -1981,12 +1981,12 @@ async def generate_wan_video(
             resp = await client.post("https://api.piapi.ai/api/v1/task",
                                      json=payload, headers=headers)
             if resp.status_code not in (200, 201):
-                logger.warning(f"[WAN] 생성 요청 실패 {resp.status_code}: {resp.text[:150]}")
+                logger.warning(f"[WAN] »ý¼º ¿äÃ» ½ÇÆÐ {resp.status_code}: {resp.text[:150]}")
                 return False
             data = resp.json()
         task_id = (data.get("data") or {}).get("task_id") or data.get("task_id", "")
         if not task_id:
-            logger.warning(f"[WAN] task_id 없음: {data}")
+            logger.warning(f"[WAN] task_id ¾øÀ½: {data}")
             return False
         logger.info(f"[WAN] task_id={task_id} scene={scene_id}")
         waited, poll_interval, video_url = 0.0, 8.0, ""
@@ -2006,32 +2006,32 @@ async def generate_wan_video(
                                  out.get("videos", [{}])[0].get("url", "") if isinstance(out.get("videos"), list) else "")
                     break
                 elif st in ("failed", "cancelled", "error"):
-                    logger.warning(f"[WAN] 실패: {pd}")
+                    logger.warning(f"[WAN] ½ÇÆÐ: {pd}")
                     return False
             except Exception as pe:
-                logger.warning(f"[WAN] 폴링 오류: {pe}")
+                logger.warning(f"[WAN] Æú¸µ ¿À·ù: {pe}")
         if not video_url:
-            logger.warning(f"[WAN] video_url 없음 (waited={waited:.0f}s)")
+            logger.warning(f"[WAN] video_url ¾øÀ½ (waited={waited:.0f}s)")
             return False
-        logger.info(f"[WAN] 다운로드: {video_url[:80]}")
+        logger.info(f"[WAN] ´Ù¿î·Îµå: {video_url[:80]}")
         async with httpx.AsyncClient(timeout=90.0, follow_redirects=True) as dl:
             r = await dl.get(video_url)
             if r.status_code == 200:
                 output_path.write_bytes(r.content)
                 sz = output_path.stat().st_size
-                logger.info(f"[WAN] ✅ 저장: {output_path} ({sz//1024}KB)")
+                logger.info(f"[WAN] ? ÀúÀå: {output_path} ({sz//1024}KB)")
                 return sz > 4096
-            logger.warning(f"[WAN] 다운로드 실패 {r.status_code}")
+            logger.warning(f"[WAN] ´Ù¿î·Îµå ½ÇÆÐ {r.status_code}")
             return False
     except Exception as e:
-        logger.warning(f"[WAN] 예외: {e}")
+        logger.warning(f"[WAN] ¿¹¿Ü: {e}")
         return False
 
-# ─────────────────────────────────────────────
-# [PATCH L / v15.83] Replicate API — WAN 2.1 T2V
-# WAN 2.1 1.3B = .20/영상 (최저가 유료 AI B-roll)
-# 무료 Try-for-free 컬렉션으로 초기 무과금 가능
-# ─────────────────────────────────────────────
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+# [PATCH L / v15.83] Replicate API ? WAN 2.1 T2V
+# WAN 2.1 1.3B = .20/¿µ»ó (ÃÖÀú°¡ À¯·á AI B-roll)
+# ¹«·á Try-for-free ÄÃ·º¼ÇÀ¸·Î ÃÊ±â ¹«°ú±Ý °¡´É
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 async def generate_replicate_video(
     prompt_en: str,
     duration: int,
@@ -2040,7 +2040,7 @@ async def generate_replicate_video(
     model: str = "wavespeedai/wan-2.1-t2v-480p",
     max_wait_sec: float = 180.0,
 ) -> bool:
-    "'''[PATCH L] Replicate T2V — WAN 2.1 1.3B 기본 (.20/영상).'''"
+    "'''[PATCH L] Replicate T2V ? WAN 2.1 1.3B ±âº» (.20/¿µ»ó).'''"
     if not _REPLICATE_API_KEY:
         return False
     try:
@@ -2068,15 +2068,15 @@ async def generate_replicate_video(
             data = resp.json()
         pred_id  = data.get("id", "")
         if not pred_id:
-            logger.warning(f"[Replicate] prediction id 없음: {data}")
+            logger.warning(f"[Replicate] prediction id ¾øÀ½: {data}")
             return False
         logger.info(f"[Replicate] pred_id={pred_id} scene={scene_id}")
-        # Prefer:wait 로 즉시 완료되면 output 있음
+        # Prefer:wait ·Î Áï½Ã ¿Ï·áµÇ¸é output ÀÖÀ½
         output_url = ""
         if data.get("status") in ("succeeded",):
             out = data.get("output")
             output_url = out if isinstance(out, str) else (out[0] if isinstance(out, list) and out else "")
-        # 폴링
+        # Æú¸µ
         waited = 0.0
         while not output_url and waited < max_wait_sec:
             await asyncio.sleep(8.0); waited += 8.0
@@ -2092,30 +2092,30 @@ async def generate_replicate_video(
                     output_url = out if isinstance(out, str) else (out[0] if isinstance(out, list) and out else "")
                     break
                 elif st in ("failed", "canceled"):
-                    logger.warning(f"[Replicate] 실패: {pd.get('error')}")
+                    logger.warning(f"[Replicate] ½ÇÆÐ: {pd.get('error')}")
                     return False
             except Exception as pe:
-                logger.warning(f"[Replicate] 폴링 오류: {pe}")
+                logger.warning(f"[Replicate] Æú¸µ ¿À·ù: {pe}")
         if not output_url:
-            logger.warning(f"[Replicate] output_url 없음 (waited={waited:.0f}s)")
+            logger.warning(f"[Replicate] output_url ¾øÀ½ (waited={waited:.0f}s)")
             return False
-        logger.info(f"[Replicate] 다운로드: {output_url[:80]}")
+        logger.info(f"[Replicate] ´Ù¿î·Îµå: {output_url[:80]}")
         async with httpx.AsyncClient(timeout=90.0, follow_redirects=True) as dl:
             r = await dl.get(output_url)
             if r.status_code == 200:
                 output_path.write_bytes(r.content)
                 sz = output_path.stat().st_size
-                logger.info(f"[Replicate] ✅ {output_path} ({sz//1024}KB)")
+                logger.info(f"[Replicate] ? {output_path} ({sz//1024}KB)")
                 return sz > 4096
         return False
     except Exception as e:
-        logger.warning(f"[Replicate] 예외: {e}")
+        logger.warning(f"[Replicate] ¿¹¿Ü: {e}")
         return False
 
-# ─────────────────────────────────────────────
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 # [PATCH O / v15.83] WaveSpeedAI API
-# WAN 2.2 Ultra Fast: .01/sec | 신규  무료크레딧(=20클립)
-# ─────────────────────────────────────────────
+# WAN 2.2 Ultra Fast: .01/sec | ½Å±Ô  ¹«·áÅ©·¹µ÷(=20Å¬¸³)
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 async def generate_wavespeed_video(
     prompt_en: str,
     duration: int,
@@ -2144,7 +2144,7 @@ async def generate_wavespeed_video(
             data = resp.json()
         req_id = (data.get("data") or {}).get("id") or data.get("id") or data.get("request_id", "")
         if not req_id:
-            logger.warning(f"[WaveSpeed] request_id 없음: {data}")
+            logger.warning(f"[WaveSpeed] request_id ¾øÀ½: {data}")
             return False
         logger.info(f"[WaveSpeed] req_id={req_id} scene={scene_id}")
         waited, poll_interval, video_url = 0.0, 5.0, ""
@@ -2164,11 +2164,11 @@ async def generate_wavespeed_video(
                     elif isinstance(out, str): video_url = out
                     break
                 elif st in ("failed", "canceled"):
-                    logger.warning(f"[WaveSpeed] 실패: {pd}"); return False
+                    logger.warning(f"[WaveSpeed] ½ÇÆÐ: {pd}"); return False
             except Exception as pe:
-                logger.warning(f"[WaveSpeed] 폴링: {pe}")
+                logger.warning(f"[WaveSpeed] Æú¸µ: {pe}")
         if not video_url:
-            logger.warning(f"[WaveSpeed] video_url 없음 ({waited:.0f}s)"); return False
+            logger.warning(f"[WaveSpeed] video_url ¾øÀ½ ({waited:.0f}s)"); return False
         async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as dl:
             r = await dl.get(video_url)
             if r.status_code == 200:
@@ -2176,12 +2176,12 @@ async def generate_wavespeed_video(
                 logger.info(f"[WaveSpeed] OK {output_path} ({sz//1024}KB)"); return sz > 4096
         return False
     except Exception as e:
-        logger.warning(f"[WaveSpeed] 예외: {e}"); return False
+        logger.warning(f"[WaveSpeed] ¿¹¿Ü: {e}"); return False
 
 
 
 
-# [PATCH P / v15.84] Google Gemini Veo 2 API — $0.12/sec (무료 티어: 월 5 videos)
+# [PATCH P / v15.84] Google Gemini Veo 2 API ? $0.12/sec (¹«·á Æ¼¾î: ¿ù 5 videos)
 _GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # generativelanguage.googleapis.com
 
 _OPENAI_API_KEY  = os.getenv("OPENAI_API_KEY", "")   # Sora 2 T2V
@@ -2195,11 +2195,11 @@ async def generate_veo_video(
     model: str = "veo-2.0-generate-001",
     max_wait_sec: float = 300.0,
 ) -> bool:
-    """Google Gemini Veo 2 T2V — predictLongRunning + polling."""
+    """Google Gemini Veo 2 T2V ? predictLongRunning + polling."""
     if not _GEMINI_API_KEY:
         return False
     try:
-        dur = min(max(int(duration), 5), 8)  # Veo 2: 5~8초
+        dur = min(max(int(duration), 5), 8)  # Veo 2: 5~8ÃÊ
         base_url = "https://generativelanguage.googleapis.com/v1beta"
         headers = {
             "Content-Type": "application/json",
@@ -2225,7 +2225,7 @@ async def generate_veo_video(
         op = r.json()
         op_name = op.get("name", "")
         if not op_name:
-            logger.warning("[Veo2] operation name 없음")
+            logger.warning("[Veo2] operation name ¾øÀ½")
             return False
         logger.info(f"[Veo2] operation: {op_name}")
 
@@ -2246,7 +2246,7 @@ async def generate_veo_video(
                 if not pd.get("done"):
                     logger.debug(f"[Veo2] waiting... ({waited:.0f}s)")
                     continue
-                # 완료
+                # ¿Ï·á
                 err = pd.get("error")
                 if err:
                     logger.warning(f"[Veo2] error: {err}")
@@ -2263,7 +2263,7 @@ async def generate_veo_video(
                         if ok:
                             logger.info(f"[Veo2] OK (bytes) {output_path} ({output_path.stat().st_size//1024}KB)")
                         return ok
-                    logger.warning("[Veo2] generatedSamples 없음")
+                    logger.warning("[Veo2] generatedSamples ¾øÀ½")
                     return False
                 video_info = samples[0].get("video", {})
                 video_uri  = video_info.get("uri", "")
@@ -2284,20 +2284,20 @@ async def generate_veo_video(
                     if ok:
                         logger.info(f"[Veo2] OK (bytes) {output_path} ({output_path.stat().st_size//1024}KB)")
                     return ok
-                logger.warning("[Veo2] video_uri/videoBytes 없음")
+                logger.warning("[Veo2] video_uri/videoBytes ¾øÀ½")
                 return False
-        logger.warning(f"[Veo2] timeout {max_wait_sec}s 초과")
+        logger.warning(f"[Veo2] timeout {max_wait_sec}s ÃÊ°ú")
         return False
     except Exception as e:
-        logger.warning(f"[Veo2] 예외: {e}")
+        logger.warning(f"[Veo2] ¿¹¿Ü: {e}")
         return False
 
 
 
 
-# ─────────────────────────────────────────────────────────────
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 # [PATCH W / v15.90] OpenAI Sora 2 T2V
-# ─────────────────────────────────────────────────────────────
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 async def generate_sora_video(
     prompt_en: str,
     duration: int,
@@ -2305,11 +2305,11 @@ async def generate_sora_video(
     output_path: Path,
     max_wait_sec: float = 360.0,
 ) -> bool:
-    """OpenAI Sora 2 text-to-video — /v1/video/generations API."""
+    """OpenAI Sora 2 text-to-video ? /v1/video/generations API."""
     if not _OPENAI_API_KEY:
         return False
     try:
-        dur = min(max(int(duration), 5), 20)  # Sora 2: 5~20초
+        dur = min(max(int(duration), 5), 20)  # Sora 2: 5~20ÃÊ
         headers = {
             "Authorization": f"Bearer {_OPENAI_API_KEY}",
             "Content-Type": "application/json",
@@ -2332,9 +2332,9 @@ async def generate_sora_video(
         data = r.json()
         gen_id = data.get("id") or (data.get("data", [{}])[0].get("id", ""))
         if not gen_id:
-            logger.warning(f"[Sora2] generation id 없음: {data}")
+            logger.warning(f"[Sora2] generation id ¾øÀ½: {data}")
             return False
-        logger.info(f"[Sora2] 생성 요청 OK, id={gen_id}")
+        logger.info(f"[Sora2] »ý¼º ¿äÃ» OK, id={gen_id}")
 
         # polling
         waited = 0.0
@@ -2354,15 +2354,15 @@ async def generate_sora_video(
                     logger.debug(f"[Sora2] {status} ({waited:.0f}s)")
                     continue
                 if status != "succeeded":
-                    logger.warning(f"[Sora2] 실패 status={status}")
+                    logger.warning(f"[Sora2] ½ÇÆÐ status={status}")
                     return False
-                # 다운로드
+                # ´Ù¿î·Îµå
                 vid_list = pd.get("data", pd.get("videos", []))
                 if not vid_list:
                     vid_list = [pd]
                 video_url = vid_list[0].get("url", "")
                 if not video_url:
-                    # content endpoint 시도
+                    # content endpoint ½Ãµµ
                     dl_r = await cli.get(
                         f"https://api.openai.com/v1/video/generations/{gen_id}/content/video",
                         headers={"Authorization": f"Bearer {_OPENAI_API_KEY}"},
@@ -2373,7 +2373,7 @@ async def generate_sora_video(
                         if ok:
                             logger.info(f"[Sora2] OK {output_path} ({output_path.stat().st_size//1024}KB)")
                         return ok
-                    logger.warning("[Sora2] download URL 없음")
+                    logger.warning("[Sora2] download URL ¾øÀ½")
                     return False
                 async with httpx.AsyncClient(timeout=120.0) as dl:
                     vr = await dl.get(video_url)
@@ -2384,16 +2384,16 @@ async def generate_sora_video(
                         logger.info(f"[Sora2] OK {output_path} ({output_path.stat().st_size//1024}KB)")
                     return ok
                 return False
-        logger.warning(f"[Sora2] timeout {max_wait_sec}s 초과")
+        logger.warning(f"[Sora2] timeout {max_wait_sec}s ÃÊ°ú")
         return False
     except Exception as e:
-        logger.warning(f"[Sora2] 예외: {e}")
+        logger.warning(f"[Sora2] ¿¹¿Ü: {e}")
         return False
 
 
-# ─────────────────────────────────────────────────────────────
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 # [PATCH X / v15.90] xAI Grok Imagine Video T2V
-# ─────────────────────────────────────────────────────────────
+# ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 async def generate_grok_video(
     prompt_en: str,
     duration: int,
@@ -2401,7 +2401,7 @@ async def generate_grok_video(
     output_path: Path,
     max_wait_sec: float = 360.0,
 ) -> bool:
-    """xAI Grok Imagine Video — api.x.ai/v1/videos/generations."""
+    """xAI Grok Imagine Video ? api.x.ai/v1/videos/generations."""
     if not _XAI_API_KEY:
         return False
     try:
@@ -2425,9 +2425,9 @@ async def generate_grok_video(
         data = r.json()
         gen_id = data.get("id") or data.get("generation_id", "")
         if not gen_id:
-            logger.warning(f"[Grok-V] generation id 없음: {data}")
+            logger.warning(f"[Grok-V] generation id ¾øÀ½: {data}")
             return False
-        logger.info(f"[Grok-V] 생성 요청 OK, id={gen_id}")
+        logger.info(f"[Grok-V] »ý¼º ¿äÃ» OK, id={gen_id}")
 
         # polling
         waited = 0.0
@@ -2447,16 +2447,16 @@ async def generate_grok_video(
                     logger.debug(f"[Grok-V] {status} ({waited:.0f}s)")
                     continue
                 if status not in ("completed", "succeeded"):
-                    logger.warning(f"[Grok-V] 실패 status={status}")
+                    logger.warning(f"[Grok-V] ½ÇÆÐ status={status}")
                     return False
-                # 다운로드 URL 파싱
+                # ´Ù¿î·Îµå URL ÆÄ½Ì
                 video_url = (
                     pd.get("url") or
                     (pd.get("videos", [{}])[0].get("url", "")) or
                     (pd.get("data", [{}])[0].get("url", ""))
                 )
                 if not video_url:
-                    logger.warning("[Grok-V] video URL 없음")
+                    logger.warning("[Grok-V] video URL ¾øÀ½")
                     return False
                 async with httpx.AsyncClient(timeout=120.0) as dl:
                     vr = await dl.get(video_url)
@@ -2467,15 +2467,15 @@ async def generate_grok_video(
                         logger.info(f"[Grok-V] OK {output_path} ({output_path.stat().st_size//1024}KB)")
                     return ok
                 return False
-        logger.warning(f"[Grok-V] timeout {max_wait_sec}s 초과")
+        logger.warning(f"[Grok-V] timeout {max_wait_sec}s ÃÊ°ú")
         return False
     except Exception as e:
-        logger.warning(f"[Grok-V] 예외: {e}")
+        logger.warning(f"[Grok-V] ¿¹¿Ü: {e}")
         return False
 
 
-# [PATCH Q / v15.85] Playwright 웹 자동화 폴백 (API 키 없을 때 / AI_VIDEO_PROVIDER=playwright)
-_PW_QUEUE_DIR = Path("/data/jobs/pw_queue")  # Docker 내부 경로 (E:\...\v2\jobs\pw_queue)
+# [PATCH Q / v15.85] Playwright À¥ ÀÚµ¿È­ Æú¹é (API Å° ¾øÀ» ¶§ / AI_VIDEO_PROVIDER=playwright)
+_PW_QUEUE_DIR = Path("/data/jobs/pw_queue")  # Docker ³»ºÎ °æ·Î (E:\...\v2\jobs\pw_queue)
 
 async def generate_playwright_video(
     prompt_en: str,
@@ -2484,7 +2484,7 @@ async def generate_playwright_video(
     output_path: Path,
     max_wait_sec: float = 360.0,
 ) -> bool:
-    """Windows 호스트 playwright_worker.py 큐에 등록 → 완료 파일 폴링."""
+    """Windows È£½ºÆ® playwright_worker.py Å¥¿¡ µî·Ï ¡æ ¿Ï·á ÆÄÀÏ Æú¸µ."""
     try:
         _PW_QUEUE_DIR.mkdir(parents=True, exist_ok=True)
         req_file  = _PW_QUEUE_DIR / f"{scene_id}.json"
@@ -2497,7 +2497,7 @@ async def generate_playwright_video(
                         "output_path": str(output_path)}),
             encoding="utf-8",
         )
-        logger.info(f"[PW-Q] 큐 등록: {req_file.name} dur={duration}s")
+        logger.info(f"[PW-Q] Å¥ µî·Ï: {req_file.name} dur={duration}s")
         waited = 0.0
         poll   = 6.0
         while waited < max_wait_sec:
@@ -2513,13 +2513,13 @@ async def generate_playwright_video(
                 except Exception:
                     pass
             elif fail_file.exists():
-                logger.warning(f"[PW-Q] 실패 {scene_id}: {fail_file.read_text(encoding='utf-8')[:200]}")
+                logger.warning(f"[PW-Q] ½ÇÆÐ {scene_id}: {fail_file.read_text(encoding='utf-8')[:200]}")
                 return False
-            logger.debug(f"[PW-Q] 대기 중... {waited:.0f}s")
+            logger.debug(f"[PW-Q] ´ë±â Áß... {waited:.0f}s")
         logger.warning(f"[PW-Q] timeout {max_wait_sec}s: {scene_id}")
         return False
     except Exception as e:
-        logger.warning(f"[PW-Q] 예외: {e}")
+        logger.warning(f"[PW-Q] ¿¹¿Ü: {e}")
         return False
 
 
@@ -2685,44 +2685,44 @@ async def generate_magichour_video(prompt_en: str, duration: int, scene_id: str,
     except Exception as e: logger.warning(f"[MHour] {e}"); return False
 
 async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[Scene]:
-    """각 장면에 대해 자산 검색 및 다운로드 ([AF-14] 영상 중복 제거)."""
+    """°¢ Àå¸é¿¡ ´ëÇØ ÀÚ»ê °Ë»ö ¹× ´Ù¿î·Îµå ([AF-14] ¿µ»ó Áßº¹ Á¦°Å)."""
     seen_urls: set = set()
     job_assets_dir = JOBS_DIR / job_id / "assets"
     job_assets_dir.mkdir(parents=True, exist_ok=True)
     
     updated_scenes = []
     total_scenes = len(scenes)
-    _used_asset_basenames: set = set()  # [v15.94] 영상 중복 방지 — 동일 소스 재사용 추적
+    _used_asset_basenames: set = set()  # [v15.94] ¿µ»ó Áßº¹ ¹æÁö ? µ¿ÀÏ ¼Ò½º Àç»ç¿ë ÃßÀû
     
     for idx, scene in enumerate(scenes):
         try:
-            # 진행률 업데이트
+            # ÁøÇà·ü ¾÷µ¥ÀÌÆ®
             progress = (idx / total_scenes) * 100
             await update_job_status(job_id, JobStatus.DOWNLOADING_ASSETS, progress=progress)
             
-            logger.info(f"[{idx+1}/{total_scenes}] 장면 '{scene.scene_id}' 검색 중...")
+            logger.info(f"[{idx+1}/{total_scenes}] Àå¸é '{scene.scene_id}' °Ë»ö Áß...")
             
-            # [v15.69] 키워드 sanitize — 카메라 디렉티브/빈 키워드 복구
+            # [v15.69] Å°¿öµå sanitize ? Ä«¸Þ¶ó µð·ºÆ¼ºê/ºó Å°¿öµå º¹±¸
             _raw_kw = scene.keyword or ""
             _narr_hint = scene.narration or scene.description or ""
             _fallback_kw = _get_topic_fallback(_raw_kw, "")
             _sanitized_kw = _sanitize_keyword_for_search(_raw_kw, _narr_hint, _fallback_kw)
             if _sanitized_kw != _raw_kw:
-                logger.info(f"[v15.69 SANITIZE] '{_raw_kw}' → '{_sanitized_kw}'")
+                logger.info(f"[v15.69 SANITIZE] '{_raw_kw}' ¡æ '{_sanitized_kw}'")
                 scene.keyword = _sanitized_kw
 
-            # [v15.93] _is_hook_or_close / _ai_vid_selective 미리 정의 (NameError 방지)
+            # [v15.93] _is_hook_or_close / _ai_vid_selective ¹Ì¸® Á¤ÀÇ (NameError ¹æÁö)
             _is_hook_or_close = (scene.tone_profile or "").lower() in ("hook","closing","cta") or idx == 0 or idx == total_scenes - 1
             _ai_vid_selective = os.getenv("AI_VIDEO_SELECTIVE","true").lower() in ("1","true","yes")
 
-            # [PATCH Q-WEB / v15.91] 웹 우선 — Grok/Playwright 먼저 시도
+            # [PATCH Q-WEB / v15.91] À¥ ¿ì¼± ? Grok/Playwright ¸ÕÀú ½Ãµµ
             _should_pw = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close)
             if _should_pw:
                 _pp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage").strip(", ")
                 if _pp and len(_pp) > 10:
                     _pd = max(int(scene.duration_seconds or 5), 3)
                     _po = job_assets_dir / f"{scene.scene_id}_pw.mp4"
-                    logger.info(f"[PW-Web] {scene.scene_id} dur={_pd}s — 웹 우선 시도")
+                    logger.info(f"[PW-Web] {scene.scene_id} dur={_pd}s ? À¥ ¿ì¼± ½Ãµµ")
                     _pw_ok = await generate_playwright_video(_pp, _pd, scene.scene_id, _po)
                     if _pw_ok:
                         scene.asset_url = str(_po)
@@ -2730,12 +2730,12 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                         logger.info(f"[PW-Web] OK {scene.scene_id}")
                         continue
 
-            # [v15.69] Kling T2V 우선 시도
+            # [v15.69] Kling T2V ¿ì¼± ½Ãµµ
             _kling_ok = False
             _wan_ok = _rep_ok = _ws_ok = _veo_ok = _pw_ok = False
             _pollo_ok = _sflow_ok = _apif_ok = _mhour_ok = _sora_ok = _grok_ok = False
-            # [v15.93] _is_hook_or_close / _ai_vid_selective 는 위에서 이미 정의됨
-            # [v15.70 Hybrid] hook/closing 필수 + selective mode 기반
+            # [v15.93] _is_hook_or_close / _ai_vid_selective ´Â À§¿¡¼­ ÀÌ¹Ì Á¤ÀÇµÊ
+            # [v15.70 Hybrid] hook/closing ÇÊ¼ö + selective mode ±â¹Ý
             _should_kling = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and _AI_VIDEO_PROVIDER in ("kling", "")
             if not _pw_ok and _should_kling:
                 _kp = (
@@ -2752,9 +2752,9 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     if _kling_ok:
                         scene.asset_url = str(_ko)
                         updated_scenes.append(scene)
-                        logger.info(f"[Kling] ✅ {scene.scene_id} 완료 — 스톡 스킵")
+                        logger.info(f"[Kling] ? {scene.scene_id} ¿Ï·á ? ½ºÅå ½ºÅµ")
                         continue
-            # [PATCH K] WAN 2.6 T2V B-roll (hook/closing 또는 비선택 모드)
+            # [PATCH K] WAN 2.6 T2V B-roll (hook/closing ¶Ç´Â ºñ¼±ÅÃ ¸ðµå)
             _should_wan = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and _AI_VIDEO_PROVIDER in ("wan", "") and bool(_WAN_API_KEY or _AIML_API_KEY)
             if not _kling_ok and _should_wan:
                 _wp = (scene.narration_en or (scene.visual_intent or "") + ", " + ", ".join((scene.visual_keywords or [])[:2]) + ", cinematic B-roll 4K").strip(", ")
@@ -2766,9 +2766,9 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     if _wan_ok:
                         scene.asset_url = str(_wo)
                         updated_scenes.append(scene)
-                        logger.info(f"[WAN] ✅ {scene.scene_id} 완료 — 스톡 스킵")
+                        logger.info(f"[WAN] ? {scene.scene_id} ¿Ï·á ? ½ºÅå ½ºÅµ")
                         continue
-            # [PATCH L] Replicate WAN 2.1 B-roll ($0.20/영상 — Kling/WAN API 미설정 시)
+            # [PATCH L] Replicate WAN 2.1 B-roll ($0.20/¿µ»ó ? Kling/WAN API ¹Ì¼³Á¤ ½Ã)
             _should_replicate = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_REPLICATE_API_KEY)
             if not _kling_ok and not _wan_ok and _should_replicate:
                 _rp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic footage 4K").strip(", ")
@@ -2780,10 +2780,10 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     if _rep_ok:
                         scene.asset_url = str(_ro)
                         updated_scenes.append(scene)
-                        logger.info(f"[Replicate] ✅ {scene.scene_id} 완료 — 스톡 스킵")
+                        logger.info(f"[Replicate] ? {scene.scene_id} ¿Ï·á ? ½ºÅå ½ºÅµ")
                         continue
 
-            # [PATCH O] WaveSpeed API B-roll ($0.01/sec, 신규 $1 무료 — 최저가)
+            # [PATCH O] WaveSpeed API B-roll ($0.01/sec, ½Å±Ô $1 ¹«·á ? ÃÖÀú°¡)
             _should_ws = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_WAVESPEED_API_KEY)
             if not _kling_ok and not _wan_ok and not _rep_ok and _should_ws:
                 _wsp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic B-roll 4K").strip(", ")
@@ -2795,10 +2795,10 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     if _ws_ok:
                         scene.asset_url = str(_wso)
                         updated_scenes.append(scene)
-                        logger.info(f"[WaveSpeed] OK {scene.scene_id} — 스톡 스킵")
+                        logger.info(f"[WaveSpeed] OK {scene.scene_id} ? ½ºÅå ½ºÅµ")
                         continue
 
-            # [PATCH P / v15.84] Veo 2 — Google Gemini 유료키 활용
+            # [PATCH P / v15.84] Veo 2 ? Google Gemini À¯·áÅ° È°¿ë
             _should_veo = _AI_VIDEO_ENABLED and (not _ai_vid_selective or _is_hook_or_close) and bool(_GEMINI_API_KEY) and _AI_VIDEO_PROVIDER in ("veo", "")
             if not _kling_ok and not _wan_ok and not _rep_ok and not _ws_ok and _should_veo:
                 _vp = (scene.narration_en or (scene.visual_intent or "") + ", cinematic 4K footage").strip(", ")
@@ -2810,7 +2810,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     if _veo_ok:
                         scene.asset_url = str(_vo)
                         updated_scenes.append(scene)
-                        logger.info(f"[Veo2] OK {scene.scene_id} — 스톡 스킵")
+                        logger.info(f"[Veo2] OK {scene.scene_id} ? ½ºÅå ½ºÅµ")
                         continue
 
 
@@ -2912,16 +2912,16 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                         logger.info(f"[Grok-V] OK {scene.scene_id}")
                         continue
 
-            # 병렬로 Pexels와 Pixabay 검색
+            # º´·Ä·Î Pexels¿Í Pixabay °Ë»ö
             expanded_kw = _expand_domain_keyword(scene.keyword)
             if expanded_kw != scene.keyword:
-                logger.info(f"[Y2] 키워드 확장: '{scene.keyword}' → '{expanded_kw}'")
+                logger.info(f"[Y2] Å°¿öµå È®Àå: '{scene.keyword}' ¡æ '{expanded_kw}'")
             # [v15.75] empty keyword fallback
             if not expanded_kw.strip():
                 import re as _re_kw
                 _nrr = scene.narration or scene.description or ""
                 _en_w = _re_kw.findall(r'[A-Za-z]{3,}', _nrr)
-                _ko_w = [w for w in _re_kw.findall(r'[가-힣]{2,}', _nrr) if w not in _KO_STOPWORDS]
+                _ko_w = [w for w in _re_kw.findall(r'[°¡-ÆR]{2,}', _nrr) if w not in _KO_STOPWORDS]
                 if _en_w:
                     expanded_kw = ' '.join(_en_w[:3]) + ' footage'
                 elif _ko_w:
@@ -2929,7 +2929,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                 else:
                     expanded_kw = _get_topic_fallback(_raw_kw, '')
                 scene.keyword = expanded_kw
-                # [v15.78] KGM 재조회
+                # [v15.78] KGM ÀçÁ¶È¸
                 if not expanded_kw.strip():
                     _base78 = _strip_korean_particles(_raw_kw.lower().strip()) if _raw_kw else ""
                     _kgm_match = KOREAN_GENERAL_MAP.get(_base78) or next(
@@ -2937,7 +2937,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     if _kgm_match:
                         expanded_kw = _kgm_match
                 logger.info(f"[v15.78] empty kw fallback: '{_raw_kw}' -> '{expanded_kw}'")
-            # [PATCH J / v15.83] SQLite 캐시 확인 [v16.4: seen_urls 중복 방지]
+            # [PATCH J / v15.83] SQLite Ä³½Ã È®ÀÎ [v16.4: seen_urls Áßº¹ ¹æÁö]
             _cached_path_j = _cache_lookup(expanded_kw)
             if _cached_path_j and _cached_path_j not in seen_urls:
                 scene.asset_url = _cached_path_j
@@ -2947,15 +2947,15 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                 updated_scenes.append(scene)
                 continue
             elif _cached_path_j and _cached_path_j in seen_urls:
-                logger.info(f"[J-CACHE-SKIP] \"{expanded_kw}\" HIT but duplicate — bypass to fresh search")
+                logger.info(f"[J-CACHE-SKIP] \"{expanded_kw}\" HIT but duplicate ? bypass to fresh search")
             pexels_videos, pixabay_videos = await asyncio.gather(
                 get_pexels_videos(expanded_kw),
                 get_pixabay_videos(expanded_kw)
-            )  # [PATCH V-fix] Coverr/Mixkit API 없음 → 제거
-            # 부정 키워드 필터링
+            )  # [PATCH V-fix] Coverr/Mixkit API ¾øÀ½ ¡æ Á¦°Å
+            # ºÎÁ¤ Å°¿öµå ÇÊÅÍ¸µ
             pexels_videos = [v for v in pexels_videos if not _is_negative(v, expanded_kw)]
             pixabay_videos = [v for v in pixabay_videos if not _is_negative(v, expanded_kw)]
-            # [v15.68] 캐스케이드 쿼리: alt_keywords 순서대로 시도
+            # [v15.68] Ä³½ºÄÉÀÌµå Äõ¸®: alt_keywords ¼ø¼­´ë·Î ½Ãµµ
             _cascade = [scene.keyword] + list(getattr(scene,'alt_keywords',[]) or [])
             _cascade.append(_get_topic_fallback(scene.keyword, ''))
             _seen_q = set()
@@ -2976,24 +2976,24 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     logger.info(f'[v15.68 CQ{_ci+1}] "{_cq}" -> {len(_px_c)+len(_pb_c)} (total {_total_c})')
                     if _total_c >= 3: break
                 except Exception as _ce:
-                    logger.warning(f'[v15.68 CQ{_ci+1}] "{_cq}" 실패: {_ce}')
+                    logger.warning(f'[v15.68 CQ{_ci+1}] "{_cq}" ½ÇÆÐ: {_ce}')
             
             
-            # [PATCH J] 무료 결과 부족 시 Storyblocks 병렬 (무료우선+유료병렬)
+            # [PATCH J] ¹«·á °á°ú ºÎÁ· ½Ã Storyblocks º´·Ä (¹«·á¿ì¼±+À¯·áº´·Ä)
             _j_free_total = len(pexels_videos) + len(pixabay_videos)
             if _j_free_total < 3 and STORYBLOCKS_PRIVATE_KEY:
                 try:
                     _sb_par = await get_storyblocks_videos(expanded_kw, per_page=5)
                     if _sb_par:
                         pixabay_videos += _sb_par
-                        logger.info(f"[J-SB parallel] {len(_sb_par)}개 추가 (free={_j_free_total})")
+                        logger.info(f"[J-SB parallel] {len(_sb_par)}°³ Ãß°¡ (free={_j_free_total})")
                 except Exception as _j_sb_e:
-                    logger.warning(f"[J-SB parallel] 오류: {_j_sb_e}")
-            # 최고 품질의 영상 선택
+                    logger.warning(f"[J-SB parallel] ¿À·ù: {_j_sb_e}")
+            # ÃÖ°í Ç°ÁúÀÇ ¿µ»ó ¼±ÅÃ
             best_video_url = select_best_video(pexels_videos, pixabay_videos, scene_index=idx, exclude_urls=seen_urls, query_keyword=scene.keyword or "")
             
             if not best_video_url:
-                # [PATCH J] Storyblocks 최후 폴백
+                # [PATCH J] Storyblocks ÃÖÈÄ Æú¹é
                 if STORYBLOCKS_PRIVATE_KEY:
                     try:
                         _sb_fb = await get_storyblocks_videos(expanded_kw, per_page=3)
@@ -3007,14 +3007,14 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     updated_scenes.append(scene)
                     continue
             
-            # 영상 다운로드
+            # ¿µ»ó ´Ù¿î·Îµå
             asset_filename = f"{scene.scene_id}.mp4"
             asset_path = job_assets_dir / asset_filename
             
             # [AC] idempotency: skip download if file already present
             if asset_path.exists() and asset_path.stat().st_size > 4096:
                 scene.asset_url = str(asset_path)
-                logger.info(f"[AC] 장면 '{scene.scene_id}' 기존 파일 재사용: {asset_path} ({asset_path.stat().st_size // 1024}KB)")
+                logger.info(f"[AC] Àå¸é '{scene.scene_id}' ±âÁ¸ ÆÄÀÏ Àç»ç¿ë: {asset_path} ({asset_path.stat().st_size // 1024}KB)")
                 updated_scenes.append(scene)
                 continue
             # [AF-14] track used URL to prevent duplicate in later scenes
@@ -3024,7 +3024,7 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
             
             # [AQ-2/AL-1] alternate retry: try up to 2 more Pexels candidates on failure
             if not success:
-                logger.warning(f"[AQ-2] 1차 다운로드 실패, 대체 URL 시도: {scene.scene_id}")
+                logger.warning(f"[AQ-2] 1Â÷ ´Ù¿î·Îµå ½ÇÆÐ, ´ëÃ¼ URL ½Ãµµ: {scene.scene_id}")
                 alt_exclude = set(seen_urls) | {best_video_url}
                 for _alt_attempt in range(2):
                     alt_url = select_best_video(pexels_videos, pixabay_videos,
@@ -3033,20 +3033,20 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     if not alt_url or alt_url == best_video_url:
                         break
                     alt_exclude.add(alt_url)
-                    logger.info(f"[AQ-2] 대체 URL {_alt_attempt+1}/2: {alt_url[:80]}")
+                    logger.info(f"[AQ-2] ´ëÃ¼ URL {_alt_attempt+1}/2: {alt_url[:80]}")
                     success = await download_video(alt_url, asset_path)
                     if success:
                         seen_urls.add(alt_url)
                         best_video_url = alt_url
-                        logger.info(f"[AQ-2] 대체 URL 성공: {scene.scene_id}")
+                        logger.info(f"[AQ-2] ´ëÃ¼ URL ¼º°ø: {scene.scene_id}")
                         break
             
             if success:
                 scene.asset_url = str(asset_path)
-                logger.info(f"장면 '{scene.scene_id}' 다운로드 완료: {asset_path}")
-                # [PATCH J] 캐시 기록
+                logger.info(f"Àå¸é '{scene.scene_id}' ´Ù¿î·Îµå ¿Ï·á: {asset_path}")
+                # [PATCH J] Ä³½Ã ±â·Ï
                 _cache_write(expanded_kw, best_video_url, str(asset_path))
-                # [v15.68] alt 소스 영상 다운로드 (서브클립 3-4번 다양화)
+                # [v15.68] alt ¼Ò½º ¿µ»ó ´Ù¿î·Îµå (¼­ºêÅ¬¸³ 3-4¹ø ´Ù¾çÈ­)
                 _scene_alt_kws = getattr(scene, 'alt_keywords', []) or []
                 if _scene_alt_kws and not getattr(scene, 'alt_asset_url', None):
                     _alt_kw2 = _expand_domain_keyword(_scene_alt_kws[0])
@@ -3068,12 +3068,12 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                     except Exception as _adl_e:
                         logger.debug(f'[v15.68] alt DL skip: {_adl_e}')
             else:
-                logger.error(f"장면 '{scene.scene_id}' 다운로드 실패 (3회 시도 후)")
+                logger.error(f"Àå¸é '{scene.scene_id}' ´Ù¿î·Îµå ½ÇÆÐ (3È¸ ½Ãµµ ÈÄ)")
             
             updated_scenes.append(scene)
         
         except Exception as e:
-            logger.error(f"장면 '{scene.scene_id}' 처리 오류: {e}")
+            logger.error(f"Àå¸é '{scene.scene_id}' Ã³¸® ¿À·ù: {e}")
             updated_scenes.append(scene)
     
     # [AY-E] persist seen URLs globally for cross-job diversity
@@ -3086,9 +3086,9 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
 
 
 def run_ffmpeg_command(command: List[str], timeout: float = 300.0) -> bool:
-    """FFmpeg 커맨드 실행"""
+    """FFmpeg Ä¿¸Çµå ½ÇÇà"""
     try:
-        logger.info(f"FFmpeg 커맨드 실행: {' '.join(command[:5])}...")
+        logger.info(f"FFmpeg Ä¿¸Çµå ½ÇÇà: {' '.join(command[:5])}...")
         result = subprocess.run(
             command,
             capture_output=True,
@@ -3097,21 +3097,21 @@ def run_ffmpeg_command(command: List[str], timeout: float = 300.0) -> bool:
         )
         
         if result.returncode != 0:
-            logger.error(f"FFmpeg 오류: {result.stderr}")
+            logger.error(f"FFmpeg ¿À·ù: {result.stderr}")
             return False
         
-        logger.info("FFmpeg 커맨드 성공")
+        logger.info("FFmpeg Ä¿¸Çµå ¼º°ø")
         return True
     except subprocess.TimeoutExpired:
-        logger.error("FFmpeg 커맨드 타임아웃")
+        logger.error("FFmpeg Ä¿¸Çµå Å¸ÀÓ¾Æ¿ô")
         return False
     except Exception as e:
-        logger.error(f"FFmpeg 실행 오류: {e}")
+        logger.error(f"FFmpeg ½ÇÇà ¿À·ù: {e}")
         return False
 
 
 async def run_ffmpeg_async(command, timeout: float = 300.0) -> bool:
-    """FFmpeg 비동기 실행 (event loop 블로킹 방지)"""
+    """FFmpeg ºñµ¿±â ½ÇÇà (event loop ºí·ÎÅ· ¹æÁö)"""
     import asyncio
     loop = asyncio.get_event_loop()
     try:
@@ -3128,10 +3128,10 @@ async def prepare_clips_for_longform(
     scenes: List[Scene],
     output_dir: Path
 ) -> List[Path]:
-    """씬당 3~4 서브클립(각 4~6초) → 총 15~20개 빠른 전환 클립"""
+    """¾À´ç 3~4 ¼­ºêÅ¬¸³(°¢ 4~6ÃÊ) ¡æ ÃÑ 15~20°³ ºü¸¥ ÀüÈ¯ Å¬¸³"""
     clips = []
 
-    # [v15.60.0] Ken Burns 프리셋 — duration 비례 zoom 속도 ({kb_speed} 치환)
+    # [v15.60.0] Ken Burns ÇÁ¸®¼Â ? duration ºñ·Ê zoom ¼Óµµ ({kb_speed} Ä¡È¯)
     KB_PRESETS = [
         "zoompan=z='min(zoom+{kb_speed},1.06)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={fps_d}:s=1920x1080:fps=30",
         "zoompan=z='if(eq(on,1),1.5,max(zoom-{kb_speed},1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={fps_d}:s=1920x1080:fps=30",
@@ -3141,25 +3141,25 @@ async def prepare_clips_for_longform(
         "zoompan=z='min(zoom+{kb_speed_hi},1.06)':x='if(lte(on,1),iw*0.1,max(x-1,0))':y='ih-ih/zoom':d={fps_d}:s=1920x1080:fps=30",
     ]
 
-    kb_counter = 0  # 전역 Ken Burns 프리셋 순환
+    kb_counter = 0  # Àü¿ª Ken Burns ÇÁ¸®¼Â ¼øÈ¯
 
     for _scene_idx, scene in enumerate(scenes):
         if not scene.asset_url:
-            # [P] fallback 비주얼 생성 (단색 대신 그라디언트 + 키워드 카드)
+            # [P] fallback ºñÁÖ¾ó »ý¼º (´Ü»ö ´ë½Å ±×¶óµð¾ðÆ® + Å°¿öµå Ä«µå)
             fb_path = output_dir / f"fallback_{scene.scene_id}.mp4"
             dur = max(scene.duration_seconds or 5.0, 2.5)
             if _make_fallback_clip(_scene_idx, dur, fb_path,
                                    keyword=scene.keyword, description=scene.description or "",
                                    resolution=os.getenv("DEFAULT_RESOLUTION", "1920x1080")):
                 scene.asset_url = str(fb_path)
-                logger.info(f"[P] 씬 '{scene.scene_id}' fallback 비주얼 사용")
+                logger.info(f"[P] ¾À '{scene.scene_id}' fallback ºñÁÖ¾ó »ç¿ë")
             else:
-                logger.warning(f"장면 '{scene.scene_id}' 자산 없음 (fallback도 실패)")
+                logger.warning(f"Àå¸é '{scene.scene_id}' ÀÚ»ê ¾øÀ½ (fallbackµµ ½ÇÆÐ)")
                 continue
 
-        scene_dur = max(scene.duration_seconds or 5.0, 1.5)  # [v16.0] TTS 동기화 존중
+        scene_dur = max(scene.duration_seconds or 5.0, 1.5)  # [v16.0] TTS µ¿±âÈ­ Á¸Áß
 
-        # 원본 영상 길이 파악
+        # ¿øº» ¿µ»ó ±æÀÌ ÆÄ¾Ç
         probe_cmd = [
             "ffprobe", "-v", "error", "-show_entries", "format=duration",
             "-of", "csv=p=0", scene.asset_url
@@ -3170,19 +3170,19 @@ async def prepare_clips_for_longform(
         except Exception:
             src_dur = scene_dur * 3
 
-        # v15.12 fix — 실제 소스 길이 보존 (scene_dur로 부풀리기 X)
+        # v15.12 fix ? ½ÇÁ¦ ¼Ò½º ±æÀÌ º¸Á¸ (scene_dur·Î ºÎÇ®¸®±â X)
         actual_src_dur = src_dur
-        # 소스가 씬보다 짧으면 stream_loop 으로 반복 재생
+        # ¼Ò½º°¡ ¾Àº¸´Ù ÂªÀ¸¸é stream_loop À¸·Î ¹Ýº¹ Àç»ý
         needs_loop = actual_src_dur < scene_dur * 0.95
 
-        # 서브클립 수 계산 (4~5초짜리로 분할)
-        SUB_DUR = 3.0  # [v15.98] 2-3s cut  # 각 서브클립 길이 (초)
+        # ¼­ºêÅ¬¸³ ¼ö °è»ê (4~5ÃÊÂ¥¸®·Î ºÐÇÒ)
+        SUB_DUR = 3.0  # [v15.98] 2-3s cut  # °¢ ¼­ºêÅ¬¸³ ±æÀÌ (ÃÊ)
         n_subs  = max(1, int(scene_dur / SUB_DUR))  # [v16.0] floor division
-        n_subs  = min(n_subs, 8)  # [v15.98] max 8  # 최대 5개
+        n_subs  = min(n_subs, 8)  # [v15.98] max 8  # ÃÖ´ë 5°³
 
-        logger.info(f"'{scene.scene_id}': {scene_dur:.1f}초 → {n_subs}개 서브클립 (src={actual_src_dur:.1f}s, loop={needs_loop})")
+        logger.info(f"'{scene.scene_id}': {scene_dur:.1f}ÃÊ ¡æ {n_subs}°³ ¼­ºêÅ¬¸³ (src={actual_src_dur:.1f}s, loop={needs_loop})")
 
-        # [v15.68] alt 소스 준비 (sub_i >= 3에서 사용)
+        # [v15.68] alt ¼Ò½º ÁØºñ (sub_i >= 3¿¡¼­ »ç¿ë)
         _alt_src2 = getattr(scene, 'alt_asset_url', None)
         _alt_src2_dur = 0.0
         if _alt_src2 and Path(_alt_src2).exists() and Path(_alt_src2).stat().st_size > 4096:
@@ -3194,7 +3194,7 @@ async def prepare_clips_for_longform(
                 _alt_src2_dur = float(_rd) if _rd and _rd not in ('N/A','') else 0.0
             except Exception: pass
 
-        # [v16.0] 정밀 sub_dur: 균등분할 + 마지막 클립에 나머지 시간 흡수
+        # [v16.0] Á¤¹Ð sub_dur: ±ÕµîºÐÇÒ + ¸¶Áö¸· Å¬¸³¿¡ ³ª¸ÓÁö ½Ã°£ Èí¼ö
         _base_sub_dur = scene_dur / n_subs
         _scene_clips_start = len(clips)
         for sub_i in range(n_subs):
@@ -3202,16 +3202,16 @@ async def prepare_clips_for_longform(
                 sub_dur = max(scene_dur - _base_sub_dur * (n_subs - 1), 1.0)
             else:
                 sub_dur = _base_sub_dur
-            # [v15.68] sub_i>=3이면 alt 소스 사용
-            # [v15.99] 홀짝 교번: 0=main,1=alt,2=main,3=alt... → 최대 다양성
+            # [v15.68] sub_i>=3ÀÌ¸é alt ¼Ò½º »ç¿ë
+            # [v15.99] È¦Â¦ ±³¹ø: 0=main,1=alt,2=main,3=alt... ¡æ ÃÖ´ë ´Ù¾ç¼º
             _can_alt2 = _alt_src2 and _alt_src2_dur > 1.0
             _use_alt2 = _can_alt2 and (sub_i % 2 == 1)
             _clip_src2 = _alt_src2 if _use_alt2 else scene.asset_url
             _clip_src2_dur = _alt_src2_dur if _use_alt2 else actual_src_dur
             _needs_loop2 = _clip_src2_dur < scene_dur * 0.95
-            # [v15.99] 소스별 독립 seek: 같은 소스 내에서 균등 분포
-            _src_uses = 2 if _can_alt2 else 1  # 소스가 2개면 각 소스당 n_subs/2번 사용
-            _sub_idx_in_src = sub_i // _src_uses  # 이 소스 안에서 몇 번째인가
+            # [v15.99] ¼Ò½ºº° µ¶¸³ seek: °°Àº ¼Ò½º ³»¿¡¼­ ±Õµî ºÐÆ÷
+            _src_uses = 2 if _can_alt2 else 1  # ¼Ò½º°¡ 2°³¸é °¢ ¼Ò½º´ç n_subs/2¹ø »ç¿ë
+            _sub_idx_in_src = sub_i // _src_uses  # ÀÌ ¼Ò½º ¾È¿¡¼­ ¸î ¹øÂ°ÀÎ°¡
             _n_per_src = max(1, (n_subs + _src_uses - 1) // _src_uses)
             seek_usable = max(_clip_src2_dur - 0.5, 0.0)
             if _n_per_src > 1 and seek_usable > 0:
@@ -3221,7 +3221,7 @@ async def prepare_clips_for_longform(
             seek_start = max(0, min(seek_start, seek_usable))
 
             fps_d        = max(int(sub_dur * 30), 30)
-            # [v15.60.0] duration 비례 KB 속도 (4초 기준; 짧을수록 빠르게)
+            # [v15.60.0] duration ºñ·Ê KB ¼Óµµ (4ÃÊ ±âÁØ; ÂªÀ»¼ö·Ï ºü¸£°Ô)
             _kb_speed    = round(0.0008 * (4.0 / max(sub_dur, 4.0)), 5)
             _kb_speed_hi = round(0.001  * (4.0 / max(sub_dur, 4.0)), 5)
             kb_filter    = (KB_PRESETS[kb_counter % len(KB_PRESETS)]
@@ -3241,7 +3241,7 @@ async def prepare_clips_for_longform(
                 f"{kb_filter},"
                 f"fade=t=in:st=0:d={SCENE_HEAD_PAD_SEC:.2f},"
                 f"fade=t=out:st={fade_out_st:.2f}:d={SCENE_TAIL_PAD_SEC:.2f},"
-                f"unsharp=lx=5:ly=5:la=1.2:cx=3:cy=3:ca=0.6,"  # [AW-3] 강화된 sharpen
+                f"unsharp=lx=5:ly=5:la=1.2:cx=3:cy=3:ca=0.6,"  # [AW-3] °­È­µÈ sharpen
                 f"eq=brightness=0.03:contrast={TEMPLATE['contrast']}:saturation={TEMPLATE['saturation']}:gamma=0.93,"
                 f"curves=preset=increase_contrast,"
                 f"colorbalance=rs=.05:gs=-.02:bs=-.03:rm=.02:gm=0:bm=-.02:rh=-.02:gh=.02:bh=.05,"
@@ -3268,12 +3268,12 @@ async def prepare_clips_for_longform(
             clip_timeout = max(60.0, sub_dur * 20)
             if await run_ffmpeg_async(command, timeout=clip_timeout) and clip_output.exists() and clip_output.stat().st_size >= 4096:
                 clips.append(clip_output)
-                logger.info(f"  서브클립 OK: {clip_output.name} ({sub_dur:.1f}s, seek={seek_start:.1f}s)")
+                logger.info(f"  ¼­ºêÅ¬¸³ OK: {clip_output.name} ({sub_dur:.1f}s, seek={seek_start:.1f}s)")
             else:
                 sz = clip_output.stat().st_size if clip_output.exists() else 0
                 if sz > 0 and sz < 4096:
-                    clip_output.unlink(missing_ok=True)  # 빈 파일 삭제
-                logger.warning(f"  서브클립 실패 (size={sz}B): {scene.scene_id}_{sub_i} — fallback")
+                    clip_output.unlink(missing_ok=True)  # ºó ÆÄÀÏ »èÁ¦
+                logger.warning(f"  ¼­ºêÅ¬¸³ ½ÇÆÐ (size={sz}B): {scene.scene_id}_{sub_i} ? fallback")
                 fallback = ["ffmpeg"]
                 if needs_loop:
                     fallback += ["-stream_loop", "-1"]
@@ -3289,8 +3289,8 @@ async def prepare_clips_for_longform(
                 if await run_ffmpeg_async(fallback, timeout=clip_timeout):
                     clips.append(clip_output)
 
-        # [v16.0] 씬별 trim: sub-clip 총합을 정확히 scene_dur로 trim
-        # → 씬 경계 오차 누적 방지 (나레이션-영상 per-scene 정렬 보장)
+        # [v16.0] ¾Àº° trim: sub-clip ÃÑÇÕÀ» Á¤È®È÷ scene_dur·Î trim
+        # ¡æ ¾À °æ°è ¿ÀÂ÷ ´©Àû ¹æÁö (³ª·¹ÀÌ¼Ç-¿µ»ó per-scene Á¤·Ä º¸Àå)
         _scene_clips = clips[_scene_clips_start:]
         if len(_scene_clips) > 0 and _scene_clips:
             _scene_merged = output_dir / f"scene_{scene.scene_id}_merged.mp4"
@@ -3311,36 +3311,36 @@ async def prepare_clips_for_longform(
                 ]
                 _trim_timeout = max(60.0, scene_dur * 5)
                 if run_ffmpeg_command(_trim_cmd, timeout=_trim_timeout) and _scene_trimmed.exists():
-                    # 서브클립들을 trimmed 씬 클립으로 교체
+                    # ¼­ºêÅ¬¸³µéÀ» trimmed ¾À Å¬¸³À¸·Î ±³Ã¼
                     del clips[_scene_clips_start:]
                     clips.append(_scene_trimmed)
-                    logger.info(f"[v16.0] 씬 '{scene.scene_id}' trim → {scene_dur:.2f}s ({len(_scene_clips)}클립→1)")
+                    logger.info(f"[v16.0] ¾À '{scene.scene_id}' trim ¡æ {scene_dur:.2f}s ({len(_scene_clips)}Å¬¸³¡æ1)")
                 else:
-                    logger.warning(f"[v16.0] 씬 trim 실패 → 원본 서브클립 유지: {scene.scene_id}")
+                    logger.warning(f"[v16.0] ¾À trim ½ÇÆÐ ¡æ ¿øº» ¼­ºêÅ¬¸³ À¯Áö: {scene.scene_id}")
             else:
-                logger.warning(f"[v16.0] 씬 merge 실패 → 원본 서브클립 유지: {scene.scene_id}")
+                logger.warning(f"[v16.0] ¾À merge ½ÇÆÐ ¡æ ¿øº» ¼­ºêÅ¬¸³ À¯Áö: {scene.scene_id}")
 
-    logger.info(f"총 클립 수: {len(clips)}개")
+    logger.info(f"ÃÑ Å¬¸³ ¼ö: {len(clips)}°³")
     return clips
 
 
 
 def create_concat_file(clips: List[Path], output_file: Path) -> bool:
-    """FFmpeg concat 파일 생성"""
+    """FFmpeg concat ÆÄÀÏ »ý¼º"""
     try:
         with open(output_file, "w") as f:
             for clip in clips:
                 f.write(f"file '{clip}'\n")
         
-        logger.info(f"Concat 파일 생성: {output_file}")
+        logger.info(f"Concat ÆÄÀÏ »ý¼º: {output_file}")
         return True
     except Exception as e:
-        logger.error(f"Concat 파일 생성 오류: {e}")
+        logger.error(f"Concat ÆÄÀÏ »ý¼º ¿À·ù: {e}")
         return False
 
 
 def _is_valid_clip(clip_path) -> bool:
-    """ffprobe로 클립 유효성 검사 (moov atom · 비디오 스트림 존재 확인)"""
+    """ffprobe·Î Å¬¸³ À¯È¿¼º °Ë»ç (moov atom ¡¤ ºñµð¿À ½ºÆ®¸² Á¸Àç È®ÀÎ)"""
     try:
         p = Path(clip_path)
         if not p.exists() or p.stat().st_size < 4096:
@@ -3358,7 +3358,7 @@ def _is_valid_clip(clip_path) -> bool:
 
 
 def normalize_clip(clip_path: Path, timeout: float = 45.0) -> Path:
-    """Duration:N/A 클립을 정규화 — filter_complex 호환을 위해 re-encode"""
+    """Duration:N/A Å¬¸³À» Á¤±ÔÈ­ ? filter_complex È£È¯À» À§ÇØ re-encode"""
     dur = get_video_duration(clip_path)
     if dur is not None and dur > 0:
         return clip_path  # already OK
@@ -3377,29 +3377,29 @@ def normalize_clip(clip_path: Path, timeout: float = 45.0) -> Path:
     return clip_path
 
 def xfade_batch(clip_paths: list, output: Path, transition: str = "fade") -> bool:
-    """클립 배치를 concat filter로 합치기 — xfade보다 안정적 (Duration:N/A 클립 허용)"""
-    # 1) 손상된 클립 사전 필터링 (moov atom 없는 파일 제거)
+    """Å¬¸³ ¹èÄ¡¸¦ concat filter·Î ÇÕÄ¡±â ? xfadeº¸´Ù ¾ÈÁ¤Àû (Duration:N/A Å¬¸³ Çã¿ë)"""
+    # 1) ¼Õ»óµÈ Å¬¸³ »çÀü ÇÊÅÍ¸µ (moov atom ¾ø´Â ÆÄÀÏ Á¦°Å)
     original_n = len(clip_paths)
     clip_paths = [cp for cp in clip_paths if _is_valid_clip(cp)]
     dropped = original_n - len(clip_paths)
     if dropped:
-        logger.warning(f"xfade_batch: 손상된 클립 {dropped}개 제외 (잔여 {len(clip_paths)}개)")
+        logger.warning(f"xfade_batch: ¼Õ»óµÈ Å¬¸³ {dropped}°³ Á¦¿Ü (ÀÜ¿© {len(clip_paths)}°³)")
 
     if len(clip_paths) == 0:
-        logger.error("xfade_batch: 유효 클립 0개 — 합치기 불가")
+        logger.error("xfade_batch: À¯È¿ Å¬¸³ 0°³ ? ÇÕÄ¡±â ºÒ°¡")
         return False
     if len(clip_paths) == 1:
         shutil.copy(str(clip_paths[0]), str(output))
         return True
 
-    # 방법 1: concat filter — Duration:N/A 클립은 먼저 정규화
+    # ¹æ¹ý 1: concat filter ? Duration:N/A Å¬¸³Àº ¸ÕÀú Á¤±ÔÈ­
     clip_paths = [normalize_clip(cp) for cp in clip_paths]
     inputs = []
     for cp in clip_paths:
         inputs += ["-i", str(cp)]
 
     n = len(clip_paths)
-    # [i:v:0] — 정규화 후 duration이 확정된 단일 비디오 스트림
+    # [i:v:0] ? Á¤±ÔÈ­ ÈÄ durationÀÌ È®Á¤µÈ ´ÜÀÏ ºñµð¿À ½ºÆ®¸²
     vparts = "".join(f"[{i}:v:0]setpts=PTS-STARTPTS[v{i}];" for i in range(n))
     vconcat = "".join(f"[v{i}]" for i in range(n))
     fg = f"{vparts}{vconcat}concat=n={n}:v=1:a=0[vout]"
@@ -3412,15 +3412,15 @@ def xfade_batch(clip_paths: list, output: Path, transition: str = "fade") -> boo
            "-y", str(output)]
     timeout = max(300.0, n * 30)
     if run_ffmpeg_command(cmd, timeout=timeout):
-        logger.info(f"xfade_batch concat OK: {n}개 → {output.name}")
+        logger.info(f"xfade_batch concat OK: {n}°³ ¡æ {output.name}")
         return True
 
-    # 방법 2: concat demuxer fallback (copy, 무손실)
-    logger.warning("concat filter 실패 → demuxer fallback")
-    # fallback 단계에서도 손상 클립 한 번 더 걸러냄
+    # ¹æ¹ý 2: concat demuxer fallback (copy, ¹«¼Õ½Ç)
+    logger.warning("concat filter ½ÇÆÐ ¡æ demuxer fallback")
+    # fallback ´Ü°è¿¡¼­µµ ¼Õ»ó Å¬¸³ ÇÑ ¹ø ´õ °É·¯³¿
     clip_paths = [cp for cp in clip_paths if _is_valid_clip(cp)]
     if not clip_paths:
-        logger.error("demuxer fallback: 유효 클립 0개")
+        logger.error("demuxer fallback: À¯È¿ Å¬¸³ 0°³")
         return False
     concat_txt = output.parent / f"_concat_{output.stem}.txt"
     with open(concat_txt, "w") as f:
@@ -3432,52 +3432,52 @@ def xfade_batch(clip_paths: list, output: Path, transition: str = "fade") -> boo
 
 
 def concatenate_videos(concat_file: Path, output_video: Path, transition: str = "fade") -> bool:
-    """영상 파일 연결 (배치 xfade 크로스페이드 트랜지션)"""
-    # concat.txt에서 클립 경로 파싱
+    """¿µ»ó ÆÄÀÏ ¿¬°á (¹èÄ¡ xfade Å©·Î½ºÆäÀÌµå Æ®·£Áö¼Ç)"""
+    # concat.txt¿¡¼­ Å¬¸³ °æ·Î ÆÄ½Ì
     with open(concat_file, "r") as f:
         lines = f.readlines()
 
     clip_paths = [l.split("'")[1] for l in lines if l.startswith("file ")]
 
-    # 유효하지 않은 클립 사전 제거 (크기 < 4KB = 깨진 파일)
+    # À¯È¿ÇÏÁö ¾ÊÀº Å¬¸³ »çÀü Á¦°Å (Å©±â < 4KB = ±úÁø ÆÄÀÏ)
     clip_paths = [cp for cp in clip_paths if _is_valid_clip(cp)]
     if not clip_paths:
-        logger.error("concatenate_videos: 유효한 클립 없음")
+        logger.error("concatenate_videos: À¯È¿ÇÑ Å¬¸³ ¾øÀ½")
         return False
 
     if len(clip_paths) < 2:
-        # 단일 클립: 그냥 copy
+        # ´ÜÀÏ Å¬¸³: ±×³É copy
         command = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(concat_file),
                    "-c", "copy", "-y", str(output_video)]
         return run_ffmpeg_command(command)
     
-    # 2개 이상: 배치 xfade (8개씩 나눠서 처리, 이후 최종 합치기)
+    # 2°³ ÀÌ»ó: ¹èÄ¡ xfade (8°³¾¿ ³ª´²¼­ Ã³¸®, ÀÌÈÄ ÃÖÁ¾ ÇÕÄ¡±â)
     BATCH_SIZE = 8
     temp_dir = output_video.parent
     
     if len(clip_paths) <= BATCH_SIZE:
-        # 소수 클립: 직접 xfade
+        # ¼Ò¼ö Å¬¸³: Á÷Á¢ xfade
         if xfade_batch(clip_paths, output_video, transition):
             return True
-        logger.warning("xfade 실패, 단순 concat fallback")
+        logger.warning("xfade ½ÇÆÐ, ´Ü¼ø concat fallback")
         fallback = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(concat_file),
                     "-c", "copy", "-y", str(output_video)]
         return run_ffmpeg_command(fallback)
     
-    # 다수 클립: 배치 분할 처리 — 마지막 고아 배치(≤1 클립)는 직전 배치에 합친다
+    # ´Ù¼ö Å¬¸³: ¹èÄ¡ ºÐÇÒ Ã³¸® ? ¸¶Áö¸· °í¾Æ ¹èÄ¡(¡Â1 Å¬¸³)´Â Á÷Àü ¹èÄ¡¿¡ ÇÕÄ£´Ù
     batches = [clip_paths[i:i+BATCH_SIZE] for i in range(0, len(clip_paths), BATCH_SIZE)]
     if len(batches) >= 2 and len(batches[-1]) <= 1:
         batches[-2].extend(batches[-1])
         batches.pop()
-        logger.info(f"xfade_batch: 마지막 고아 배치 머지 → {len(batches)}개 배치")
+        logger.info(f"xfade_batch: ¸¶Áö¸· °í¾Æ ¹èÄ¡ ¸ÓÁö ¡æ {len(batches)}°³ ¹èÄ¡")
     batch_outputs = []
     for bi, batch in enumerate(batches):
         bout = temp_dir / f"batch_{bi}.mp4"
         if not xfade_batch(batch, bout, transition):
-            # 배치 실패 시 단순 concat (무효 클립 제외)
+            # ¹èÄ¡ ½ÇÆÐ ½Ã ´Ü¼ø concat (¹«È¿ Å¬¸³ Á¦¿Ü)
             valid_batch = [cp for cp in batch if _is_valid_clip(cp)]
             if not valid_batch:
-                logger.warning(f"batch_{bi}: 유효 클립 없음 — 건너뜀")
+                logger.warning(f"batch_{bi}: À¯È¿ Å¬¸³ ¾øÀ½ ? °Ç³Ê¶Ü")
                 continue
             if len(valid_batch) == 1:
                 import shutil as _sh
@@ -3500,20 +3500,20 @@ def concatenate_videos(concat_file: Path, output_video: Path, transition: str = 
         shutil.copy(batch_outputs[0], str(output_video))
         return True
     
-    # 배치 결과들을 최종 합치기 — 배치는 이미 xfade 처리됨.
-    # 큰 배치들(각 30-50초)을 xfade filter_complex로 재결합하면 메모리 과부하 → 컨테이너 SIGKILL.
-    # 따라서 최종 배치 머지는 항상 demuxer concat (stream copy) 사용.
+    # ¹èÄ¡ °á°úµéÀ» ÃÖÁ¾ ÇÕÄ¡±â ? ¹èÄ¡´Â ÀÌ¹Ì xfade Ã³¸®µÊ.
+    # Å« ¹èÄ¡µé(°¢ 30-50ÃÊ)À» xfade filter_complex·Î Àç°áÇÕÇÏ¸é ¸Þ¸ð¸® °úºÎÇÏ ¡æ ÄÁÅ×ÀÌ³Ê SIGKILL.
+    # µû¶ó¼­ ÃÖÁ¾ ¹èÄ¡ ¸ÓÁö´Â Ç×»ó demuxer concat (stream copy) »ç¿ë.
     final_concat = temp_dir / "final_concat.txt"
     with open(final_concat, "w") as f:
         for bp in batch_outputs:
             f.write(f"file '{bp}'\n")
     if run_ffmpeg_command(["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(final_concat),
                            "-c", "copy", "-y", str(output_video)]):
-        logger.info(f"최종 배치 머지 OK (demuxer concat): {len(batch_outputs)}개 -> {output_video.name}")
+        logger.info(f"ÃÖÁ¾ ¹èÄ¡ ¸ÓÁö OK (demuxer concat): {len(batch_outputs)}°³ -> {output_video.name}")
         return True
     
-    # 최종 fallback: re-encode concat (stream copy 실패 시 코덱/해상도 불일치)
-    logger.warning("demuxer concat 실패 -> filter_complex concat로 재시도 (re-encode)")
+    # ÃÖÁ¾ fallback: re-encode concat (stream copy ½ÇÆÐ ½Ã ÄÚµ¦/ÇØ»óµµ ºÒÀÏÄ¡)
+    logger.warning("demuxer concat ½ÇÆÐ -> filter_complex concat·Î Àç½Ãµµ (re-encode)")
     inputs = []
     for bp in batch_outputs:
         inputs.extend(["-i", str(bp)])
@@ -3527,14 +3527,14 @@ def concatenate_videos(concat_file: Path, output_video: Path, transition: str = 
 
 
 def _UNUSED_old_xfade():
-    # 구 코드 보관용 (사용 안 함)
+    # ±¸ ÄÚµå º¸°ü¿ë (»ç¿ë ¾È ÇÔ)
     FADE_DUR = 0.5
     offset = 0  # placeholder
     
     if len(clip_paths) == 2:
         fg = f"[0:v][1:v]xfade=transition={transition}:duration={FADE_DUR}:offset={offset:.3f}[vout]"
     else:
-        # 첫 번째 트랜지션
+        # Ã¹ ¹øÂ° Æ®·£Áö¼Ç
         fg = f"[0:v][1:v]xfade=transition={transition}:duration={FADE_DUR}:offset={offset:.3f}[t1];"
         running_dur = durations[0] + durations[1] - FADE_DUR
         
@@ -3561,8 +3561,8 @@ def _UNUSED_old_xfade():
     
     success = run_ffmpeg_command(command)
     if not success:
-        # xfade 실패 시 단순 concat fallback
-        logger.warning("xfade 실패, 단순 concat으로 fallback")
+        # xfade ½ÇÆÐ ½Ã ´Ü¼ø concat fallback
+        logger.warning("xfade ½ÇÆÐ, ´Ü¼ø concatÀ¸·Î fallback")
         fallback = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(concat_file),
                     "-c", "copy", "-y", str(output_video)]
         return run_ffmpeg_command(fallback)
@@ -3577,8 +3577,8 @@ def mix_audio(
     bgm_volume: float,
     output_video: Path
 ) -> bool:
-    """오디오 믹싱 - loudnorm 정규화 + 나레이션 우선 BGM 더킹"""
-    # [v16.0] TTS 길이 기준 영상 trim (나레이션-영상 정확히 일치)
+    """¿Àµð¿À ¹Í½Ì - loudnorm Á¤±ÔÈ­ + ³ª·¹ÀÌ¼Ç ¿ì¼± BGM ´õÅ·"""
+    # [v16.0] TTS ±æÀÌ ±âÁØ ¿µ»ó trim (³ª·¹ÀÌ¼Ç-¿µ»ó Á¤È®È÷ ÀÏÄ¡)
     _tts_trim: list = []
     if tts_audio_path.exists():
         try:
@@ -3592,12 +3592,12 @@ def mix_audio(
                 _tts_d = float(_rd)
                 if _tts_d > 0:
                     _tts_trim = ["-t", str(round(_tts_d + 0.5, 2))]
-                    logger.info(f"[v16.0] TTS trim: {_tts_d:.2f}s + 0.5s 여유")
+                    logger.info(f"[v16.0] TTS trim: {_tts_d:.2f}s + 0.5s ¿©À¯")
         except Exception as _e:
-            logger.warning(f"[v16.0] TTS 길이 측정 실패: {_e}")
+            logger.warning(f"[v16.0] TTS ±æÀÌ ÃøÁ¤ ½ÇÆÐ: {_e}")
 
     if not tts_audio_path.exists():
-        logger.warning(f"TTS 오디오 없음: {tts_audio_path}")
+        logger.warning(f"TTS ¿Àµð¿À ¾øÀ½: {tts_audio_path}")
         if bgm_path and bgm_path.exists():
             command = [
                 "ffmpeg", "-i", str(video_path), "-i", str(bgm_path),
@@ -3609,12 +3609,12 @@ def mix_audio(
             command = ["ffmpeg", "-i", str(video_path), "-c", "copy", "-y", str(output_video)]
         return run_ffmpeg_command(command)
 
-    # TTS 있음: loudnorm으로 나레이션 볼륨 정규화
+    # TTS ÀÖÀ½: loudnormÀ¸·Î ³ª·¹ÀÌ¼Ç º¼·ý Á¤±ÔÈ­
     if bgm_path and bgm_path.exists() and bgm_volume > 0:
-        # [v15.60.0] TTS 나레이션 + BGM 덕킹 믹스 (sidechaincompress)
-        # BGM_VOLUME_DURING_VOICE (ENV) 기반 덕킹 — 나레이션 구간 자동 감소
-        actual_bgm_vol = BGM_VOLUME_DURING_VOICE  # 기본 0.045
-        # 명시적 bgm_volume 지정 시 (기본 0.3 아닌 경우) 반영
+        # [v15.60.0] TTS ³ª·¹ÀÌ¼Ç + BGM ´öÅ· ¹Í½º (sidechaincompress)
+        # BGM_VOLUME_DURING_VOICE (ENV) ±â¹Ý ´öÅ· ? ³ª·¹ÀÌ¼Ç ±¸°£ ÀÚµ¿ °¨¼Ò
+        actual_bgm_vol = BGM_VOLUME_DURING_VOICE  # ±âº» 0.045
+        # ¸í½ÃÀû bgm_volume ÁöÁ¤ ½Ã (±âº» 0.3 ¾Æ´Ñ °æ¿ì) ¹Ý¿µ
         if bgm_volume not in (0.3, 0.8):
             actual_bgm_vol = min(bgm_volume * 0.15, BGM_VOLUME_DEFAULT)
         # [v15.66.0] sidechaincompress -> volume+amix (ffmpeg 7.x compat)
@@ -3631,14 +3631,14 @@ def mix_audio(
             "-filter_complex", filter_complex,
             "-map", "0:v",
             "-map", "[aout]",
-            *_tts_trim,  # [v16.0] TTS 길이 기준 trim
+            *_tts_trim,  # [v16.0] TTS ±æÀÌ ±âÁØ trim
             "-c:v", "copy",
             "-c:a", "aac", "-ac", "2", "-b:a", "192k",
             "-shortest",
             "-y", str(output_video)
         ]
     else:
-        # TTS 나레이션만 (loudnorm 정규화)
+        # TTS ³ª·¹ÀÌ¼Ç¸¸ (loudnorm Á¤±ÔÈ­)
         filter_complex = "[1:a]loudnorm=I=-16:TP=-1.5:LRA=11[aout]"
         command = [
             "ffmpeg",
@@ -3647,7 +3647,7 @@ def mix_audio(
             "-filter_complex", filter_complex,
             "-map", "0:v",
             "-map", "[aout]",
-            *_tts_trim,  # [v16.0] TTS 길이 기준 trim
+            *_tts_trim,  # [v16.0] TTS ±æÀÌ ±âÁØ trim
             "-c:v", "copy",
             "-c:a", "aac", "-ac", "2", "-b:a", "192k",
             "-shortest",
@@ -3656,8 +3656,8 @@ def mix_audio(
 
     success = run_ffmpeg_command(command)
     if not success:
-        # loudnorm 실패 시 단순 믹스 fallback
-        logger.warning("loudnorm 실패, 단순 믹스 fallback")
+        # loudnorm ½ÇÆÐ ½Ã ´Ü¼ø ¹Í½º fallback
+        logger.warning("loudnorm ½ÇÆÐ, ´Ü¼ø ¹Í½º fallback")
         simple_cmd = [
             "ffmpeg", "-i", str(video_path), "-i", str(tts_audio_path),
             "-map", "0:v", "-map", "1:a",
@@ -3676,12 +3676,12 @@ def add_subtitles_to_video(
     outline: bool = True,
     subtitle_type: str = "srt"
 ) -> bool:
-    """[v15.59.0] ASS/SRT 자막 오버레이. subtitle_type에 따라 필터 자동 분기."""
+    """[v15.59.0] ASS/SRT ÀÚ¸· ¿À¹ö·¹ÀÌ. subtitle_type¿¡ µû¶ó ÇÊÅÍ ÀÚµ¿ ºÐ±â."""
     if not srt_path.exists():
-        logger.warning(f"SRT 파일 없음: {srt_path}")
+        logger.warning(f"SRT ÆÄÀÏ ¾øÀ½: {srt_path}")
         return False
 
-    # [v16.7] 입력 영상의 실제 해상도 감지 → 세로형 자동 판별
+    # [v16.7] ÀÔ·Â ¿µ»óÀÇ ½ÇÁ¦ ÇØ»óµµ °¨Áö ¡æ ¼¼·ÎÇü ÀÚµ¿ ÆÇº°
     _detected_res = "1920x1080"
     try:
         _probe = subprocess.run(
@@ -3710,10 +3710,10 @@ def add_subtitles_to_video(
         f"Alignment={SUBTITLE_ALIGNMENT}"
     )
 
-    # 경로 내 콜론 이스케이프 (Windows 경로 대비)
+    # °æ·Î ³» ÄÝ·Ð ÀÌ½ºÄÉÀÌÇÁ (Windows °æ·Î ´ëºñ)
     srt_escaped = str(srt_path).replace("\\", "/").replace(":", "\\:")
 
-    # [v15.59.0] ASS: ass= 필터 / SRT: subtitles= 필터
+    # [v15.59.0] ASS: ass= ÇÊÅÍ / SRT: subtitles= ÇÊÅÍ
     if subtitle_type == "ass" or str(srt_path).lower().endswith(".ass"):
         vf_filter = f"ass='{srt_escaped}'"
     else:
@@ -3733,8 +3733,8 @@ def add_subtitles_to_video(
 
     success = run_ffmpeg_command(command)
     if not success:
-        # SRT 경로 이스케이프 문제로 실패 시 copy fallback
-        logger.warning("SRT 오버레이 실패, subtitles 필터 재시도")
+        # SRT °æ·Î ÀÌ½ºÄÉÀÌÇÁ ¹®Á¦·Î ½ÇÆÐ ½Ã copy fallback
+        logger.warning("SRT ¿À¹ö·¹ÀÌ ½ÇÆÐ, subtitles ÇÊÅÍ Àç½Ãµµ")
         simple_cmd = [
             "ffmpeg", "-i", str(input_video),
             "-vf", f"subtitles='{str(srt_path)}'",
@@ -3745,7 +3745,7 @@ def add_subtitles_to_video(
     return True
 
 def extract_thumbnail(video_path: Path, output_image: Path, timestamp: str = "3") -> bool:
-    """영상에서 썸네일 추출"""
+    """¿µ»ó¿¡¼­ ½æ³×ÀÏ ÃßÃâ"""
     command = [
         "ffmpeg",
         "-i", str(video_path),
@@ -3765,20 +3765,20 @@ def add_text_overlay_to_thumbnail(
     title: str = "LongForm Video",
     font_size: int = 80
 ) -> bool:
-    """썸네일에 텍스트 오버레이 추가"""
+    """½æ³×ÀÏ¿¡ ÅØ½ºÆ® ¿À¹ö·¹ÀÌ Ãß°¡"""
     try:
-        # 썸네일 로드
+        # ½æ³×ÀÏ ·Îµå
         img = Image.open(thumbnail_path)
         draw = ImageDraw.Draw(img)
         
-        # 폰트 설정 (기본 폰트 사용)
+        # ÆùÆ® ¼³Á¤ (±âº» ÆùÆ® »ç¿ë)
         try:
             font = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", font_size)
         except:
-            # 폰트 없으면 기본 폰트 사용
+            # ÆùÆ® ¾øÀ¸¸é ±âº» ÆùÆ® »ç¿ë
             font = ImageFont.load_default()
         
-        # 텍스트 위치 (중앙 하단)
+        # ÅØ½ºÆ® À§Ä¡ (Áß¾Ó ÇÏ´Ü)
         img_width, img_height = img.size
         bbox = draw.textbbox((0, 0), title, font=font)
         text_width = bbox[2] - bbox[0]
@@ -3787,7 +3787,7 @@ def add_text_overlay_to_thumbnail(
         x = (img_width - text_width) // 2
         y = img_height - text_height - 30
         
-        # 반투명 배경 추가 (선택사항)
+        # ¹ÝÅõ¸í ¹è°æ Ãß°¡ (¼±ÅÃ»çÇ×)
         background_padding = 20
         bg_box = [
             x - background_padding,
@@ -3797,26 +3797,26 @@ def add_text_overlay_to_thumbnail(
         ]
         draw.rectangle(bg_box, fill=(0, 0, 0, 180))
         
-        # 텍스트 그리기
+        # ÅØ½ºÆ® ±×¸®±â
         draw.text((x, y), title, font=font, fill=(255, 255, 255))
         
-        # 저장
+        # ÀúÀå
         img.save(output_path, "JPEG", quality=95)
-        logger.info(f"썸네일 생성 완료: {output_path}")
+        logger.info(f"½æ³×ÀÏ »ý¼º ¿Ï·á: {output_path}")
         return True
     
     except Exception as e:
-        logger.error(f"썸네일 텍스트 오버레이 오류: {e}")
+        logger.error(f"½æ³×ÀÏ ÅØ½ºÆ® ¿À¹ö·¹ÀÌ ¿À·ù: {e}")
         return False
 
 
-# [PRO v2] 썸네일 CTR 최적화 색상
+# [PRO v2] ½æ³×ÀÏ CTR ÃÖÀûÈ­ »ö»ó
 _THUMB_COLOR_SCHEMES = [
-    ("#0D0D0D","#1A1A2E","#FFD700","#FFFFFF","#FFD700"),  # 블랙+골드
-    ("#0A1628","#0D47A1","#FF6B00","#FFFFFF","#FFB347"),  # 딥블루+오렌지
-    ("#1A0A00","#CC3300","#FFFF00","#FFFFFF","#FFDD00"),  # 레드+옐로우
-    ("#0D1B00","#1B5E20","#00FF88","#FFFFFF","#B9F6CA"),  # 그린 다크
-    ("#1A0033","#4A0080","#FF00FF","#FFFFFF","#FFB3FF"),  # 퍼플+마젠타
+    ("#0D0D0D","#1A1A2E","#FFD700","#FFFFFF","#FFD700"),  # ºí·¢+°ñµå
+    ("#0A1628","#0D47A1","#FF6B00","#FFFFFF","#FFB347"),  # µöºí·ç+¿À·»Áö
+    ("#1A0A00","#CC3300","#FFFF00","#FFFFFF","#FFDD00"),  # ·¹µå+¿»·Î¿ì
+    ("#0D1B00","#1B5E20","#00FF88","#FFFFFF","#B9F6CA"),  # ±×¸° ´ÙÅ©
+    ("#1A0033","#4A0080","#FF00FF","#FFFFFF","#FFB3FF"),  # ÆÛÇÃ+¸¶Á¨Å¸
 ]
 
 def generate_pro_thumbnail(
@@ -3825,18 +3825,18 @@ def generate_pro_thumbnail(
     title: str,
     subtitle: str = "",
 ) -> bool:
-    """YouTube 프로 썸네일 v2 — 분할 패널 레이아웃 (내용별 의미 분리)
+    """YouTube ÇÁ·Î ½æ³×ÀÏ v2 ? ºÐÇÒ ÆÐ³Î ·¹ÀÌ¾Æ¿ô (³»¿ëº° ÀÇ¹Ì ºÐ¸®)
     
-    레이아웃:
-      LEFT (44%): 어두운 그라데이션 + 연도 배지 + 주제어 + 임팩트 워드
-      RIGHT (56%): 영상 최적 프레임 (색감 강화)
-      BOTTOM BAR: 자막/부제목 스트립
+    ·¹ÀÌ¾Æ¿ô:
+      LEFT (44%): ¾îµÎ¿î ±×¶óµ¥ÀÌ¼Ç + ¿¬µµ ¹èÁö + ÁÖÁ¦¾î + ÀÓÆÑÆ® ¿öµå
+      RIGHT (56%): ¿µ»ó ÃÖÀû ÇÁ·¹ÀÓ (»ö°¨ °­È­)
+      BOTTOM BAR: ÀÚ¸·/ºÎÁ¦¸ñ ½ºÆ®¸³
     """
     try:
         import re as _re_thumb
         from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 
-        # ── 1. 최적 프레임 추출 ────────────────────────────────
+        # ¦¡¦¡ 1. ÃÖÀû ÇÁ·¹ÀÓ ÃßÃâ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         duration = get_video_duration(video_path) or 60.0
         timestamps = [duration * t for t in [0.08, 0.20, 0.38, 0.52, 0.68]]
         best_frame = None
@@ -3861,17 +3861,17 @@ def generate_pro_thumbnail(
             except: pass
 
         if best_frame is None:
-            logger.warning("[THUMB] 프레임 추출 실패")
+            logger.warning("[THUMB] ÇÁ·¹ÀÓ ÃßÃâ ½ÇÆÐ")
             return False
 
-        # ── 2. 캔버스 크기 및 구역 정의 ────────────────────────
+        # ¦¡¦¡ 2. Äµ¹ö½º Å©±â ¹× ±¸¿ª Á¤ÀÇ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         TW, TH = 1280, 720
-        SPLIT_X  = int(TW * 0.44)   # 왼쪽 패널 너비
-        BLEND_W  = 80                # 좌우 블렌딩 폭
-        BOTTOM_H = int(TH * 0.135)  # 하단 바 높이
-        MAIN_H   = TH - BOTTOM_H    # 메인 영역 높이
+        SPLIT_X  = int(TW * 0.44)   # ¿ÞÂÊ ÆÐ³Î ³Êºñ
+        BLEND_W  = 80                # ÁÂ¿ì ºí·»µù Æø
+        BOTTOM_H = int(TH * 0.135)  # ÇÏ´Ü ¹Ù ³ôÀÌ
+        MAIN_H   = TH - BOTTOM_H    # ¸ÞÀÎ ¿µ¿ª ³ôÀÌ
 
-        # ── 3. 배경 프레임 (전체) ───────────────────────────────
+        # ¦¡¦¡ 3. ¹è°æ ÇÁ·¹ÀÓ (ÀüÃ¼) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         orig_w, orig_h = best_frame.size
         ratio = max(TW / orig_w, TH / orig_h)
         nw = int(orig_w * ratio) + 1
@@ -3885,7 +3885,7 @@ def generate_pro_thumbnail(
         bg = ImageEnhance.Brightness(bg).enhance(1.08)
         img = bg.convert("RGBA")
 
-        # ── 4. 왼쪽 어두운 패널 오버레이 ───────────────────────
+        # ¦¡¦¡ 4. ¿ÞÂÊ ¾îµÎ¿î ÆÐ³Î ¿À¹ö·¹ÀÌ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         panel = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
         draw_p = ImageDraw.Draw(panel)
         for x in range(TW):
@@ -3897,24 +3897,24 @@ def generate_pro_thumbnail(
                 a = 0
             if a > 0:
                 draw_p.line([(x, 0), (x, MAIN_H)], fill=(6, 10, 28, a))
-        # 상단 어두운 띠 (양쪽 공통)
+        # »ó´Ü ¾îµÎ¿î ¶ì (¾çÂÊ °øÅë)
         for y in range(0, 55):
             a = int(110 * (1 - y / 55))
             draw_p.line([(0, y), (TW, y)], fill=(0, 0, 0, a))
         img = Image.alpha_composite(img, panel)
 
-        # ── 5. 하단 바 ──────────────────────────────────────────
+        # ¦¡¦¡ 5. ÇÏ´Ü ¹Ù ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         bar = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
         draw_b = ImageDraw.Draw(bar)
         draw_b.rectangle([0, MAIN_H, TW, TH], fill=(6, 10, 38, 245))
         draw_b.rectangle([0, MAIN_H, TW, MAIN_H + 3], fill=(255, 200, 0, 255))
         img = Image.alpha_composite(img, bar)
 
-        # ── 6. 최종 RGB 변환 + 그리기 준비 ────────────────────
+        # ¦¡¦¡ 6. ÃÖÁ¾ RGB º¯È¯ + ±×¸®±â ÁØºñ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         img = img.convert("RGB")
         draw = ImageDraw.Draw(img)
 
-        # ── 7. 폰트 로드 ─────────────────────────────────────────
+        # ¦¡¦¡ 7. ÆùÆ® ·Îµå ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         _FONT_PATHS = [
             "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
             "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
@@ -3928,33 +3928,33 @@ def generate_pro_thumbnail(
             return ImageFont.load_default()
 
         font_badge  = _load_font(28)    # [v15.81] badge
-        font_main   = _load_font(88)    # [v15.81] +12px (25-35% 영역)
+        font_main   = _load_font(88)    # [v15.81] +12px (25-35% ¿µ¿ª)
         font_impact = _load_font(96)    # [v15.81] +16px impact
         font_sub    = _load_font(50)    # [v15.81] +6px sub
         font_bar    = _load_font(34)    # [v15.81] +4px bar
 
-        # ── 8. 제목 파싱 — "/" 기준 분할 ────────────────────────
+        # ¦¡¦¡ 8. Á¦¸ñ ÆÄ½Ì ? "/" ±âÁØ ºÐÇÒ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         parts_raw = [p.strip() for p in title.split("/") if p.strip()]
         if len(parts_raw) == 1:
-            # 공백 기준 중간 분리
+            # °ø¹é ±âÁØ Áß°£ ºÐ¸®
             ws = title.split()
             mid = max(1, len(ws) // 2)
             parts_raw = [" ".join(ws[:mid]), " ".join(ws[mid:])]
-        # 최대 2개 파트
+        # ÃÖ´ë 2°³ ÆÄÆ®
         line1 = parts_raw[0] if parts_raw else title
         line2 = parts_raw[1] if len(parts_raw) > 1 else ""
 
-        # 연도 배지 추출
+        # ¿¬µµ ¹èÁö ÃßÃâ
         yr_match = _re_thumb.search(r'\d{4}', title)
         year_str = yr_match.group() if yr_match else ""
 
-        # 임팩트 키워드 감지 (마지막 파트 또는 특정 단어)
-        _IMPACT_KW = ["충격", "혁명", "혁신", "경고", "위험", "주의", "미래", "변화",
-                       "폭발", "급등", "붕괴", "비밀", "진실", "반전", "대박", "최강"]
+        # ÀÓÆÑÆ® Å°¿öµå °¨Áö (¸¶Áö¸· ÆÄÆ® ¶Ç´Â Æ¯Á¤ ´Ü¾î)
+        _IMPACT_KW = ["Ãæ°Ý", "Çõ¸í", "Çõ½Å", "°æ°í", "À§Çè", "ÁÖÀÇ", "¹Ì·¡", "º¯È­",
+                       "Æø¹ß", "±Þµî", "ºØ±«", "ºñ¹Ð", "Áø½Ç", "¹ÝÀü", "´ë¹Ú", "ÃÖ°­"]
         def _is_impact(s: str) -> bool:
             return any(k in s for k in _IMPACT_KW)
 
-        # ── 9. 연도 배지 ──────────────────────────────────────────
+        # ¦¡¦¡ 9. ¿¬µµ ¹èÁö ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         GOLD  = (255, 200, 0)
         WHITE = (255, 255, 255)
         CYAN  = (0, 212, 255)
@@ -3967,21 +3967,21 @@ def generate_pro_thumbnail(
             draw.rounded_rectangle([bx, by, bx + bw, by + bh], radius=6, fill=GOLD)
             draw.text((bx + 10, by + 5), year_str, font=font_badge, fill=DARK)
 
-        # ── 10. 골드 액센트 라인 ─────────────────────────────────
+        # ¦¡¦¡ 10. °ñµå ¾×¼¾Æ® ¶óÀÎ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         line_y = 90
         draw.rectangle([38, line_y, SPLIT_X - 40, line_y + 4], fill=GOLD)
 
-        # ── 11. 메인 라인 1 ──────────────────────────────────────
+        # ¦¡¦¡ 11. ¸ÞÀÎ ¶óÀÎ 1 ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         y_pos = 105
         color1 = GOLD if _is_impact(line1) else WHITE
-        # 그림자
+        # ±×¸²ÀÚ
         for ox, oy in [(-2, 2), (2, 2), (0, 3)]:
             draw.text((40 + ox, y_pos + oy), line1, font=font_main, fill=DARK)
         draw.text((40, y_pos), line1, font=font_main, fill=color1)
         bb1 = draw.textbbox((40, y_pos), line1, font=font_main)
         y_pos = bb1[3] + 8
 
-        # ── 12. 라인 2 (임팩트 강조) ─────────────────────────────
+        # ¦¡¦¡ 12. ¶óÀÎ 2 (ÀÓÆÑÆ® °­Á¶) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         if line2:
             color2 = GOLD if _is_impact(line2) else WHITE
             fnt2   = font_impact if _is_impact(line2) else font_sub
@@ -3991,7 +3991,7 @@ def generate_pro_thumbnail(
             bb2 = draw.textbbox((40, y_pos), line2, font=fnt2)
             y_pos = bb2[3] + 16
 
-        # ── 13. 삼각형 재생 아이콘 ───────────────────────────────
+        # ¦¡¦¡ 13. »ï°¢Çü Àç»ý ¾ÆÀÌÄÜ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         icon_x, icon_y = 42, y_pos + 8
         draw.polygon(
             [(icon_x, icon_y), (icon_x, icon_y + 32), (icon_x + 28, icon_y + 16)],
@@ -3999,36 +3999,36 @@ def generate_pro_thumbnail(
         )
 
 
-        # ── 13-b. 국기 PIL 직접 드로잉 스트립 ─────────────────────────
+        # ¦¡¦¡ 13-b. ±¹±â PIL Á÷Á¢ µå·ÎÀ× ½ºÆ®¸³ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         _FLAG_DRAW = {
-            "🇺🇸": [  # USA — 파란 캔턴 + 빨강/흰 가로줄
-                ("rect_full", (178, 34, 52)),          # 빨강 배경
-                ("hstripes_white", None),               # 흰 줄 6개
-                ("rect_canton", (60, 59, 110)),         # 파란 캔턴
+            "????": [  # USA ? ÆÄ¶õ ÄµÅÏ + »¡°­/Èò °¡·ÎÁÙ
+                ("rect_full", (178, 34, 52)),          # »¡°­ ¹è°æ
+                ("hstripes_white", None),               # Èò ÁÙ 6°³
+                ("rect_canton", (60, 59, 110)),         # ÆÄ¶õ ÄµÅÏ
                 ("stars", (255, 255, 255)),
             ],
-            "🇨🇳": [("rect_full", (222, 41, 16)), ("star_big", (255, 215, 0))],
-            "🇯🇵": [("rect_full", (255, 255, 255)), ("circle_red", (188, 0, 45))],
-            "🇰🇷": [("rect_full", (255, 255, 255)), ("taegeuk", None)],
-            "🇬🇧": [("union_jack", None)],
-            "🇩🇪": [("tricolor_h", [(0,0,0),(221,0,0),(255,206,0)])],
-            "🇫🇷": [("tricolor_v", [(0,35,149),(255,255,255),(237,41,57)])],
-            "🇷🇺": [("tricolor_h", [(255,255,255),(0,57,166),(213,43,30)])],
-            "🇨🇦": [("rect_full", (255,0,0)), ("maple_leaf", None)],
-            "🇮🇳": [("tricolor_h", [(255,153,51),(255,255,255),(19,136,8)])],
-            "🇦🇺": [("rect_full", (0,0,128))],
-            "🇪🇺": [("rect_full", (0,51,153)), ("eu_stars", (255,204,0))],
-            "🇰🇵": [("tricolor_h", [(0,42,142),(255,255,255),(205,46,58)])],
-            "🇹🇼": [("rect_full", (255,0,0))],
-            "🇮🇹": [("tricolor_v", [(0,140,69),(255,255,255),(206,43,55)])],
-            "🇪🇸": [("tricolor_h", [(170,21,27),(255,196,0),(170,21,27)])],
+            "????": [("rect_full", (222, 41, 16)), ("star_big", (255, 215, 0))],
+            "????": [("rect_full", (255, 255, 255)), ("circle_red", (188, 0, 45))],
+            "????": [("rect_full", (255, 255, 255)), ("taegeuk", None)],
+            "????": [("union_jack", None)],
+            "????": [("tricolor_h", [(0,0,0),(221,0,0),(255,206,0)])],
+            "????": [("tricolor_v", [(0,35,149),(255,255,255),(237,41,57)])],
+            "????": [("tricolor_h", [(255,255,255),(0,57,166),(213,43,30)])],
+            "????": [("rect_full", (255,0,0)), ("maple_leaf", None)],
+            "????": [("tricolor_h", [(255,153,51),(255,255,255),(19,136,8)])],
+            "????": [("rect_full", (0,0,128))],
+            "????": [("rect_full", (0,51,153)), ("eu_stars", (255,204,0))],
+            "????": [("tricolor_h", [(0,42,142),(255,255,255),(205,46,58)])],
+            "????": [("rect_full", (255,0,0))],
+            "????": [("tricolor_v", [(0,140,69),(255,255,255),(206,43,55)])],
+            "????": [("tricolor_h", [(170,21,27),(255,196,0),(170,21,27)])],
         }
 
         def _draw_flag_badge(draw_ctx: ImageDraw.Draw, fx: int, fy: int, fw: int, fh: int, flag_emoji: str):
-            """국기 배지를 PIL로 직접 그림"""
+            """±¹±â ¹èÁö¸¦ PIL·Î Á÷Á¢ ±×¸²"""
             specs = _FLAG_DRAW.get(flag_emoji)
             if not specs:
-                # 기본: 회색 배지에 국기 이모지 첫 글자
+                # ±âº»: È¸»ö ¹èÁö¿¡ ±¹±â ÀÌ¸ðÁö Ã¹ ±ÛÀÚ
                 draw_ctx.rectangle([(fx, fy), (fx+fw, fy+fh)], fill=(80,80,100))
                 return
             for spec, color in specs:
@@ -4042,7 +4042,7 @@ def generate_pro_thumbnail(
                 elif spec == "rect_canton":
                     draw_ctx.rectangle([(fx, fy), (fx+fw//2, fy+fh//2)], fill=color)
                 elif spec == "stars":
-                    pass  # 너무 복잡 — 캔턴 색으로 대체
+                    pass  # ³Ê¹« º¹Àâ ? ÄµÅÏ »öÀ¸·Î ´ëÃ¼
                 elif spec == "star_big":
                     cx, cy = fx + fw//3, fy + fh//2
                     r = min(fw, fh) // 4
@@ -4092,11 +4092,11 @@ def generate_pro_thumbnail(
         _detected_flags = detect_countries_in_text(title + " " + (subtitle or ""))
         if _detected_flags:
             try:
-                FW, FH = 44, 30   # 국기 배지 크기
+                FW, FH = 44, 30   # ±¹±â ¹èÁö Å©±â
                 _badge_x = 42
                 _badge_y = icon_y + 46
                 for _flag_emoji in _detected_flags[:5]:
-                    # 테두리 라운드 배지
+                    # Å×µÎ¸® ¶ó¿îµå ¹èÁö
                     _pad = 3
                     draw.rounded_rectangle(
                         [(_badge_x-_pad, _badge_y-_pad), (_badge_x+FW+_pad, _badge_y+FH+_pad)],
@@ -4105,13 +4105,13 @@ def generate_pro_thumbnail(
                     _draw_flag_badge(draw, _badge_x, _badge_y, FW, FH, _flag_emoji)
                     _badge_x += FW + 12
             except Exception as _fe:
-                logger.debug(f"[THUMB] 국기 배지 오류: {_fe}")
+                logger.debug(f"[THUMB] ±¹±â ¹èÁö ¿À·ù: {_fe}")
 
-        # ── 14. 하단 바 텍스트 ───────────────────────────────────
+        # ¦¡¦¡ 14. ÇÏ´Ü ¹Ù ÅØ½ºÆ® ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         bar_text = subtitle.strip() if subtitle else (line2 if line2 and line1 != line2 else "")
         if not bar_text:
-            # 제목 전체 축약
-            bar_text = title[:40] + ("…" if len(title) > 40 else "")
+            # Á¦¸ñ ÀüÃ¼ Ãà¾à
+            bar_text = title[:40] + ("¡¦" if len(title) > 40 else "")
         if bar_text:
             bb_bar = draw.textbbox((0, 0), bar_text, font=font_bar)
             btw = bb_bar[2] - bb_bar[0]
@@ -4120,7 +4120,7 @@ def generate_pro_thumbnail(
             draw.text((btx + 1, bty + 1), bar_text, font=font_bar, fill=DARK)
             draw.text((btx, bty), bar_text, font=font_bar, fill=(210, 210, 220))
 
-        # ── 15. 오른쪽 패널 상단 미세 비네트 ────────────────────
+        # ¦¡¦¡ 15. ¿À¸¥ÂÊ ÆÐ³Î »ó´Ü ¹Ì¼¼ ºñ³×Æ® ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         rv = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
         draw_rv = ImageDraw.Draw(rv)
         for x in range(60):
@@ -4129,14 +4129,14 @@ def generate_pro_thumbnail(
             draw_rv.line([(rx, 0), (rx, MAIN_H)], fill=(0, 0, 0, a))
         img = Image.alpha_composite(img.convert("RGBA"), rv).convert("RGB")
 
-        # ── 16. 저장 ──────────────────────────────────────────────
+        # ¦¡¦¡ 16. ÀúÀå ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         output_path.parent.mkdir(parents=True, exist_ok=True)
         img.save(str(output_path), "JPEG", quality=92, optimize=True)
-        logger.info(f"[THUMB-v2] 멀티패널 썸네일 완료: {output_path} score={best_score:.1f}")
+        logger.info(f"[THUMB-v2] ¸ÖÆ¼ÆÐ³Î ½æ³×ÀÏ ¿Ï·á: {output_path} score={best_score:.1f}")
         return True
 
     except Exception as e:
-        logger.error(f"[THUMB] 프로 썸네일 오류: {e}")
+        logger.error(f"[THUMB] ÇÁ·Î ½æ³×ÀÏ ¿À·ù: {e}")
         import traceback; logger.debug(traceback.format_exc())
         return False
 def create_shortform_from_longform(
@@ -4145,26 +4145,26 @@ def create_shortform_from_longform(
     max_duration: float = 60.0,
     timeout: float = 120.0,
 ) -> bool:
-    """[v16.6] 장편 영상에서 숏폼(1080x1920) 생성 — 강화 버전
+    """[v16.6] ÀåÆí ¿µ»ó¿¡¼­ ¼ôÆû(1080x1920) »ý¼º ? °­È­ ¹öÀü
 
-    crop 필터: scale→crop→pad 순서로 안전하게 처리.
-    - 1단계: 가로 기준으로 1920 높이에 맞게 스케일
-    - 2단계: 중앙 1080×1920 크롭 (비율 0인 경우 방어)
-    - 3단계: 남는 공간 black pad (비율 불일치 시 fallback)
+    crop ÇÊÅÍ: scale¡æcrop¡æpad ¼ø¼­·Î ¾ÈÀüÇÏ°Ô Ã³¸®.
+    - 1´Ü°è: °¡·Î ±âÁØÀ¸·Î 1920 ³ôÀÌ¿¡ ¸Â°Ô ½ºÄÉÀÏ
+    - 2´Ü°è: Áß¾Ó 1080¡¿1920 Å©·Ó (ºñÀ² 0ÀÎ °æ¿ì ¹æ¾î)
+    - 3´Ü°è: ³²´Â °ø°£ black pad (ºñÀ² ºÒÀÏÄ¡ ½Ã fallback)
     """
     if not longform_path.exists():
-        logger.error(f"[SHORTFORM] 입력 파일 없음: {longform_path}")
+        logger.error(f"[SHORTFORM] ÀÔ·Â ÆÄÀÏ ¾øÀ½: {longform_path}")
         return False
 
     dur = get_video_duration(longform_path)
     if dur is not None and dur <= 0:
-        logger.error(f"[SHORTFORM] 유효하지 않은 duration: {dur}")
+        logger.error(f"[SHORTFORM] À¯È¿ÇÏÁö ¾ÊÀº duration: {dur}")
         return False
 
     actual_max = min(max_duration, dur) if dur else max_duration
 
-    # [v16.6] 안전한 9:16 crop 필터
-    # scale=iw*sar:ih (SAR 보정) → 1920 높이 기준 스케일 → 1080 너비 크롭
+    # [v16.6] ¾ÈÀüÇÑ 9:16 crop ÇÊÅÍ
+    # scale=iw*sar:ih (SAR º¸Á¤) ¡æ 1920 ³ôÀÌ ±âÁØ ½ºÄÉÀÏ ¡æ 1080 ³Êºñ Å©·Ó
     vf_filter = (
         "scale='if(gt(iw/ih,9/16),1080,-2)':'if(gt(iw/ih,9/16),-2,1920)',"
         "crop=1080:1920:(iw-1080)/2:(ih-1920)/2,"
@@ -4188,11 +4188,11 @@ def create_shortform_from_longform(
 
     ok = run_ffmpeg_command(command, timeout=timeout)
     if ok and output_path.exists() and output_path.stat().st_size > 4096:
-        logger.info(f"[SHORTFORM] 생성 완료: {output_path} ({output_path.stat().st_size/1024/1024:.1f}MB)")
+        logger.info(f"[SHORTFORM] »ý¼º ¿Ï·á: {output_path} ({output_path.stat().st_size/1024/1024:.1f}MB)")
         return True
 
-    # [v16.6] fallback: 단순 crop 재시도
-    logger.warning("[SHORTFORM] 1차 시도 실패 — 단순 crop fallback 시도")
+    # [v16.6] fallback: ´Ü¼ø crop Àç½Ãµµ
+    logger.warning("[SHORTFORM] 1Â÷ ½Ãµµ ½ÇÆÐ ? ´Ü¼ø crop fallback ½Ãµµ")
     fallback_cmd = [
         "ffmpeg",
         "-i", str(longform_path),
@@ -4207,15 +4207,15 @@ def create_shortform_from_longform(
     ]
     ok2 = run_ffmpeg_command(fallback_cmd, timeout=timeout)
     if ok2 and output_path.exists() and output_path.stat().st_size > 4096:
-        logger.info(f"[SHORTFORM] fallback 생성 완료: {output_path}")
+        logger.info(f"[SHORTFORM] fallback »ý¼º ¿Ï·á: {output_path}")
         return True
 
-    logger.error(f"[SHORTFORM] 생성 최종 실패: {longform_path}")
+    logger.error(f"[SHORTFORM] »ý¼º ÃÖÁ¾ ½ÇÆÐ: {longform_path}")
     return False
 
 
 def get_video_duration(video_path: Path) -> Optional[float]:
-    """영상 길이 조회"""
+    """¿µ»ó ±æÀÌ Á¶È¸"""
     try:
         command = [
             "ffprobe",
@@ -4250,34 +4250,34 @@ def get_video_duration(video_path: Path) -> Optional[float]:
                     pass
             return None
     except Exception as e:
-        logger.error(f"영상 길이 조회 오류: {e}")
+        logger.error(f"¿µ»ó ±æÀÌ Á¶È¸ ¿À·ù: {e}")
     
     return None
 
 
 def get_random_bgm() -> Optional[Path]:
-    """배경음악 디렉토리에서 랜덤 파일 선택"""
+    """¹è°æÀ½¾Ç µð·ºÅä¸®¿¡¼­ ·£´ý ÆÄÀÏ ¼±ÅÃ"""
     import random
     
     bgm_files = list(BGM_DIR.glob("*.mp3")) + list(BGM_DIR.glob("*.wav"))
     
     if bgm_files:
         selected = random.choice(bgm_files)
-        logger.info(f"선택된 배경음악: {selected}")
+        logger.info(f"¼±ÅÃµÈ ¹è°æÀ½¾Ç: {selected}")
         return selected
     
-    logger.warning("배경음악 파일 없음")
+    logger.warning("¹è°æÀ½¾Ç ÆÄÀÏ ¾øÀ½")
     return None
 
 
 
 
 # ============================================================================
-# [v15.60.0] Narration-First Timeline Engine 함수군
+# [v15.60.0] Narration-First Timeline Engine ÇÔ¼ö±º
 # ============================================================================
 
 def split_script_into_beats(script, avg_speech_rate=4.0, min_beat_sec=6.0, max_beat_sec=12.0):
-    """스크립트를 의미 단위(Beat)로 분할. Returns list of {text, est_duration, beat_idx}"""
+    """½ºÅ©¸³Æ®¸¦ ÀÇ¹Ì ´ÜÀ§(Beat)·Î ºÐÇÒ. Returns list of {text, est_duration, beat_idx}"""
     import re as _re
     raw_sentences = [s.strip() for s in _re.split(r"(?<=[.!?])\s+|\n+", script) if s.strip()]
     beats, current_text, current_dur = [], "", 0.0
@@ -4292,18 +4292,18 @@ def split_script_into_beats(script, avg_speech_rate=4.0, min_beat_sec=6.0, max_b
         else:
             current_text = (current_text + " " + sent).strip() if current_text else sent
             current_dur += est_dur
-        if current_dur >= min_beat_sec and sent[-1:] in (".", "!", "?", "。"):
+        if current_dur >= min_beat_sec and sent[-1:] in (".", "!", "?", "¡£"):
             beats.append({"text": current_text.strip(), "est_duration": round(current_dur, 2), "beat_idx": len(beats)})
             current_text, current_dur = "", 0.0
     if current_text.strip():
         beats.append({"text": current_text.strip(), "est_duration": round(current_dur, 2), "beat_idx": len(beats)})
-    logger.info(f"[NTL] 스크립트 → {len(beats)}개 Beat (총 {sum(b['est_duration'] for b in beats):.1f}초)")
+    logger.info(f"[NTL] ½ºÅ©¸³Æ® ¡æ {len(beats)}°³ Beat (ÃÑ {sum(b['est_duration'] for b in beats):.1f}ÃÊ)")
     return beats
 
 
 def build_narration_ssml(text, voice="ko-KR-SunHiNeural", rate="+0%", pitch="+0Hz",
                           pause_comma_ms=None, pause_sentence_ms=None):
-    """[v15.60.0] SSML 전처리: 쉼표/문장 끝 pause 삽입"""
+    """[v15.60.0] SSML ÀüÃ³¸®: ½°Ç¥/¹®Àå ³¡ pause »ðÀÔ"""
     import re as _re
     pc = pause_comma_ms if pause_comma_ms is not None else PAUSE_COMMA_MS
     ps = pause_sentence_ms if pause_sentence_ms is not None else PAUSE_SENTENCE_MS
@@ -4314,7 +4314,7 @@ def build_narration_ssml(text, voice="ko-KR-SunHiNeural", rate="+0%", pitch="+0H
 
 
 def _assign_scene_timings(scenes, segments, total_dur):
-    """씬에 start/end 타이밍 할당"""
+    """¾À¿¡ start/end Å¸ÀÌ¹Ö ÇÒ´ç"""
     scene_timings, seg_idx, cursor = [], 0, 0.0
     for scene in scenes:
         if segments and seg_idx < len(segments):
@@ -4336,7 +4336,7 @@ def _assign_scene_timings(scenes, segments, total_dur):
 
 
 def build_narration_timeline(job_id, scenes, timestamps_path=None):
-    """[v15.60.0] WhisperX 타임스탬프 기반 나레이션 타임라인 구성"""
+    """[v15.60.0] WhisperX Å¸ÀÓ½ºÅÆÇÁ ±â¹Ý ³ª·¹ÀÌ¼Ç Å¸ÀÓ¶óÀÎ ±¸¼º"""
     import json as _json
     if timestamps_path and Path(timestamps_path).exists():
         try:
@@ -4344,11 +4344,11 @@ def build_narration_timeline(job_id, scenes, timestamps_path=None):
             segments = ts_data.get("segments", [])
             if segments:
                 total_dur = segments[-1].get("end", 0.0)
-                logger.info(f"[NTL] WhisperX 로드: {len(segments)}세그먼트, {total_dur:.1f}초")
+                logger.info(f"[NTL] WhisperX ·Îµå: {len(segments)}¼¼±×¸ÕÆ®, {total_dur:.1f}ÃÊ")
                 return _assign_scene_timings(scenes, segments, total_dur)
         except Exception as e:
-            logger.warning(f"[NTL] timestamps 파싱 실패, 추정 사용: {e}")
-    # 추정 타임라인
+            logger.warning(f"[NTL] timestamps ÆÄ½Ì ½ÇÆÐ, ÃßÁ¤ »ç¿ë: {e}")
+    # ÃßÁ¤ Å¸ÀÓ¶óÀÎ
     segments, cursor = [], 0.0
     for scene in scenes:
         narr = getattr(scene, "narration", None) or ""
@@ -4360,7 +4360,7 @@ def build_narration_timeline(job_id, scenes, timestamps_path=None):
 
 
 def visual_match_score(asset_meta, scene, already_used=None):
-    """[v15.60.0] 자산-씬 매칭 점수 (0~1). keyword 35% + visual_intent 25% + duration 15% + resolution 10% + motion 10% - dup 5%"""
+    """[v15.60.0] ÀÚ»ê-¾À ¸ÅÄª Á¡¼ö (0~1). keyword 35% + visual_intent 25% + duration 15% + resolution 10% + motion 10% - dup 5%"""
     score = 0.0
     asset_tags = set((asset_meta.get("tags", "") or "").lower().split(","))
     asset_tags |= set((asset_meta.get("title", "") or "").lower().split())
@@ -4388,7 +4388,7 @@ def visual_match_score(asset_meta, scene, already_used=None):
 
 
 def save_timeline_report(job_id, timeline, scenes):
-    """[v15.60.0] timeline_report.json 저장"""
+    """[v15.60.0] timeline_report.json ÀúÀå"""
     import json as _json
     report_path = JOBS_DIR / job_id / "timeline_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -4403,37 +4403,37 @@ def save_timeline_report(job_id, timeline, scenes):
                 "SCENE_HEAD_PAD_SEC","SCENE_TAIL_PAD_SEC","BGM_VOLUME_DEFAULT","BGM_VOLUME_DURING_VOICE")},
     }
     report_path.write_text(_json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    logger.info(f"[NTL] timeline_report.json 저장: {report_path}")
+    logger.info(f"[NTL] timeline_report.json ÀúÀå: {report_path}")
     return report_path
 
 
 def create_srt_from_text(text: str, total_duration: float, output_path: Path) -> bool:
     """
-    스크립트 텍스트를 SRT 자막 파일로 변환.
-    전체 영상 시간에 맞게 텍스트를 균등 분배.
+    ½ºÅ©¸³Æ® ÅØ½ºÆ®¸¦ SRT ÀÚ¸· ÆÄÀÏ·Î º¯È¯.
+    ÀüÃ¼ ¿µ»ó ½Ã°£¿¡ ¸Â°Ô ÅØ½ºÆ®¸¦ ±Õµî ºÐ¹è.
 
     Args:
-        text: 자막으로 표시할 전체 텍스트
-        total_duration: 영상 총 길이 (초)
-        output_path: SRT 파일 저장 경로
+        text: ÀÚ¸·À¸·Î Ç¥½ÃÇÒ ÀüÃ¼ ÅØ½ºÆ®
+        total_duration: ¿µ»ó ÃÑ ±æÀÌ (ÃÊ)
+        output_path: SRT ÆÄÀÏ ÀúÀå °æ·Î
 
     Returns:
-        성공 여부
+        ¼º°ø ¿©ºÎ
     """
     try:
         import re
 
-        # 문장 단위로 분리 (마침표, 느낌표, 물음표, 줄바꿈)
+        # ¹®Àå ´ÜÀ§·Î ºÐ¸® (¸¶Ä§Ç¥, ´À³¦Ç¥, ¹°À½Ç¥, ÁÙ¹Ù²Þ)
         sentences = [s.strip() for s in re.split(r'[.!?\n]+', text) if s.strip()]
 
         if not sentences:
             sentences = [text[:50]]  # fallback
 
-        # 한 자막당 최대 글자 수 (2줄 x 25자)
+        # ÇÑ ÀÚ¸·´ç ÃÖ´ë ±ÛÀÚ ¼ö (2ÁÙ x 25ÀÚ)
         MAX_CHARS = 40
         chunks = []
         for sentence in sentences:
-            # 긴 문장은 MAX_CHARS 단위로 분할
+            # ±ä ¹®ÀåÀº MAX_CHARS ´ÜÀ§·Î ºÐÇÒ
             while len(sentence) > MAX_CHARS:
                 chunks.append(sentence[:MAX_CHARS])
                 sentence = sentence[MAX_CHARS:]
@@ -4443,7 +4443,7 @@ def create_srt_from_text(text: str, total_duration: float, output_path: Path) ->
         if not chunks:
             return False
 
-        # 각 청크에 시간 균등 배분 (마지막 0.5초는 여유)
+        # °¢ Ã»Å©¿¡ ½Ã°£ ±Õµî ¹èºÐ (¸¶Áö¸· 0.5ÃÊ´Â ¿©À¯)
         usable_duration = max(total_duration - 0.5, 1.0)
         chunk_duration = usable_duration / len(chunks)
 
@@ -4458,23 +4458,23 @@ def create_srt_from_text(text: str, total_duration: float, output_path: Path) ->
         srt_content = ""
         for i, chunk in enumerate(chunks):
             start = i * chunk_duration
-            # 겹침 방지: end는 다음 start보다 0.1초 앞
+            # °ãÄ§ ¹æÁö: end´Â ´ÙÀ½ startº¸´Ù 0.1ÃÊ ¾Õ
             end = min((i + 1) * chunk_duration - 0.1, usable_duration)
             srt_content += f"{i+1}\n"
             srt_content += f"{sec_to_srt_time(start)} --> {sec_to_srt_time(end)}\n"
             srt_content += f"{chunk}\n\n"
 
         output_path.write_text(srt_content, encoding="utf-8")
-        logger.info(f"SRT 생성 완료: {len(chunks)}개 자막 구간, {output_path}")
+        logger.info(f"SRT »ý¼º ¿Ï·á: {len(chunks)}°³ ÀÚ¸· ±¸°£, {output_path}")
         return True
 
     except Exception as e:
-        logger.error(f"SRT 생성 오류: {e}")
+        logger.error(f"SRT »ý¼º ¿À·ù: {e}")
         return False
 
 
 def create_srt_from_scenes(scenes: list, output_path: Path) -> bool:
-    """씬별 description/keyword를 SRT 자막으로 변환 (씬 타이밍 완전 동기화)."""
+    """¾Àº° description/keyword¸¦ SRT ÀÚ¸·À¸·Î º¯È¯ (¾À Å¸ÀÌ¹Ö ¿ÏÀü µ¿±âÈ­)."""
     try:
         import re
 
@@ -4524,11 +4524,11 @@ def create_srt_from_scenes(scenes: list, output_path: Path) -> bool:
             srt_content += f"{txt}\n\n"
 
         output_path.write_text(srt_content, encoding="utf-8")
-        logger.info(f"씬 동기화 SRT 생성: {len(srt_entries)}개 구간")
+        logger.info(f"¾À µ¿±âÈ­ SRT »ý¼º: {len(srt_entries)}°³ ±¸°£")
         return True
 
     except Exception as e:
-        logger.error(f"씬 SRT 생성 오류: {e}")
+        logger.error(f"¾À SRT »ý¼º ¿À·ù: {e}")
         return False
 
 
@@ -4541,34 +4541,34 @@ def create_music_video(
     resolution: str = "1920x1080"
 ) -> bool:
     """
-    뮤직비디오 생성: 비디오 클립 연결 + BGM + 자막 오버레이.
-    TTS 나레이션 없이 배경음악만 사용.
+    ¹ÂÁ÷ºñµð¿À »ý¼º: ºñµð¿À Å¬¸³ ¿¬°á + BGM + ÀÚ¸· ¿À¹ö·¹ÀÌ.
+    TTS ³ª·¹ÀÌ¼Ç ¾øÀÌ ¹è°æÀ½¾Ç¸¸ »ç¿ë.
 
     Args:
-        clips: 비디오 클립 경로 목록
-        srt_path: SRT 자막 파일 경로
-        bgm_path: BGM 오디오 파일 경로 (None이면 무음)
-        bgm_volume: BGM 볼륨 (0-1)
-        output_path: 출력 영상 경로
-        resolution: 출력 해상도
+        clips: ºñµð¿À Å¬¸³ °æ·Î ¸ñ·Ï
+        srt_path: SRT ÀÚ¸· ÆÄÀÏ °æ·Î
+        bgm_path: BGM ¿Àµð¿À ÆÄÀÏ °æ·Î (NoneÀÌ¸é ¹«À½)
+        bgm_volume: BGM º¼·ý (0-1)
+        output_path: Ãâ·Â ¿µ»ó °æ·Î
+        resolution: Ãâ·Â ÇØ»óµµ
 
     Returns:
-        성공 여부
+        ¼º°ø ¿©ºÎ
     """
     if not clips:
-        logger.error("클립 없음")
+        logger.error("Å¬¸³ ¾øÀ½")
         return False
 
     try:
         import tempfile
 
-        # 1) 클립 concat용 임시 txt
+        # 1) Å¬¸³ concat¿ë ÀÓ½Ã txt
         concat_txt = output_path.parent / "mv_concat.txt"
         with open(concat_txt, "w") as f:
             for clip in clips:
                 f.write(f"file '{clip}'\n")
 
-        # 2) concat → 임시 combined
+        # 2) concat ¡æ ÀÓ½Ã combined
         combined = output_path.parent / "mv_combined.mp4"
         concat_cmd = [
             "ffmpeg",
@@ -4578,43 +4578,43 @@ def create_music_video(
             "-y", str(combined)
         ]
         if not run_ffmpeg_command(concat_cmd):
-            logger.error("뮤직비디오 concat 실패")
+            logger.error("¹ÂÁ÷ºñµð¿À concat ½ÇÆÐ")
             return False
 
-        # 3) 자막 스타일 (뮤직비디오 감성: 큰 폰트, 흰색, 굵은 외곽선)
-        # 연구 기반 최적값:
-        # - FontSize=56: 1920x1080의 5.2% 높이 = 가사 가독성 최적 (YouTube MV 기준)
-        # - BorderStyle=3: 반투명 박스 배경 (텍스트 가독성 극대화)
-        # - Outline=4: 외곽선 두께 - 어두운/밝은 배경 모두 대응
-        # - MarginV=60: 하단 60px - 모바일/TV 안전 영역
+        # 3) ÀÚ¸· ½ºÅ¸ÀÏ (¹ÂÁ÷ºñµð¿À °¨¼º: Å« ÆùÆ®, Èò»ö, ±½Àº ¿Ü°û¼±)
+        # ¿¬±¸ ±â¹Ý ÃÖÀû°ª:
+        # - FontSize=56: 1920x1080ÀÇ 5.2% ³ôÀÌ = °¡»ç °¡µ¶¼º ÃÖÀû (YouTube MV ±âÁØ)
+        # - BorderStyle=3: ¹ÝÅõ¸í ¹Ú½º ¹è°æ (ÅØ½ºÆ® °¡µ¶¼º ±Ø´ëÈ­)
+        # - Outline=4: ¿Ü°û¼± µÎ²² - ¾îµÎ¿î/¹àÀº ¹è°æ ¸ðµÎ ´ëÀÀ
+        # - MarginV=60: ÇÏ´Ü 60px - ¸ð¹ÙÀÏ/TV ¾ÈÀü ¿µ¿ª
         subtitle_style = (
             "FontName=Noto Sans CJK KR,"
-            "FontSize=56,"             # 1920x1080 최적 (화면 높이 5.2%)
-            "PrimaryColour=&H00FFFFFF,"  # 흰색 텍스트 (AABBGGRR)
-            "OutlineColour=&H00000000,"  # 검정 외곽선
-            "BackColour=&HA0000000,"     # 50% 투명 검정 박스 배경
-            "BorderStyle=3,"             # 불투명 박스 배경
-            "Outline=4,"                 # 외곽선 두께 4px
+            "FontSize=56,"             # 1920x1080 ÃÖÀû (È­¸é ³ôÀÌ 5.2%)
+            "PrimaryColour=&H00FFFFFF,"  # Èò»ö ÅØ½ºÆ® (AABBGGRR)
+            "OutlineColour=&H00000000,"  # °ËÁ¤ ¿Ü°û¼±
+            "BackColour=&HA0000000,"     # 50% Åõ¸í °ËÁ¤ ¹Ú½º ¹è°æ
+            "BorderStyle=3,"             # ºÒÅõ¸í ¹Ú½º ¹è°æ
+            "Outline=4,"                 # ¿Ü°û¼± µÎ²² 4px
             "Shadow=0,"
             "Bold=1,"
-            "Alignment=2,"               # 하단 중앙
-            "MarginV=60"                 # 하단 60px 여백
+            "Alignment=2,"               # ÇÏ´Ü Áß¾Ó
+            "MarginV=60"                 # ÇÏ´Ü 60px ¿©¹é
         )
 
-        # 4) 자막 필터 문자열 (srt 경로 이스케이프)
+        # 4) ÀÚ¸· ÇÊÅÍ ¹®ÀÚ¿­ (srt °æ·Î ÀÌ½ºÄÉÀÌÇÁ)
         srt_escaped = str(srt_path).replace("\\", "/").replace(":", "\\:")
         subtitle_filter = f"subtitles={srt_escaped}:charenc=UTF-8:force_style='{subtitle_style}'"
 
-        # 5) BGM 포함 여부에 따라 명령 구성
+        # 5) BGM Æ÷ÇÔ ¿©ºÎ¿¡ µû¶ó ¸í·É ±¸¼º
         if bgm_path and bgm_path.exists():
-            # BGM + 자막
+            # BGM + ÀÚ¸·
             cmd = [
                 "ffmpeg",
                 "-i", str(combined),
-                # BGM 반복
+                # BGM ¹Ýº¹
                 "-i", str(bgm_path),
                 "-filter_complex",
-                # loudnorm: YouTube 기준 -14 LUFS, TP=-1.5, LRA=11
+                # loudnorm: YouTube ±âÁØ -14 LUFS, TP=-1.5, LRA=11
                 f"[1:a]volume={bgm_volume},loudnorm=I=-14:TP=-1.5:LRA=11[bgm]",
                 "-vf", subtitle_filter,
                 "-map", "0:v",
@@ -4623,11 +4623,11 @@ def create_music_video(
                 "-preset", "fast",
                 "-c:a", "aac",
                 "-b:a", "192k",
-                "-shortest",            # 비디오 길이 기준 종료
+                "-shortest",            # ºñµð¿À ±æÀÌ ±âÁØ Á¾·á
                 "-y", str(output_path)
             ]
         else:
-            # 자막만 (무음)
+            # ÀÚ¸·¸¸ (¹«À½)
             cmd = [
                 "ffmpeg",
                 "-i", str(combined),
@@ -4640,11 +4640,11 @@ def create_music_video(
 
         result = run_ffmpeg_command(cmd)
         if result:
-            logger.info(f"뮤직비디오 생성 완료: {output_path}")
+            logger.info(f"¹ÂÁ÷ºñµð¿À »ý¼º ¿Ï·á: {output_path}")
         return result
 
     except Exception as e:
-        logger.error(f"뮤직비디오 생성 오류: {e}")
+        logger.error(f"¹ÂÁ÷ºñµð¿À »ý¼º ¿À·ù: {e}")
         return False
 
 def sync_scene_durations_from_timestamps(
@@ -4652,27 +4652,27 @@ def sync_scene_durations_from_timestamps(
     timestamps_path
 ):
     """
-    TTS 오디오 타임스탬프(ElevenLabs alignment 또는 Whisper segments) 기반
-    씬별 비디오 클립 길이 동기화.
+    TTS ¿Àµð¿À Å¸ÀÓ½ºÅÆÇÁ(ElevenLabs alignment ¶Ç´Â Whisper segments) ±â¹Ý
+    ¾Àº° ºñµð¿À Å¬¸³ ±æÀÌ µ¿±âÈ­.
 
-    우선순위:
-    1. Whisper `segments` 가 있으면 → 씬별 실제 오디오 구간에 정밀 매핑
-       (세그먼트를 씬 개수에 맞춰 누적 길이 비례로 분할)
-    2. 그 외 → 전체 오디오 길이 기반 비례 배분
-       (ElevenLabs character_end_times_seconds[-1] 또는 Whisper duration)
+    ¿ì¼±¼øÀ§:
+    1. Whisper `segments` °¡ ÀÖÀ¸¸é ¡æ ¾Àº° ½ÇÁ¦ ¿Àµð¿À ±¸°£¿¡ Á¤¹Ð ¸ÅÇÎ
+       (¼¼±×¸ÕÆ®¸¦ ¾À °³¼ö¿¡ ¸ÂÃç ´©Àû ±æÀÌ ºñ·Ê·Î ºÐÇÒ)
+    2. ±× ¿Ü ¡æ ÀüÃ¼ ¿Àµð¿À ±æÀÌ ±â¹Ý ºñ·Ê ¹èºÐ
+       (ElevenLabs character_end_times_seconds[-1] ¶Ç´Â Whisper duration)
 
-    Returns: duration_seconds 조정된 씬 목록
+    Returns: duration_seconds Á¶Á¤µÈ ¾À ¸ñ·Ï
     """
     import json as _json
     from pathlib import Path as _Path
 
     if not timestamps_path:
-        logger.info("타임스탬프 경로 없음 — scenes.json 추정 duration 사용")
+        logger.info("Å¸ÀÓ½ºÅÆÇÁ °æ·Î ¾øÀ½ ? scenes.json ÃßÁ¤ duration »ç¿ë")
         return scenes
 
     ts_path = _Path(timestamps_path)
     if not ts_path.exists():
-        logger.info(f"타임스탬프 파일 없음: {ts_path} — scenes.json 추정 duration 사용")
+        logger.info(f"Å¸ÀÓ½ºÅÆÇÁ ÆÄÀÏ ¾øÀ½: {ts_path} ? scenes.json ÃßÁ¤ duration »ç¿ë")
         return scenes
 
     try:
@@ -4684,7 +4684,7 @@ def sync_scene_durations_from_timestamps(
         alignment = ts_data.get("alignment") or {}
         end_times = alignment.get("character_end_times_seconds") or []
 
-        # ── 전체 오디오 길이 확보 ──────────────────────────────────────
+        # ¦¡¦¡ ÀüÃ¼ ¿Àµð¿À ±æÀÌ È®º¸ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         total_audio_sec = 0.0
         if segments:
             total_audio_sec = float(segments[-1].get("end", 0.0) or 0.0)
@@ -4695,21 +4695,21 @@ def sync_scene_durations_from_timestamps(
 
         if total_audio_sec <= 0:
             logger.warning(
-                f"타임스탬프에 길이 정보 없음 (source={source}) — 동기화 스킵"
+                f"Å¸ÀÓ½ºÅÆÇÁ¿¡ ±æÀÌ Á¤º¸ ¾øÀ½ (source={source}) ? µ¿±âÈ­ ½ºÅµ"
             )
             return scenes
 
         logger.info(
-            f"타임스탬프 로드: source={source} 총길이={total_audio_sec:.2f}s "
+            f"Å¸ÀÓ½ºÅÆÇÁ ·Îµå: source={source} ÃÑ±æÀÌ={total_audio_sec:.2f}s "
             f"segments={len(segments)}"
         )
 
-        # ── 전략 A: 세그먼트 정밀 매핑 (Whisper segments 있을 때) ──────
-        # 씬 개수에 세그먼트를 누적 길이 비례로 분할해 각 씬의 (start,end) 산출
+        # ¦¡¦¡ Àü·« A: ¼¼±×¸ÕÆ® Á¤¹Ð ¸ÅÇÎ (Whisper segments ÀÖÀ» ¶§) ¦¡¦¡¦¡¦¡¦¡¦¡
+        # ¾À °³¼ö¿¡ ¼¼±×¸ÕÆ®¸¦ ´©Àû ±æÀÌ ºñ·Ê·Î ºÐÇÒÇØ °¢ ¾ÀÀÇ (start,end) »êÃâ
         if segments and len(segments) >= len(scenes) >= 1:
             scene_weights = [max((s.duration_seconds or 5.0), 0.1) for s in scenes]
             total_weight = sum(scene_weights)
-            # 누적 경계 초 단위 계산 (오디오 total * (누적 weight / total_weight))
+            # ´©Àû °æ°è ÃÊ ´ÜÀ§ °è»ê (¿Àµð¿À total * (´©Àû weight / total_weight))
             boundaries = []
             cum = 0.0
             for w in scene_weights[:-1]:
@@ -4717,12 +4717,12 @@ def sync_scene_durations_from_timestamps(
                 boundaries.append(total_audio_sec * cum / total_weight)
             boundaries.append(total_audio_sec)
 
-            # 경계를 가장 가까운 세그먼트 경계로 스냅
+            # °æ°è¸¦ °¡Àå °¡±î¿î ¼¼±×¸ÕÆ® °æ°è·Î ½º³À
             seg_ends = [float(seg.get("end", 0.0) or 0.0) for seg in segments]
             snapped = []
             last_end_idx = -1
             for b in boundaries[:-1]:
-                # 현재까지 쓴 세그먼트 이후 구간에서 b에 가장 가까운 end 선택
+                # ÇöÀç±îÁö ¾´ ¼¼±×¸ÕÆ® ÀÌÈÄ ±¸°£¿¡¼­ b¿¡ °¡Àå °¡±î¿î end ¼±ÅÃ
                 best_idx = last_end_idx + 1
                 best_diff = abs(seg_ends[best_idx] - b) if best_idx < len(seg_ends) else 1e9
                 for j in range(last_end_idx + 1, len(seg_ends)):
@@ -4731,10 +4731,10 @@ def sync_scene_durations_from_timestamps(
                         best_diff = d
                         best_idx = j
                     else:
-                        # 정렬되어 있으므로 멀어지면 중단
+                        # Á¤·ÄµÇ¾î ÀÖÀ¸¹Ç·Î ¸Ö¾îÁö¸é Áß´Ü
                         if seg_ends[j] > b:
                             break
-                # 최소 1개 세그먼트는 남겨야 하므로 끝에서 2개는 남기기
+                # ÃÖ¼Ò 1°³ ¼¼±×¸ÕÆ®´Â ³²°Ü¾ß ÇÏ¹Ç·Î ³¡¿¡¼­ 2°³´Â ³²±â±â
                 best_idx = min(best_idx, len(seg_ends) - (len(scenes) - len(snapped)))
                 snapped.append(seg_ends[best_idx])
                 last_end_idx = best_idx
@@ -4746,20 +4746,20 @@ def sync_scene_durations_from_timestamps(
                 dur = max(1.0, round(end - prev, 2))
                 if abs(dur - (s.duration_seconds or 5.0)) > 0.1:
                     old = (s.duration_seconds or 5.0)
-                    logger.info(f"씬 '{s.scene_id}' 길이 조정 (segment-snap): {old:.1f}s -> {dur:.1f}s")
+                    logger.info(f"¾À '{s.scene_id}' ±æÀÌ Á¶Á¤ (segment-snap): {old:.1f}s -> {dur:.1f}s")
                 synced.append(s.model_copy(update={"duration_seconds": dur}))
                 prev = end
             actual_total = sum(x.duration_seconds for x in synced)
             logger.info(
-                f"씬 동기화 완료 (segment-snap, source={source}): "
-                f"TTS {total_audio_sec:.1f}s → 실제합계 {actual_total:.1f}s"
+                f"¾À µ¿±âÈ­ ¿Ï·á (segment-snap, source={source}): "
+                f"TTS {total_audio_sec:.1f}s ¡æ ½ÇÁ¦ÇÕ°è {actual_total:.1f}s"
             )
             return synced
 
-        # ── 전략 B: 비례 배분 (세그먼트 부족 시 fallback) ───────────────
+        # ¦¡¦¡ Àü·« B: ºñ·Ê ¹èºÐ (¼¼±×¸ÕÆ® ºÎÁ· ½Ã fallback) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         total_scene_sec = sum((s.duration_seconds or 5.0) for s in scenes)
         if total_scene_sec <= 0:
-            logger.warning("씬 총 길이 0 — 동기화 스킵")
+            logger.warning("¾À ÃÑ ±æÀÌ 0 ? µ¿±âÈ­ ½ºÅµ")
             return scenes
 
         ratio = total_audio_sec / total_scene_sec
@@ -4767,27 +4767,27 @@ def sync_scene_durations_from_timestamps(
         for s in scenes:
             new_dur = max(1.0, round((s.duration_seconds or 5.0) * ratio, 2))
             if abs(new_dur - (s.duration_seconds or 5.0)) > 0.1:
-                logger.info(f"씬 '{s.scene_id}' 길이 조정 (ratio): {s.duration_seconds:.1f}s -> {new_dur:.1f}s")
+                logger.info(f"¾À '{s.scene_id}' ±æÀÌ Á¶Á¤ (ratio): {s.duration_seconds:.1f}s -> {new_dur:.1f}s")
             synced.append(s.model_copy(update={"duration_seconds": new_dur}))
 
         actual_total = sum(s.duration_seconds for s in synced)
         logger.info(
-            f"씬 동기화 완료 (ratio, source={source}): "
-            f"씬합계 {total_scene_sec:.1f}s → TTS {total_audio_sec:.1f}s "
-            f"(실제합계 {actual_total:.1f}s)"
+            f"¾À µ¿±âÈ­ ¿Ï·á (ratio, source={source}): "
+            f"¾ÀÇÕ°è {total_scene_sec:.1f}s ¡æ TTS {total_audio_sec:.1f}s "
+            f"(½ÇÁ¦ÇÕ°è {actual_total:.1f}s)"
         )
         return synced
 
     except Exception as e:
-        logger.error(f"씬 동기화 오류 (원본 사용): {e}", exc_info=True)
+        logger.error(f"¾À µ¿±âÈ­ ¿À·ù (¿øº» »ç¿ë): {e}", exc_info=True)
         return scenes
 
 
-# [Q4] silencedetect 파라미터 (환경변수 override 가능)
-SILENCE_NOISE_DB = float(_rhythm_os.getenv("SILENCE_NOISE_DB", "-30"))      # 무음 임계 dB
-SILENCE_MIN_SEC  = float(_rhythm_os.getenv("SILENCE_MIN_SEC", "0.25"))      # 최소 무음 길이
+# [Q4] silencedetect ÆÄ¶ó¹ÌÅÍ (È¯°æº¯¼ö override °¡´É)
+SILENCE_NOISE_DB = float(_rhythm_os.getenv("SILENCE_NOISE_DB", "-30"))      # ¹«À½ ÀÓ°è dB
+SILENCE_MIN_SEC  = float(_rhythm_os.getenv("SILENCE_MIN_SEC", "0.25"))      # ÃÖ¼Ò ¹«À½ ±æÀÌ
 
-# [Q5] 자막 무음 스냅 파라미터
+# [Q5] ÀÚ¸· ¹«À½ ½º³À ÆÄ¶ó¹ÌÅÍ
 SUBTITLE_SNAP_WINDOW_SEC       = float(_rhythm_os.getenv("SUBTITLE_SNAP_WINDOW_SEC", "0.6"))
 SUBTITLE_LEAD_AFTER_SIL_SEC    = float(_rhythm_os.getenv("SUBTITLE_LEAD_AFTER_SIL_SEC", "0.08"))
 SUBTITLE_TAIL_BEFORE_SIL_SEC   = float(_rhythm_os.getenv("SUBTITLE_TAIL_BEFORE_SIL_SEC", "0.05"))
@@ -4795,8 +4795,8 @@ SUBTITLE_TAIL_BEFORE_SIL_SEC   = float(_rhythm_os.getenv("SUBTITLE_TAIL_BEFORE_S
 
 def _detect_audio_silences(audio_path) -> list:
     """
-    ffmpeg silencedetect 로 오디오 내 무음 구간 검출.
-    Returns: [(start, end), ...] 단위는 초.
+    ffmpeg silencedetect ·Î ¿Àµð¿À ³» ¹«À½ ±¸°£ °ËÃâ.
+    Returns: [(start, end), ...] ´ÜÀ§´Â ÃÊ.
     """
     import subprocess as _sp
     from pathlib import Path as _P
@@ -4828,28 +4828,28 @@ def _detect_audio_silences(audio_path) -> list:
                     pass
                 cur_start = None
         logger.info(
-            f"silencedetect: {len(silences)}개 무음 구간 "
+            f"silencedetect: {len(silences)}°³ ¹«À½ ±¸°£ "
             f"(noise={SILENCE_NOISE_DB}dB, d={SILENCE_MIN_SEC}s)"
         )
         return silences
     except Exception as e:
-        logger.warning(f"silencedetect 실패 — {e}")
+        logger.warning(f"silencedetect ½ÇÆÐ ? {e}")
         return []
 
 
 def _find_pause_split(seg_start: float, seg_end: float, ts_data: dict):
     """
-    [Q2]+[Q4] segment 내부 분할 지점.
-    1순위: ts_data['audio_silences'] 의 무음 구간 중간 (실제 음향 검출, 가장 정확)
-    2순위: Whisper words 간 0.3초 이상 쉼
-    실패 → None (caller가 mid로 fallback)
+    [Q2]+[Q4] segment ³»ºÎ ºÐÇÒ ÁöÁ¡.
+    1¼øÀ§: ts_data['audio_silences'] ÀÇ ¹«À½ ±¸°£ Áß°£ (½ÇÁ¦ À½Çâ °ËÃâ, °¡Àå Á¤È®)
+    2¼øÀ§: Whisper words °£ 0.3ÃÊ ÀÌ»ó ½°
+    ½ÇÆÐ ¡æ None (caller°¡ mid·Î fallback)
     """
-    # 1) 실제 음향 무음 우선 (양 끝 1초 여유)
+    # 1) ½ÇÁ¦ À½Çâ ¹«À½ ¿ì¼± (¾ç ³¡ 1ÃÊ ¿©À¯)
     silences = ts_data.get("audio_silences") or []
     best_t = None
     best_dur = 0.0
     for (s_start, s_end) in silences:
-        # 무음이 segment 내부에 걸쳐있으면
+        # ¹«À½ÀÌ segment ³»ºÎ¿¡ °ÉÃÄÀÖÀ¸¸é
         if s_end < seg_start + 1.0 or s_start > seg_end - 1.0:
             continue
         clipped_s = max(s_start, seg_start + 1.0)
@@ -4863,7 +4863,7 @@ def _find_pause_split(seg_start: float, seg_end: float, ts_data: dict):
     if best_t is not None:
         return best_t
 
-    # 2) Whisper word gaps (한국어에서는 종종 무용지물이지만 fallback)
+    # 2) Whisper word gaps (ÇÑ±¹¾î¿¡¼­´Â Á¾Á¾ ¹«¿ëÁö¹°ÀÌÁö¸¸ fallback)
     words = ts_data.get("words") or []
     if not words:
         return None
@@ -4892,38 +4892,38 @@ def _find_pause_split(seg_start: float, seg_end: float, ts_data: dict):
 
 # [BA] MARKER v1 - Stronger keyword extraction with multi-word concrete phrases
 # Abstract single words that Pexels mis-maps to random content
-# [BL] 중의어 단독 사용 시 Pexels 오인 — 대체어로 자동 치환
+# [BL] ÁßÀÇ¾î ´Üµ¶ »ç¿ë ½Ã Pexels ¿ÀÀÎ ? ´ëÃ¼¾î·Î ÀÚµ¿ Ä¡È¯
 # [BN-2] MARKER v2
 _AMBIGUOUS_REPLACE = {
-    "microphone": "building",        # [BN-2] 마이크→건물 (podium 스톡 많으면 미국기 나옴)
-    "press": "journalist",            # press phone → 기자
-    "screen": "monitor",              # 휴대폰 화면 → 모니터
-    "phone": "",                       # 모호함 → 제거
-    "audio": "",                       # 음향 → 제거
-    "recording": "",                   # 녹음 → 제거
-    "studio": "",                      # 스튜디오 → 제거
-    "conference": "meeting",          # 회의
-    "speaker": "official",            # [BN-2] politician→official (podium 회피)
-    "podium": "building",             # [BN-2] 연단→건물 (generic podium US flags)
-    "politician": "official",         # [BN-2] 정치인→공무원
-    "president": "government",        # [BN-2] 대통령→정부
-    "flag": "",                        # [BN-2] flag 단어 자체 제거
-    # [BP] 미세먼지 검증 실패 키워드
-    "pollution": "smog",              # pollution 단독→smog (volcano 방지)
+    "microphone": "building",        # [BN-2] ¸¶ÀÌÅ©¡æ°Ç¹° (podium ½ºÅå ¸¹À¸¸é ¹Ì±¹±â ³ª¿È)
+    "press": "journalist",            # press phone ¡æ ±âÀÚ
+    "screen": "monitor",              # ÈÞ´ëÆù È­¸é ¡æ ¸ð´ÏÅÍ
+    "phone": "",                       # ¸ðÈ£ÇÔ ¡æ Á¦°Å
+    "audio": "",                       # À½Çâ ¡æ Á¦°Å
+    "recording": "",                   # ³ìÀ½ ¡æ Á¦°Å
+    "studio": "",                      # ½ºÆ©µð¿À ¡æ Á¦°Å
+    "conference": "meeting",          # È¸ÀÇ
+    "speaker": "official",            # [BN-2] politician¡æofficial (podium È¸ÇÇ)
+    "podium": "building",             # [BN-2] ¿¬´Ü¡æ°Ç¹° (generic podium US flags)
+    "politician": "official",         # [BN-2] Á¤Ä¡ÀÎ¡æ°ø¹«¿ø
+    "president": "government",        # [BN-2] ´ëÅë·É¡æÁ¤ºÎ
+    "flag": "",                        # [BN-2] flag ´Ü¾î ÀÚÃ¼ Á¦°Å
+    # [BP] ¹Ì¼¼¸ÕÁö °ËÁõ ½ÇÆÐ Å°¿öµå
+    "pollution": "smog",              # pollution ´Üµ¶¡æsmog (volcano ¹æÁö)
     "polluted": "smog",                #
-    "vulnerable": "",                   # 제거 (forest fire 방지)
-    "invisible": "",                    # 제거
-    "particles": "",                    # 제거 (abstract particle)
+    "vulnerable": "",                   # Á¦°Å (forest fire ¹æÁö)
+    "invisible": "",                    # Á¦°Å
+    "particles": "",                    # Á¦°Å (abstract particle)
     "particle": "",                     #
-    "quality": "",                      # 제거 (server hardware 방지)
-    "forecast": "weather",              # forecast→weather TV screen
-    "hardware": "",                     # LLM 환각 결과물
-    "server": "",                       # 동
-    "environment": "nature",            # environment→nature
-    "announcement": "news",             # announcement→news studio
+    "quality": "",                      # Á¦°Å (server hardware ¹æÁö)
+    "forecast": "weather",              # forecast¡æweather TV screen
+    "hardware": "",                     # LLM È¯°¢ °á°ú¹°
+    "server": "",                       # µ¿
+    "environment": "nature",            # environment¡ænature
+    "announcement": "news",             # announcement¡ænews studio
 }
 
-# "press conference" 같은 복합어는 유지 (분리 금지 대상)
+# "press conference" °°Àº º¹ÇÕ¾î´Â À¯Áö (ºÐ¸® ±ÝÁö ´ë»ó)
 _COMPOUND_KEEP = {
     "press conference",
     "breaking news",
@@ -4935,19 +4935,19 @@ _COMPOUND_KEEP = {
 
 
 _ABSTRACT_BLACKLIST = {
-    # 추상 명사
+    # Ãß»ó ¸í»ç
     "odd", "even", "number", "rule", "exception", "fine", "date",
     "idea", "concept", "type", "way", "form", "part", "thing",
     "issue", "problem", "solution", "factor", "aspect", "matter",
     "process", "case", "method", "system", "structure", "pattern",
     "level", "change", "difference", "step", "point",
-    # 추상 동사·형용사 (Pexels가 풍경으로 오해석)
+    # Ãß»ó µ¿»ç¡¤Çü¿ë»ç (Pexels°¡ Ç³°æÀ¸·Î ¿ÀÇØ¼®)
     "divided", "alternating", "regulated", "announced", "announcement",
     "reduction", "increase", "decrease", "growth", "decline",
     "approach", "practice", "application", "impact", "effect",
     "relationship", "connection", "communication",
     # [BP] MARKER v3
-    # [BP] 검증 실패 경험상 Pexels 가 무관 영상 뱉는 키워드
+    # [BP] °ËÁõ ½ÇÆÐ °æÇè»ó Pexels °¡ ¹«°ü ¿µ»ó ¹ñ´Â Å°¿öµå
     "pollution", "polluted", "vulnerable", "invisible", "invisible-particle",
     "particles", "particle", "quality", "forecast", "announcement-daily",
     "hardware", "server", "database", "data", "announcement",
@@ -4978,45 +4978,45 @@ async def _batch_extract_keywords_from_segments(segments: list, topic_hint: str 
         if not texts:
             return {}
         context_summary = " ".join(full_context)[:600]
-        topic_line = f"주제: {topic_hint}\n" if topic_hint else ""
+        topic_line = f"ÁÖÁ¦: {topic_hint}\n" if topic_hint else ""
         
         prompt = (
-            "한국어 영상 스크립트를 Pexels 영어 검색어로 변환.\n\n"
+            "ÇÑ±¹¾î ¿µ»ó ½ºÅ©¸³Æ®¸¦ Pexels ¿µ¾î °Ë»ö¾î·Î º¯È¯.\n\n"
             + topic_line
-            + "전체 맥락: " + context_summary + "\n\n"
-            "각 문장마다 Pexels에서 가장 잘 매칭될 영어 문구 1개를 만드세요.\n"
-            "규칙 (절대 준수):\n"
-            "1. 반드시 2~3 단어만 (4단어 이상 금지, Pexels 매칭률 떨어짐)\n"
-            "2. 추상어 금지: odd, even, rule, number, exception, fine, concept, idea, type, process, method, system, level\n"
-            "3. 구체적 시각 객체·장면만: 'city street traffic cars', 'polluted urban skyline'\n"
-            "4. 주제의 물리적 장면 연상: 자동차 2부제 → 도시 교통, 세금 → 동전 계산기, 우주 → 위성 로켓\n"
-            "5. 한국 개념(2부제·주민번호·수능 등)은 관련 시각 장면으로: '2부제→highway traffic cars', '수능→students classroom exam'\n"
-            "6. 중복 금지 — 모든 씬 키워드는 서로 달라야 함. 같은 주제라도 각도를 다르게 (예: 교통/운전석/신호등/주차장/배기가스)\n\n"
-            "예시 (명사 3-5개 + 장소/사람/동작):\n"
-            "  '미세먼지' → 'industrial chimney smoke pollution skyline'\n"
-            "  '홀수 차량' → 'cars city traffic asian street'\n"
-            "  '번호판' → 'license plate closeup vehicle rear metal'\n"
-            "  '짝수 운행' → 'cars urban road traffic light seoul'\n"
-            "  '미세먼지 감소' → 'factory smokestack pollution asian city'\n"
-            "  '정부 발표' → 'seoul government building exterior'\n"
-            "  '과태료 부과' → 'police officer parking ticket violation'\n"
-            "  '국회 통과' → 'korean parliament building asian'\n"
-            "  '대통령 연설' → 'korean government building exterior'\n"
-            "  '큐브샛' → 'satellite orbit space earth blue'\n"
-            "  '우주 환경 시험' → 'vacuum chamber engineering lab scientist'\n"
-            "나쁜 예시 (절대 금지):\n"
-            "  ✗ 'cars divided by license plate' → divided 는 추상 (풍경 매칭됨)\n"
-            "  ✗ 'cash register money fine penalty' → 돈/기계 섞임 (POS 기계 나옴)\n"
-            "  ✗ 'government announcement press conference' → announcement 추상 (뉴스 그래픽 나옴)\n\n"
-            "한국 관련 주제면 'asian', 'seoul', 'korean' 등 지역어 1개 포함 (구체성 향상).\n"
-            "한국 주제일 때 절대 금지어 (서양 이미지 나옴): american, usa, us, white house, capitol, trump, biden, obama, union jack, british, britain, eu, european, buckingham.\n"
-            "대통령·국회·정부 장면도 'asian president podium' / 'asian parliament building' / 'korean government meeting' 식으로.\n\n"
-            "문장:\n"
+            + "ÀüÃ¼ ¸Æ¶ô: " + context_summary + "\n\n"
+            "°¢ ¹®Àå¸¶´Ù Pexels¿¡¼­ °¡Àå Àß ¸ÅÄªµÉ ¿µ¾î ¹®±¸ 1°³¸¦ ¸¸µå¼¼¿ä.\n"
+            "±ÔÄ¢ (Àý´ë ÁØ¼ö):\n"
+            "1. ¹Ýµå½Ã 2~3 ´Ü¾î¸¸ (4´Ü¾î ÀÌ»ó ±ÝÁö, Pexels ¸ÅÄª·ü ¶³¾îÁü)\n"
+            "2. Ãß»ó¾î ±ÝÁö: odd, even, rule, number, exception, fine, concept, idea, type, process, method, system, level\n"
+            "3. ±¸Ã¼Àû ½Ã°¢ °´Ã¼¡¤Àå¸é¸¸: 'city street traffic cars', 'polluted urban skyline'\n"
+            "4. ÁÖÁ¦ÀÇ ¹°¸®Àû Àå¸é ¿¬»ó: ÀÚµ¿Â÷ 2ºÎÁ¦ ¡æ µµ½Ã ±³Åë, ¼¼±Ý ¡æ µ¿Àü °è»ê±â, ¿ìÁÖ ¡æ À§¼º ·ÎÄÏ\n"
+            "5. ÇÑ±¹ °³³ä(2ºÎÁ¦¡¤ÁÖ¹Î¹øÈ£¡¤¼ö´É µî)Àº °ü·Ã ½Ã°¢ Àå¸éÀ¸·Î: '2ºÎÁ¦¡æhighway traffic cars', '¼ö´É¡æstudents classroom exam'\n"
+            "6. Áßº¹ ±ÝÁö ? ¸ðµç ¾À Å°¿öµå´Â ¼­·Î ´Þ¶ó¾ß ÇÔ. °°Àº ÁÖÁ¦¶óµµ °¢µµ¸¦ ´Ù¸£°Ô (¿¹: ±³Åë/¿îÀü¼®/½ÅÈ£µî/ÁÖÂ÷Àå/¹è±â°¡½º)\n\n"
+            "¿¹½Ã (¸í»ç 3-5°³ + Àå¼Ò/»ç¶÷/µ¿ÀÛ):\n"
+            "  '¹Ì¼¼¸ÕÁö' ¡æ 'industrial chimney smoke pollution skyline'\n"
+            "  'È¦¼ö Â÷·®' ¡æ 'cars city traffic asian street'\n"
+            "  '¹øÈ£ÆÇ' ¡æ 'license plate closeup vehicle rear metal'\n"
+            "  'Â¦¼ö ¿îÇà' ¡æ 'cars urban road traffic light seoul'\n"
+            "  '¹Ì¼¼¸ÕÁö °¨¼Ò' ¡æ 'factory smokestack pollution asian city'\n"
+            "  'Á¤ºÎ ¹ßÇ¥' ¡æ 'seoul government building exterior'\n"
+            "  '°úÅÂ·á ºÎ°ú' ¡æ 'police officer parking ticket violation'\n"
+            "  '±¹È¸ Åë°ú' ¡æ 'korean parliament building asian'\n"
+            "  '´ëÅë·É ¿¬¼³' ¡æ 'korean government building exterior'\n"
+            "  'Å¥ºê»û' ¡æ 'satellite orbit space earth blue'\n"
+            "  '¿ìÁÖ È¯°æ ½ÃÇè' ¡æ 'vacuum chamber engineering lab scientist'\n"
+            "³ª»Û ¿¹½Ã (Àý´ë ±ÝÁö):\n"
+            "  ? 'cars divided by license plate' ¡æ divided ´Â Ãß»ó (Ç³°æ ¸ÅÄªµÊ)\n"
+            "  ? 'cash register money fine penalty' ¡æ µ·/±â°è ¼¯ÀÓ (POS ±â°è ³ª¿È)\n"
+            "  ? 'government announcement press conference' ¡æ announcement Ãß»ó (´º½º ±×·¡ÇÈ ³ª¿È)\n\n"
+            "ÇÑ±¹ °ü·Ã ÁÖÁ¦¸é 'asian', 'seoul', 'korean' µî Áö¿ª¾î 1°³ Æ÷ÇÔ (±¸Ã¼¼º Çâ»ó).\n"
+            "ÇÑ±¹ ÁÖÁ¦ÀÏ ¶§ Àý´ë ±ÝÁö¾î (¼­¾ç ÀÌ¹ÌÁö ³ª¿È): american, usa, us, white house, capitol, trump, biden, obama, union jack, british, britain, eu, european, buckingham.\n"
+            "´ëÅë·É¡¤±¹È¸¡¤Á¤ºÎ Àå¸éµµ 'asian president podium' / 'asian parliament building' / 'korean government meeting' ½ÄÀ¸·Î.\n\n"
+            "¹®Àå:\n"
             + "\n".join(texts)
-            + '\n\n응답: JSON 배열 ["phrase1", "phrase2", ...] ' + str(len(texts)) + '개만.\n반드시 ```json 으로 시작, ``` 으로 끝. 설명·주석 금지, 오직 JSON 배열.\n예시 응답:\n```json\n["traffic cars highway", "factory smoke pollution"]\n```'
+            + '\n\nÀÀ´ä: JSON ¹è¿­ ["phrase1", "phrase2", ...] ' + str(len(texts)) + '°³¸¸.\n¹Ýµå½Ã ```json À¸·Î ½ÃÀÛ, ``` À¸·Î ³¡. ¼³¸í¡¤ÁÖ¼® ±ÝÁö, ¿ÀÁ÷ JSON ¹è¿­.\n¿¹½Ã ÀÀ´ä:\n```json\n["traffic cars highway", "factory smoke pollution"]\n```'
         )
         
-        # LLM 호출
+        # LLM È£Ãâ
         try:
             import httpx as _httpx
             _anth_url = os.getenv("ANTHROPIC_BASE_URL", "http://lf2_llm_proxy:8789").rstrip("/")
@@ -5035,21 +5035,21 @@ async def _batch_extract_keywords_from_segments(segments: list, topic_hint: str 
                         if blk.get("type") == "text":
                             raw += blk.get("text", "")
         except Exception as _ex:
-            logger.warning(f"[BB] LLM 호출 실패: {_ex}")
+            logger.warning(f"[BB] LLM È£Ãâ ½ÇÆÐ: {_ex}")
             return {}
         
-        # [BD+BH] 파서 강화 — code block 우선, non-greedy array, line fallback
+        # [BD+BH] ÆÄ¼­ °­È­ ? code block ¿ì¼±, non-greedy array, line fallback
         import re as _re
         kws = None
         
-        # [BH] 시도 0: ```json ... ``` fenced block 우선
+        # [BH] ½Ãµµ 0: ```json ... ``` fenced block ¿ì¼±
         fenced = _re.search(r"```(?:json)?\s*\n([\s\S]*?)\n```", raw)
         if fenced:
             inner = fenced.group(1).strip()
             try:
                 kws = _json.loads(inner)
             except _json.JSONDecodeError:
-                # 배열만 추출 시도
+                # ¹è¿­¸¸ ÃßÃâ ½Ãµµ
                 marr = _re.search(r"\[\s*([\s\S]*?)\s*\]", inner)
                 if marr:
                     try:
@@ -5057,7 +5057,7 @@ async def _batch_extract_keywords_from_segments(segments: list, topic_hint: str 
                     except _json.JSONDecodeError:
                         kws = None
         
-        # 시도 1: non-greedy JSON array (fenced block 없는 경우)
+        # ½Ãµµ 1: non-greedy JSON array (fenced block ¾ø´Â °æ¿ì)
         if not kws:
             m = _re.search(r"\[([^\[\]]*?)\]", raw)
             if m:
@@ -5066,42 +5066,42 @@ async def _batch_extract_keywords_from_segments(segments: list, topic_hint: str 
                 except _json.JSONDecodeError:
                     kws = None
         
-        # 시도 2: 줄 단위 "N. phrase" 또는 "N. '...' → 'phrase'" 형식
+        # ½Ãµµ 2: ÁÙ ´ÜÀ§ "N. phrase" ¶Ç´Â "N. '...' ¡æ 'phrase'" Çü½Ä
         if not kws:
             extracted = []
-            # pattern: N.  ... →  "phrase"  OR  N. "phrase"
+            # pattern: N.  ... ¡æ  "phrase"  OR  N. "phrase"
             for line in raw.split("\n"):
                 line = line.strip()
                 if not line:
                     continue
-                # '^\d+\.' prefix 확인
+                # '^\d+\.' prefix È®ÀÎ
                 mm = _re.match(r"^\d+[\.\)]\s*(.+)$", line)
                 if not mm:
                     continue
                 rest = mm.group(1).strip()
-                # 마지막 quote 안의 content 뽑기
+                # ¸¶Áö¸· quote ¾ÈÀÇ content »Ì±â
                 quoted = _re.findall(r'["\u201c\u201d]([^"\u201c\u201d]{2,80})["\u201c\u201d]', rest)
                 if quoted:
                     extracted.append(quoted[-1].strip())
                 else:
-                    # → 나 -> 이후 부분
+                    # ¡æ ³ª -> ÀÌÈÄ ºÎºÐ
                     arrow = _re.search(r"[\u2192\-=]>\s*(.+?)$", rest)
                     if arrow:
                         extracted.append(arrow.group(1).strip().strip('"').strip("'"))
                     else:
-                        # 그냥 line 전체
+                        # ±×³É line ÀüÃ¼
                         extracted.append(rest[:80])
             if extracted:
                 kws = extracted
-                logger.info(f"[BD] markdown list 파서 성공: {len(kws)}개")
+                logger.info(f"[BD] markdown list ÆÄ¼­ ¼º°ø: {len(kws)}°³")
         
         if not kws:
-            logger.warning(f"[BB] 응답 파싱 실패: {raw[:200]}")
+            logger.warning(f"[BB] ÀÀ´ä ÆÄ½Ì ½ÇÆÐ: {raw[:200]}")
             return {}
         if not isinstance(kws, list):
             return {}
         
-        # 검증 + 보강
+        # °ËÁõ + º¸°­
         result = {}
         fixed = 0
         for i, kw in enumerate(kws[:len(segments)], 1):
@@ -5110,7 +5110,7 @@ async def _batch_extract_keywords_from_segments(segments: list, topic_hint: str 
             cleaned = kw.strip().lower()[:80]
             words = cleaned.split()
             
-            # 단어 1개 절대 거부 → topic_hint 또는 description으로 확장
+            # ´Ü¾î 1°³ Àý´ë °ÅºÎ ¡æ topic_hint ¶Ç´Â descriptionÀ¸·Î È®Àå
             if len(words) < 2:
                 seg_text = (segments[i-1].get("text") or "").strip()[:40]
                 if topic_hint:
@@ -5118,58 +5118,58 @@ async def _batch_extract_keywords_from_segments(segments: list, topic_hint: str 
                 else:
                     cleaned = f"{cleaned} city scene real footage"
                 fixed += 1
-            # 추상어 블랙리스트 단어 비율 > 30% 거부 (엄격해짐)
+            # Ãß»ó¾î ºí·¢¸®½ºÆ® ´Ü¾î ºñÀ² > 30% °ÅºÎ (¾ö°ÝÇØÁü)
             # [BQ] MARKER v4
-            # [BQ-1] typo/환각 접미사 필터 — cleaned 에 반영 (BP 버그 수정)
+            # [BQ-1] typo/È¯°¢ Á¢¹Ì»ç ÇÊÅÍ ? cleaned ¿¡ ¹Ý¿µ (BP ¹ö±× ¼öÁ¤)
             suspicious_suffixes = ("ererer", "wareer", "warer", "nessness", "mentment", "tiontion")
             words = [w for w in words if not any(s in w for s in suspicious_suffixes)]
-            cleaned = " ".join(words).strip()  # [BQ] 필터 결과 반영
-            # [BQ-2] 비-ASCII 문자(한국어 잔류) 제거
+            cleaned = " ".join(words).strip()  # [BQ] ÇÊÅÍ °á°ú ¹Ý¿µ
+            # [BQ-2] ºñ-ASCII ¹®ÀÚ(ÇÑ±¹¾î ÀÜ·ù) Á¦°Å
             cleaned = "".join(ch for ch in cleaned if ord(ch) < 128).strip()
             while "  " in cleaned:
                 cleaned = cleaned.replace("  ", " ")
             words = cleaned.split()
-            # [BQ-3] 필터 후 단어 부족 → topic_hint fallback
+            # [BQ-3] ÇÊÅÍ ÈÄ ´Ü¾î ºÎÁ· ¡æ topic_hint fallback
             if len(words) < 2 and topic_hint:
                 cleaned = f"{topic_hint} asian scene"
                 words = cleaned.split()
                 fixed += 1
             blacklisted = sum(1 for w in words if w in _ABSTRACT_BLACKLIST)
             if blacklisted > 0 and blacklisted / max(1, len(words)) > 0.3:
-                # 추상어 과다 → topic 추가
+                # Ãß»ó¾î °ú´Ù ¡æ topic Ãß°¡
                 if topic_hint:
                     cleaned = f"{topic_hint} " + " ".join(w for w in words if w not in _ABSTRACT_BLACKLIST)
                 cleaned = cleaned.strip()
                 fixed += 1
             
-            # [BL] 중의어 처리 (복합어는 보존, 단독은 치환/제거)
+            # [BL] ÁßÀÇ¾î Ã³¸® (º¹ÇÕ¾î´Â º¸Á¸, ´Üµ¶Àº Ä¡È¯/Á¦°Å)
             final_words = []
             lower = cleaned.lower()
-            # 먼저 복합어 유지 체크
+            # ¸ÕÀú º¹ÇÕ¾î À¯Áö Ã¼Å©
             compound_found = False
             for cmp in _COMPOUND_KEEP:
                 if cmp in lower:
                     compound_found = True
                     break
             if not compound_found:
-                # 단어별로 처리
+                # ´Ü¾îº°·Î Ã³¸®
                 for w in cleaned.split():
                     wl = w.lower()
                     if wl in _AMBIGUOUS_REPLACE:
                         rep = _AMBIGUOUS_REPLACE[wl]
                         if rep:
                             final_words.append(rep)
-                        # 빈 문자열이면 제거 (추가 안 함)
+                        # ºó ¹®ÀÚ¿­ÀÌ¸é Á¦°Å (Ãß°¡ ¾È ÇÔ)
                     else:
                         final_words.append(w)
                 cleaned = " ".join(final_words) if final_words else cleaned
-            # [BL] 최대 3단어로 자름 (Pexels 매칭률 최적)
+            # [BL] ÃÖ´ë 3´Ü¾î·Î ÀÚ¸§ (Pexels ¸ÅÄª·ü ÃÖÀû)
             words_out = cleaned.split()
             if len(words_out) > 3:
                 cleaned = " ".join(words_out[:3])
                 fixed += 1
             # [BW] MARKER v8
-            # [BW] 한국 주제 + Korean locale token 부재 → "hanbok" 강제
+            # [BW] ÇÑ±¹ ÁÖÁ¦ + Korean locale token ºÎÀç ¡æ "hanbok" °­Á¦
             _KOREA_LOCALE = ("korean", "korea", "asian", "seoul", "busan",
                              "jeju", "hanbok", "palace", "gyeongbok",
                              "gyeongju", "bukchon", "insadong")
@@ -5177,21 +5177,21 @@ async def _batch_extract_keywords_from_segments(segments: list, topic_hint: str 
                                 "black", "pink", "yellow", "pastel",
                                 "summer", "winter", "spring", "autumn", "fall",
                                 "bright", "dark", "soft", "warm", "cool")
-            # [BW-FIX] 한국 문화 토픽만 locale 보강, 일반 토픽 강제 주입 제거
-            _KOREA_TOPIC_WORDS = ("한국", "대한민국", "서울", "부산", "제주", "한류", "한복", "케이팝", "경복궁")
+            # [BW-FIX] ÇÑ±¹ ¹®È­ ÅäÇÈ¸¸ locale º¸°­, ÀÏ¹Ý ÅäÇÈ °­Á¦ ÁÖÀÔ Á¦°Å
+            _KOREA_TOPIC_WORDS = ("ÇÑ±¹", "´ëÇÑ¹Î±¹", "¼­¿ï", "ºÎ»ê", "Á¦ÁÖ", "ÇÑ·ù", "ÇÑº¹", "ÄÉÀÌÆË", "°æº¹±Ã")
             is_kor_culture = bool(topic_hint) and any(kw in (topic_hint or "") for kw in _KOREA_TOPIC_WORDS)
             low_cleaned = cleaned.lower()
             has_locale = any(t in low_cleaned for t in _KOREA_LOCALE)
-            # color/mood 만으로 구성되면 거부 — 한국 문화 토픽에만 적용
+            # color/mood ¸¸À¸·Î ±¸¼ºµÇ¸é °ÅºÎ ? ÇÑ±¹ ¹®È­ ÅäÇÈ¿¡¸¸ Àû¿ë
             color_only = all(w.lower() in _COLOR_MOOD_SOLO
                              for w in cleaned.split())
             if is_kor_culture and (not has_locale or color_only):
-                # color_only 면 완전 대체, 아니면 prefix
+                # color_only ¸é ¿ÏÀü ´ëÃ¼, ¾Æ´Ï¸é prefix
                 if color_only:
                     cleaned = "korean hanbok palace"
                 else:
                     cleaned = "korean " + cleaned
-                    # 3단어 초과 시 다시 자름
+                    # 3´Ü¾î ÃÊ°ú ½Ã ´Ù½Ã ÀÚ¸§
                     ws = cleaned.split()
                     if len(ws) > 3:
                         cleaned = " ".join(ws[:3])
@@ -5199,8 +5199,8 @@ async def _batch_extract_keywords_from_segments(segments: list, topic_hint: str 
             result[i] = cleaned[:80]
         
         if fixed > 0:
-            logger.info(f"[BB+BL] {fixed}개 키워드 보강 적용 (중의어 제거 + 3단어 cap)")
-        # [BC] 중복 제거 — 동일 문구 있으면 angle 변형 suffix 추가
+            logger.info(f"[BB+BL] {fixed}°³ Å°¿öµå º¸°­ Àû¿ë (ÁßÀÇ¾î Á¦°Å + 3´Ü¾î cap)")
+        # [BC] Áßº¹ Á¦°Å ? µ¿ÀÏ ¹®±¸ ÀÖÀ¸¸é angle º¯Çü suffix Ãß°¡
         seen_phrases = set()
         ANGLES = ["close up", "aerial view", "wide shot", "side angle", "night time",
                  "daytime sunny", "macro detail", "rush hour", "empty lane", "side mirror",
@@ -5210,37 +5210,37 @@ async def _batch_extract_keywords_from_segments(segments: list, topic_hint: str 
         for i in sorted(result.keys()):
             phrase = result[i]
             if phrase in seen_phrases:
-                # 중복! angle 추가
+                # Áßº¹! angle Ãß°¡
                 suffix = ANGLES[_angle_idx % len(ANGLES)]
                 _angle_idx += 1
-                # 문구 축약 후 angle 병합 (단어 5개 유지)
+                # ¹®±¸ Ãà¾à ÈÄ angle º´ÇÕ (´Ü¾î 5°³ À¯Áö)
                 parts = phrase.split()[:3]
                 phrase = " ".join(parts) + " " + suffix
                 result[i] = phrase[:80]
                 dedup_fixed += 1
             seen_phrases.add(phrase)
         if dedup_fixed > 0:
-            logger.info(f"[BC] 중복 {dedup_fixed}개 제거 (angle 변형 적용)")
+            logger.info(f"[BC] Áßº¹ {dedup_fixed}°³ Á¦°Å (angle º¯Çü Àû¿ë)")
         avg_words = sum(len(v.split()) for v in result.values()) / max(1, len(result))
         unique_count = len(set(result.values()))
-        logger.info(f"[BB+BC] batch 키워드: {len(result)}개, 고유 {unique_count}개 (평균 {avg_words:.1f} 단어)")
+        logger.info(f"[BB+BC] batch Å°¿öµå: {len(result)}°³, °íÀ¯ {unique_count}°³ (Æò±Õ {avg_words:.1f} ´Ü¾î)")
         return result
     except Exception as e:
-        logger.warning(f"[BB] batch 키워드 실패: {e}")
+        logger.warning(f"[BB] batch Å°¿öµå ½ÇÆÐ: {e}")
         return {}
 
 
 def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
     """
-    [4] 의미 단위 재분해 + [7] 리듬 컷
+    [4] ÀÇ¹Ì ´ÜÀ§ ÀçºÐÇØ + [7] ¸®µë ÄÆ
 
-    Whisper segments가 있으면 scenes를 **한 문장=한 씬** 기준으로 재구성.
-    - 각 segment를 독립 씬으로 생성
-    - duration > SCENE_MAX_SEC 이면 2등분
-    - keyword는 원본 scenes에서 시간 비율로 승계
-    - 세그먼트 부족 / 타임스탬프 없음 → 원본 scenes 그대로 반환
+    Whisper segments°¡ ÀÖÀ¸¸é scenes¸¦ **ÇÑ ¹®Àå=ÇÑ ¾À** ±âÁØÀ¸·Î Àç±¸¼º.
+    - °¢ segment¸¦ µ¶¸³ ¾ÀÀ¸·Î »ý¼º
+    - duration > SCENE_MAX_SEC ÀÌ¸é 2µîºÐ
+    - keyword´Â ¿øº» scenes¿¡¼­ ½Ã°£ ºñÀ²·Î ½Â°è
+    - ¼¼±×¸ÕÆ® ºÎÁ· / Å¸ÀÓ½ºÅÆÇÁ ¾øÀ½ ¡æ ¿øº» scenes ±×´ë·Î ¹ÝÈ¯
 
-    Returns: 재구성된 씬 리스트 (또는 원본)
+    Returns: Àç±¸¼ºµÈ ¾À ¸®½ºÆ® (¶Ç´Â ¿øº»)
     """
     import json as _json
     from pathlib import Path as _Path
@@ -5256,18 +5256,18 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
             ts_data = _json.load(f)
         segments = ts_data.get("segments") or []
         if not segments:
-            logger.info("Whisper segments 없음 — 의미 재분해 스킵")
+            logger.info("Whisper segments ¾øÀ½ ? ÀÇ¹Ì ÀçºÐÇØ ½ºÅµ")
             return scenes
 
         source = ts_data.get("source", "unknown")
-        logger.info(f"의미 재분해 시작: segments={len(segments)} (source={source})")
+        logger.info(f"ÀÇ¹Ì ÀçºÐÇØ ½ÃÀÛ: segments={len(segments)} (source={source})")
 
-        # [Q4] 오디오에서 실제 무음 구간 검출 (씬 분할 정확도 향상)
+        # [Q4] ¿Àµð¿À¿¡¼­ ½ÇÁ¦ ¹«À½ ±¸°£ °ËÃâ (¾À ºÐÇÒ Á¤È®µµ Çâ»ó)
         audio_path = ts_data.get("audio_path")
         if audio_path and not ts_data.get("audio_silences"):
             ts_data["audio_silences"] = _detect_audio_silences(audio_path)
 
-        # 원본 씬의 keyword·asset을 시간 비율로 승계하기 위해 누적 경계 계산
+        # ¿øº» ¾ÀÀÇ keyword¡¤assetÀ» ½Ã°£ ºñÀ²·Î ½Â°èÇÏ±â À§ÇØ ´©Àû °æ°è °è»ê
         orig_total = sum((s.duration_seconds or 5.0) for s in scenes) or 1.0
         orig_bounds = []  # [(end_sec, scene_idx)]
         cum = 0.0
@@ -5281,15 +5281,15 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                     return scenes[idx]
             return scenes[-1]
 
-        # 각 세그먼트를 씬으로 (4초 초과 시 2등분)
+        # °¢ ¼¼±×¸ÕÆ®¸¦ ¾ÀÀ¸·Î (4ÃÊ ÃÊ°ú ½Ã 2µîºÐ)
         total_audio = float(segments[-1].get("end", 0.0) or 0.0)
         if total_audio <= 0:
-            logger.info("Whisper 총 길이 0 — 재분해 스킵")
+            logger.info("Whisper ÃÑ ±æÀÌ 0 ? ÀçºÐÇØ ½ºÅµ")
             return scenes
 
-        # [C-1] segment_keywords 가 있으면 키워드 자동 교체
+        # [C-1] segment_keywords °¡ ÀÖÀ¸¸é Å°¿öµå ÀÚµ¿ ±³Ã¼
         segment_keywords = ts_data.get("segment_keywords") or []
-        # idx(1-based) → ["kw1", "kw2"]
+        # idx(1-based) ¡æ ["kw1", "kw2"]
         seg_kw_map = {}
         for item in segment_keywords:
             idx = item.get("idx")
@@ -5297,7 +5297,7 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
             if isinstance(idx, int) and kws:
                 seg_kw_map[idx] = kws
         if seg_kw_map:
-            logger.info(f"[C-1] 키워드 매핑 로드: {len(seg_kw_map)}개 segment")
+            logger.info(f"[C-1] Å°¿öµå ¸ÅÇÎ ·Îµå: {len(seg_kw_map)}°³ segment")
 
         # [AH-4] Fast path: Whisper-first alignment with gap absorption.
         # When UNIFIED_TIMELINE=true and we have clean segments, use them directly as scenes.
@@ -5331,15 +5331,15 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                     total_dur = max(0.5, next_start - seg_start)
                     seg_text = (seg.get("text") or "").strip()
                     
-                    # [BF] 긴 segment (>SCENE_MAX_SEC) 를 2~3 등분
+                    # [BF] ±ä segment (>SCENE_MAX_SEC) ¸¦ 2~3 µîºÐ
                     n_splits = 1
                     if total_dur > SCENE_MAX_SEC * 1.5:
                         n_splits = min(3, int(total_dur / SCENE_MAX_SEC) + 1)
                     
-                    # 텍스트를 쉼표·마침표로 대충 split (n_splits 만큼)
+                    # ÅØ½ºÆ®¸¦ ½°Ç¥¡¤¸¶Ä§Ç¥·Î ´ëÃæ split (n_splits ¸¸Å­)
                     if n_splits > 1:
                         import re as _re_split
-                        phrases = _re_split.split(r"[,·.、]\s*", seg_text)
+                        phrases = _re_split.split(r"[,¡¤.¡¢]\s*", seg_text)
                         phrases = [p.strip() for p in phrases if p.strip()]
                         if not phrases or len(phrases) < n_splits:
                             # fallback: char-based split
@@ -5347,13 +5347,13 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                             phrases = [seg_text[k*L//n_splits : (k+1)*L//n_splits] for k in range(n_splits)]
                             phrases = [p.strip() for p in phrases if p.strip()]
                         else:
-                            # phrase가 많으면 n_splits 만큼 합치기
+                            # phrase°¡ ¸¹À¸¸é n_splits ¸¸Å­ ÇÕÄ¡±â
                             per = max(1, len(phrases) // n_splits)
                             phrases = [" ".join(phrases[k*per:(k+1)*per]) for k in range(n_splits)]
                     else:
                         phrases = [seg_text]
                     
-                    # 각 phrase를 scene으로
+                    # °¢ phrase¸¦ sceneÀ¸·Î
                     for j, phrase in enumerate(phrases):
                         if not phrase:
                             continue
@@ -5375,17 +5375,17 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                                 update["keyword"] = kws[0]
                                 update["asset_url"] = None
                         else:
-                            # [v16.4 SYNC] 나레이션 텍스트 → 영어 시각 키워드 자동 생성
+                            # [v16.4 SYNC] ³ª·¹ÀÌ¼Ç ÅØ½ºÆ® ¡æ ¿µ¾î ½Ã°¢ Å°¿öµå ÀÚµ¿ »ý¼º
                             _vq = _ko_narration_to_visual_query(_phrase_text, orig.keyword or "", "")
                             update["keyword"] = _vq
-                            update["asset_url"] = None  # 새 키워드로 재검색
+                            update["asset_url"] = None  # »õ Å°¿öµå·Î Àç°Ë»ö
                         aligned_scenes.append(orig.model_copy(update=update))
                 total = sum(s.duration_seconds for s in aligned_scenes)
                 logger.info(
-                    f"[AH-4] Whisper-first 정렬: {len(aligned_scenes)}씬, 총 {total:.2f}s "
-                    f"(audio_end={audio_end:.2f}s, gap 흡수 완료) # [AH-4] MARKER v1"
+                    f"[AH-4] Whisper-first Á¤·Ä: {len(aligned_scenes)}¾À, ÃÑ {total:.2f}s "
+                    f"(audio_end={audio_end:.2f}s, gap Èí¼ö ¿Ï·á) # [AH-4] MARKER v1"
                 )
-                # [v16.1] alt_asset_url 3n마다 교번
+                # [v16.1] alt_asset_url 3n¸¶´Ù ±³¹ø
                 for _ai, _sc in enumerate(aligned_scenes):
                     if _ai % 3 == 2:
                         _alt = getattr(_sc, "alt_asset_url", None)
@@ -5393,7 +5393,7 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                             aligned_scenes[_ai] = _sc.model_copy(update={"asset_url": _alt, "alt_asset_url": _sc.asset_url})
                 return aligned_scenes
             except Exception as _ah4_err:
-                logger.warning(f"[AH-4] Whisper-first 실패, 기존 경로로 fallback: {_ah4_err}")
+                logger.warning(f"[AH-4] Whisper-first ½ÇÆÐ, ±âÁ¸ °æ·Î·Î fallback: {_ah4_err}")
 
         new_scenes = []
         _scene_abs_times = []  # [AH-1] parallel list of (abs_start, abs_end) in Whisper time
@@ -5406,15 +5406,15 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
             if seg_dur <= 0:
                 continue
 
-            # 리듬 컷: 4초 초과면 분할
-            # [Q2] words 간 쉼(≥ PAUSE_THRESHOLD_SEC) 지점에서 분할 시도
+            # ¸®µë ÄÆ: 4ÃÊ ÃÊ°ú¸é ºÐÇÒ
+            # [Q2] words °£ ½°(¡Ã PAUSE_THRESHOLD_SEC) ÁöÁ¡¿¡¼­ ºÐÇÒ ½Ãµµ
             subclips = []
             if seg_dur > SCENE_MAX_SEC:
                 pause_t = _find_pause_split(seg_start, seg_end, ts_data)
                 split_t = pause_t if pause_t is not None else seg_start + seg_dur / 2.0
                 reason = "pause" if pause_t is not None else "mid"
                 logger.info(
-                    f"  segment [{seg_start:.2f}-{seg_end:.2f}] 분할 ({reason}): {split_t:.2f}"
+                    f"  segment [{seg_start:.2f}-{seg_end:.2f}] ºÐÇÒ ({reason}): {split_t:.2f}"
                 )
                 subclips.append((seg_start, split_t, seg_text))
                 subclips.append((split_t, seg_end, seg_text))
@@ -5422,20 +5422,20 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                 subclips.append((seg_start, seg_end, seg_text))
 
             for (sub_start, sub_end, sub_text) in subclips:
-                sub_dur = max(SCENE_MIN_SEC * 0.5, sub_end - sub_start)  # 최소 1초는 남김
-                # 원본 씬에서 keyword 승계 (시간 비율 기반)
+                sub_dur = max(SCENE_MIN_SEC * 0.5, sub_end - sub_start)  # ÃÖ¼Ò 1ÃÊ´Â ³²±è
+                # ¿øº» ¾À¿¡¼­ keyword ½Â°è (½Ã°£ ºñÀ² ±â¹Ý)
                 rel_mid = ((sub_start + sub_end) / 2.0) / total_audio
                 orig = pick_orig_scene(rel_mid)
                 seg_counter += 1
 
-                # [C-1] segment_keywords 가 있으면 keyword 교체 (시각적 매칭)
+                # [C-1] segment_keywords °¡ ÀÖÀ¸¸é keyword ±³Ã¼ (½Ã°¢Àû ¸ÅÄª)
                 kw_override = None
                 asset_override = None
                 if seg_idx in seg_kw_map:
                     kws = seg_kw_map[seg_idx]
-                    # 첫 키워드를 메인, 두 번째는 fallback
+                    # Ã¹ Å°¿öµå¸¦ ¸ÞÀÎ, µÎ ¹øÂ°´Â fallback
                     kw_override = kws[0] if kws else None
-                    # 원본 asset_url 은 리셋 (새 키워드로 재다운로드 되도록)
+                    # ¿øº» asset_url Àº ¸®¼Â (»õ Å°¿öµå·Î Àç´Ù¿î·Îµå µÇµµ·Ï)
                     asset_override = None
 
                 _seg_desc = sub_text or orig.description or ""
@@ -5446,9 +5446,9 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                 }
                 if kw_override:
                     update_dict["keyword"] = kw_override
-                    update_dict["asset_url"] = None  # 재검색 트리거
+                    update_dict["asset_url"] = None  # Àç°Ë»ö Æ®¸®°Å
                 else:
-                    # [v16.4 SYNC] 나레이션 텍스트 → 영어 시각 키워드 자동 생성
+                    # [v16.4 SYNC] ³ª·¹ÀÌ¼Ç ÅØ½ºÆ® ¡æ ¿µ¾î ½Ã°¢ Å°¿öµå ÀÚµ¿ »ý¼º
                     _vq2 = _ko_narration_to_visual_query(_seg_desc, orig.keyword or "", "")
                     update_dict["keyword"] = _vq2
                     update_dict["asset_url"] = None
@@ -5460,18 +5460,18 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                 new_scenes.append(sc_new)
 
         if not new_scenes:
-            logger.info("재분해 결과 없음 — 원본 사용")
+            logger.info("ÀçºÐÇØ °á°ú ¾øÀ½ ? ¿øº» »ç¿ë")
             return scenes
 
-        # ── [C] 짧은 씬 인접 병합 (SCENE_MIN_SEC 미만) ────────────────────
+        # ¦¡¦¡ [C] ÂªÀº ¾À ÀÎÁ¢ º´ÇÕ (SCENE_MIN_SEC ¹Ì¸¸) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         merged = []
         for sc in new_scenes:
             if merged and sc.duration_seconds < SCENE_MIN_SEC:
                 prev = merged[-1]
                 combined = round(prev.duration_seconds + sc.duration_seconds, 2)
-                # 여전히 너무 크면 병합하지 않음 (SCENE_MAX_SEC 초과 방지)
+                # ¿©ÀüÈ÷ ³Ê¹« Å©¸é º´ÇÕÇÏÁö ¾ÊÀ½ (SCENE_MAX_SEC ÃÊ°ú ¹æÁö)
                 if combined <= SCENE_MAX_SEC * 1.25:
-                    # 병합: 이전 씬의 duration 확장 + description 이어붙이기
+                    # º´ÇÕ: ÀÌÀü ¾ÀÀÇ duration È®Àå + description ÀÌ¾îºÙÀÌ±â
                     new_desc = prev.description or ""
                     if sc.description and sc.description.strip() and sc.description.strip() != prev.description:
                         new_desc = (new_desc + " " + sc.description).strip() if new_desc else sc.description
@@ -5482,7 +5482,7 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                     continue
             merged.append(sc)
 
-        # 첫 씬이 너무 짧으면 다음 씬에 병합
+        # Ã¹ ¾ÀÀÌ ³Ê¹« ÂªÀ¸¸é ´ÙÀ½ ¾À¿¡ º´ÇÕ
         if len(merged) >= 2 and merged[0].duration_seconds < SCENE_MIN_SEC:
             first = merged.pop(0)
             nxt = merged[0]
@@ -5492,17 +5492,17 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                 if nxt.description and nxt.description.strip() and nxt.description.strip() != first.description:
                     new_desc = (new_desc + " " + nxt.description).strip() if new_desc else nxt.description
                 merged[0] = nxt.model_copy(update={
-                    "scene_id": first.scene_id,  # 첫 씬 ID 유지
+                    "scene_id": first.scene_id,  # Ã¹ ¾À ID À¯Áö
                     "duration_seconds": combined,
                     "description": new_desc,
-                    "keyword": first.keyword,    # 키워드도 첫 씬 것 승계
+                    "keyword": first.keyword,    # Å°¿öµåµµ Ã¹ ¾À °Í ½Â°è
                 })
             else:
-                merged.insert(0, first)  # 병합 안 하고 되돌림
+                merged.insert(0, first)  # º´ÇÕ ¾È ÇÏ°í µÇµ¹¸²
 
         if len(merged) != len(new_scenes):
             logger.info(
-                f"짧은 씬 병합: {len(new_scenes)}씬 → {len(merged)}씬 "
+                f"ÂªÀº ¾À º´ÇÕ: {len(new_scenes)}¾À ¡æ {len(merged)}¾À "
                 f"(SCENE_MIN_SEC={SCENE_MIN_SEC}s)"
             )
 
@@ -5537,11 +5537,11 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                 merged = gap_shifted
                 total_after = sum(s.duration_seconds for s in merged)
                 logger.info(
-                    f"[AH-1] gap 흡수 완료: {len(merged)}씬, 총 {total_after:.2f}s "
-                    f"(audio_end={audio_end_abs:.2f}s, 절대시간 정렬)"
+                    f"[AH-1] gap Èí¼ö ¿Ï·á: {len(merged)}¾À, ÃÑ {total_after:.2f}s "
+                    f"(audio_end={audio_end_abs:.2f}s, Àý´ë½Ã°£ Á¤·Ä)"
                 )
             except Exception as _gap_err:
-                logger.warning(f"[AH-1] gap 흡수 실패: {_gap_err}")
+                logger.warning(f"[AH-1] gap Èí¼ö ½ÇÆÐ: {_gap_err}")
 
         if UNIFIED_TIMELINE and SCENE_LEAD_SEC > 0 and len(merged) >= 2:
             try:
@@ -5559,9 +5559,9 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                         new_d = max(SCENE_MIN_SEC * 0.5, d - per)
                     shifted.append(sc.model_copy(update={"duration_seconds": round(new_d, 2)}))
                 merged = shifted  # [AF-7] MARKER v1
-                logger.info(f"[AF-7] SCENE_LEAD={lead}s / {n}씬 — 첫씬 +{lead}s / 나머지 -{per:.3f}s (총길이 보존)")
+                logger.info(f"[AF-7] SCENE_LEAD={lead}s / {n}¾À ? Ã¹¾À +{lead}s / ³ª¸ÓÁö -{per:.3f}s (ÃÑ±æÀÌ º¸Á¸)")
             except Exception as _lead_err:
-                logger.warning(f"[AD] scene lead 적용 실패 (무시): {_lead_err}")
+                logger.warning(f"[AD] scene lead Àû¿ë ½ÇÆÐ (¹«½Ã): {_lead_err}")
 
         # [AF-11] Extend last scene to cover audio tail silence beyond last Whisper segment.
         try:
@@ -5584,24 +5584,24 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                             update={"duration_seconds": round(cur + extra, 2)}
                         )
                         logger.info(
-                            f"[AF-11] 오디오 tail +{extra}s → 마지막 씬 연장 "
+                            f"[AF-11] ¿Àµð¿À tail +{extra}s ¡æ ¸¶Áö¸· ¾À ¿¬Àå "
                             f"(audio={total_audio_real:.2f}s scenes={total_scenes:.2f}s)"
                         )
         except Exception as _tail_err:
             logger.debug(f"[AF-11] tail-extend skip: {_tail_err}")
 
-        # [S] 장면 길이 변주 (편안한 리듬 — 너무 균일하면 어색, 너무 들쭉날쭉도 불안)
+        # [S] Àå¸é ±æÀÌ º¯ÁÖ (Æí¾ÈÇÑ ¸®µë ? ³Ê¹« ±ÕÀÏÇÏ¸é ¾î»ö, ³Ê¹« µéÂß³¯Âßµµ ºÒ¾È)
         if SCENE_LEN_VARIANCE > 0 and len(merged) > 1:
             import random as _scene_rnd
-            _scene_rnd.seed(42)  # 결정적 변주 (같은 씬 → 같은 변주)
+            _scene_rnd.seed(42)  # °áÁ¤Àû º¯ÁÖ (°°Àº ¾À ¡æ °°Àº º¯ÁÖ)
             varied = []
             cum_orig = sum(s.duration_seconds for s in merged)
             for s in merged:
-                # ±variance 범위에서 랜덤
+                # ¡¾variance ¹üÀ§¿¡¼­ ·£´ý
                 offset = _scene_rnd.uniform(-SCENE_LEN_VARIANCE, SCENE_LEN_VARIANCE)
                 new_dur = max(SCENE_MIN_SEC, min(SCENE_MAX_SEC + 0.5, s.duration_seconds + offset))
                 varied.append(s.model_copy(update={"duration_seconds": round(new_dur, 2)}))
-            # 전체 길이 보정 (TTS 와 맞춤)
+            # ÀüÃ¼ ±æÀÌ º¸Á¤ (TTS ¿Í ¸ÂÃã)
             cum_new = sum(s.duration_seconds for s in varied)
             if cum_new > 0 and abs(cum_new - cum_orig) > 0.5:
                 ratio = cum_orig / cum_new
@@ -5609,17 +5609,17 @@ def rebuild_scenes_from_whisper_segments(scenes, timestamps_path):
                     s.model_copy(update={"duration_seconds": round(s.duration_seconds * ratio, 2)})
                     for s in varied
                 ]
-            logger.info(f"[S] 장면 길이 변주: ±{SCENE_LEN_VARIANCE}s")
+            logger.info(f"[S] Àå¸é ±æÀÌ º¯ÁÖ: ¡¾{SCENE_LEN_VARIANCE}s")
             merged = varied
 
         logger.info(
-            f"의미 재분해 완료: {len(scenes)}씬 → {len(merged)}씬 "
-            f"(총 {sum(s.duration_seconds for s in merged):.1f}s / TTS {total_audio:.1f}s)"
+            f"ÀÇ¹Ì ÀçºÐÇØ ¿Ï·á: {len(scenes)}¾À ¡æ {len(merged)}¾À "
+            f"(ÃÑ {sum(s.duration_seconds for s in merged):.1f}s / TTS {total_audio:.1f}s)"
         )
         return merged
 
     except Exception as e:
-        logger.error(f"의미 재분해 오류 (원본 사용): {e}", exc_info=True)
+        logger.error(f"ÀÇ¹Ì ÀçºÐÇØ ¿À·ù (¿øº» »ç¿ë): {e}", exc_info=True)
         return scenes
 
 
@@ -5644,7 +5644,7 @@ def _highlight_keywords_in_srt(srt_path: Path, scenes: list) -> bool:
                 # hangul syllable block U+AC00-U+D7A3
                 for match in _re.findall(r"[\uac00-\ud7a3]{2,}", desc):
                     # Filter out common particles/connectives
-                    if match in ("입니다", "합니다", "습니다", "됩니다", "있습", "없습", "하여", "으로", "에서", "이고", "보겠", "살펴", "보고"):
+                    if match in ("ÀÔ´Ï´Ù", "ÇÕ´Ï´Ù", "½À´Ï´Ù", "µË´Ï´Ù", "ÀÖ½À", "¾ø½À", "ÇÏ¿©", "À¸·Î", "¿¡¼­", "ÀÌ°í", "º¸°Ú", "»ìÆì", "º¸°í"):
                         continue
                     if len(match) >= 2:
                         keywords.add(match)
@@ -5662,38 +5662,38 @@ def _highlight_keywords_in_srt(srt_path: Path, scenes: list) -> bool:
                 changed += 1  # [AF-10] MARKER v1
         if changed:
             srt_path.write_text(content, encoding="utf-8")
-            logger.info(f"[AF-8] 자막 키워드 강조: {changed}회 치환 ({len(keywords)}개 후보)")
+            logger.info(f"[AF-8] ÀÚ¸· Å°¿öµå °­Á¶: {changed}È¸ Ä¡È¯ ({len(keywords)}°³ ÈÄº¸)")
             return True
         else:
-            logger.info(f"[AF-8] 키워드 {len(keywords)}개 후보 있으나 자막에 매치 없음")
+            logger.info(f"[AF-8] Å°¿öµå {len(keywords)}°³ ÈÄº¸ ÀÖÀ¸³ª ÀÚ¸·¿¡ ¸ÅÄ¡ ¾øÀ½")
     except Exception as e:
-        logger.warning(f"[AF-8] 자막 강조 실패 (무시): {e}")
+        logger.warning(f"[AF-8] ÀÚ¸· °­Á¶ ½ÇÆÐ (¹«½Ã): {e}")
     return False
 
 
 async def generate_tts_for_job(job_id: str, scenes: list, request) -> bool:
-    """[DEPRECATED] ensure_tts_assets() 래퍼 — 하위호환용"""
+    """[DEPRECATED] ensure_tts_assets() ·¡ÆÛ ? ÇÏÀ§È£È¯¿ë"""
     r = await ensure_tts_assets(job_id, scenes, request)
     return r.get("ok", False)
 
 
 
 def _post_process_narration_quality(text: str) -> str:
-    """[v15.96] 100만뷰 나레이션 품질 후처리 — 맞춤법/표기 통일/길이 최적화"""
+    """[v15.96] 100¸¸ºä ³ª·¹ÀÌ¼Ç Ç°Áú ÈÄÃ³¸® ? ¸ÂÃã¹ý/Ç¥±â ÅëÀÏ/±æÀÌ ÃÖÀûÈ­"""
     if not text:
         return text
-    # 1. 마커 잔재 제거
-    text = re.sub(r'\[하이라이트:\s*[^\]]*\]', '', text)
-    text = re.sub(r'\[.*?\]', '', text)  # 기타 마커
-    # 2. 숫자 표기 통일: 1000000 → 100만, 1000 → 1천
+    # 1. ¸¶Ä¿ ÀÜÀç Á¦°Å
+    text = re.sub(r'\[ÇÏÀÌ¶óÀÌÆ®:\s*[^\]]*\]', '', text)
+    text = re.sub(r'\[.*?\]', '', text)  # ±âÅ¸ ¸¶Ä¿
+    # 2. ¼ýÀÚ Ç¥±â ÅëÀÏ: 1000000 ¡æ 100¸¸, 1000 ¡æ 1Ãµ
     def _num_ko(m):
         n = int(m.group().replace(',',''))
-        if n >= 100_000_000: return f"{n//100_000_000}억"
-        if n >= 10_000:      return f"{n//10_000}만{n%10_000//1000 and str(n%10_000//1000)+'천' or ''}"
-        if n >= 1_000:       return f"{n//1000}천"
+        if n >= 100_000_000: return f"{n//100_000_000}¾ï"
+        if n >= 10_000:      return f"{n//10_000}¸¸{n%10_000//1000 and str(n%10_000//1000)+'Ãµ' or ''}"
+        if n >= 1_000:       return f"{n//1000}Ãµ"
         return m.group()
     text = re.sub(r'\d{4,}(?:,\d{3})*', _num_ko, text)
-    # 3. 문장 끝 마침표 통일 (없으면 추가)
+    # 3. ¹®Àå ³¡ ¸¶Ä§Ç¥ ÅëÀÏ (¾øÀ¸¸é Ãß°¡)
     sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
     fixed = []
     for s in sentences:
@@ -5701,19 +5701,19 @@ def _post_process_narration_quality(text: str) -> str:
             s += '.'
         fixed.append(s)
     text = ' '.join(fixed)
-    # 4. 이중 공백 제거
+    # 4. ÀÌÁß °ø¹é Á¦°Å
     text = re.sub(r'\s{2,}', ' ', text).strip()
-    # 5. 문장 길이 체크: 너무 짧으면 (5자 미만) 필터
+    # 5. ¹®Àå ±æÀÌ Ã¼Å©: ³Ê¹« ÂªÀ¸¸é (5ÀÚ ¹Ì¸¸) ÇÊÅÍ
     if len(text.replace(' ','')) < 5:
         return ''
     return text
 
 async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
     """
-    [v15.59.0] TTS mp3 + timestamps.json 동시 보장.
-    mp3만 있고 timestamps 없으면 lf2_tts 재호출.
-    audio_url 있으면 HEAD 검증.
-    반환: {"ok": bool, "mp3_path": Path|None, "ts_path": Path|None,
+    [v15.59.0] TTS mp3 + timestamps.json µ¿½Ã º¸Àå.
+    mp3¸¸ ÀÖ°í timestamps ¾øÀ¸¸é lf2_tts ÀçÈ£Ãâ.
+    audio_url ÀÖÀ¸¸é HEAD °ËÁõ.
+    ¹ÝÈ¯: {"ok": bool, "mp3_path": Path|None, "ts_path": Path|None,
            "error_code": str|None, "message": str|None, "retryable": bool}
     """
     mp3_path = TMP_DIR / f"{job_id}.mp3"
@@ -5728,18 +5728,18 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
         except Exception:
             return False
 
-    # 1. mp3 + timestamps 모두 정상 → 재사용
+    # 1. mp3 + timestamps ¸ðµÎ Á¤»ó ¡æ Àç»ç¿ë
     if (mp3_path.exists() and mp3_path.stat().st_size > 1024
             and ts_path.exists() and _ts_valid(ts_path)):
-        logger.info(f"[TTS] 재사용: {mp3_path.stat().st_size//1024}KB + timestamps OK")
+        logger.info(f"[TTS] Àç»ç¿ë: {mp3_path.stat().st_size//1024}KB + timestamps OK")
         return {"ok": True, "mp3_path": mp3_path, "ts_path": ts_path,
                 "error_code": None, "retryable": False}
 
-    # 2. mp3만 있고 timestamps 없음 → 재생성 필요
+    # 2. mp3¸¸ ÀÖ°í timestamps ¾øÀ½ ¡æ Àç»ý¼º ÇÊ¿ä
     if mp3_path.exists() and mp3_path.stat().st_size > 1024:
-        logger.warning(f"[TTS] mp3 존재하나 timestamps 없음 → 재생성: {job_id}")
+        logger.warning(f"[TTS] mp3 Á¸ÀçÇÏ³ª timestamps ¾øÀ½ ¡æ Àç»ý¼º: {job_id}")
 
-    # 3. audio_url 있으면 HEAD 검증
+    # 3. audio_url ÀÖÀ¸¸é HEAD °ËÁõ
     audio_url = getattr(request, "audio_url", None)
     if audio_url:
         try:
@@ -5761,21 +5761,21 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
     for s in scenes:
         s_dict = s.model_dump() if hasattr(s, "model_dump") else (s if isinstance(s, dict) else {})
         text = (s_dict.get("narration") or s_dict.get("description") or s_dict.get("keyword") or "").strip()
-        text = re.sub(r'\[하이라이트:\s*[^\]]*\]', '', text).strip()  # [v15.94]
-        text = _post_process_narration_quality(text)  # [v15.96] 품질 후처리
-        if text and text not in _seen_narr:  # [v15.92] 중복 나레이션 제거
+        text = re.sub(r'\[ÇÏÀÌ¶óÀÌÆ®:\s*[^\]]*\]', '', text).strip()  # [v15.94]
+        text = _post_process_narration_quality(text)  # [v15.96] Ç°Áú ÈÄÃ³¸®
+        if text and text not in _seen_narr:  # [v15.92] Áßº¹ ³ª·¹ÀÌ¼Ç Á¦°Å
             narration_parts.append(text)
             _seen_narr.add(text)
 
     if not narration_parts:
-        logger.warning("[TTS] 나레이션 없음 — validation error")
+        logger.warning("[TTS] ³ª·¹ÀÌ¼Ç ¾øÀ½ ? validation error")
         return {"ok": False, "error_code": "TTS_NARRATION_EMPTY",
-                "message": "모든 씬에 narration/description 없음", "retryable": False}
+                "message": "¸ðµç ¾À¿¡ narration/description ¾øÀ½", "retryable": False}
 
     full_script = " ".join(narration_parts)
-    # [v15.94] [하이라이트:] 마커 제거 — 자막·TTS에서 깨진 텍스트 방지
-    full_script = re.sub(r'\[하이라이트:\s*[^\]]*\]', '', full_script).strip()
-    logger.info(f"[TTS-AUTO] TTS 생성: {len(full_script)}자 / {len(narration_parts)}씬")
+    # [v15.94] [ÇÏÀÌ¶óÀÌÆ®:] ¸¶Ä¿ Á¦°Å ? ÀÚ¸·¡¤TTS¿¡¼­ ±úÁø ÅØ½ºÆ® ¹æÁö
+    full_script = re.sub(r'\[ÇÏÀÌ¶óÀÌÆ®:\s*[^\]]*\]', '', full_script).strip()
+    logger.info(f"[TTS-AUTO] TTS »ý¼º: {len(full_script)}ÀÚ / {len(narration_parts)}¾À")
 
     try:
         import httpx as _httpx
@@ -5784,13 +5784,13 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
             "filename": job_id,
             "engine": "edge",
             "edge_voice": "ko-KR-SunHiNeural",
-            "edge_rate": "+15%",    # [v16.8] Voice Director 최대 속도 15% 적용 (이전: +10%)
+            "edge_rate": "+15%",    # [v16.8] Voice Director ÃÖ´ë ¼Óµµ 15% Àû¿ë (ÀÌÀü: +10%)
             "preprocess": True,
         }
         async with _httpx.AsyncClient(timeout=300.0) as _cli:
             resp = await _cli.post("http://lf2_tts:8001/tts", json=payload)
             if resp.status_code != 200:
-                logger.error(f"[TTS-AUTO] TTS 서비스 오류: {resp.status_code} {resp.text[:200]}")
+                logger.error(f"[TTS-AUTO] TTS ¼­ºñ½º ¿À·ù: {resp.status_code} {resp.text[:200]}")
                 return False
             data = resp.json()
 
@@ -5799,27 +5799,27 @@ async def ensure_tts_assets(job_id: str, scenes: list, request) -> dict:
         import shutil as _shutil
 
         if tts_file and Path(tts_file).exists():
-            if Path(tts_file).resolve() != Path(mp3_path).resolve():  # [v15.92] SameFileError 방어
+            if Path(tts_file).resolve() != Path(mp3_path).resolve():  # [v15.92] SameFileError ¹æ¾î
                 _shutil.copy2(tts_file, mp3_path)
-            logger.info(f"[TTS] mp3 저장: {mp3_path.stat().st_size//1024}KB")
+            logger.info(f"[TTS] mp3 ÀúÀå: {mp3_path.stat().st_size//1024}KB")
         else:
-            logger.error(f"[TTS] mp3 파일 없음: {tts_file}")
+            logger.error(f"[TTS] mp3 ÆÄÀÏ ¾øÀ½: {tts_file}")
             return {"ok": False, "error_code": "TTS_MP3_MISSING",
-                    "message": f"lf2_tts mp3 없음: {tts_file}", "retryable": True}
+                    "message": f"lf2_tts mp3 ¾øÀ½: {tts_file}", "retryable": True}
 
         if ts_file and Path(ts_file).exists():
-            if Path(ts_file).resolve() != Path(ts_path).resolve():  # [v16.5] SameFileError 방어
+            if Path(ts_file).resolve() != Path(ts_path).resolve():  # [v16.5] SameFileError ¹æ¾î
                 _shutil.copy2(ts_file, ts_path)
-            logger.info("[TTS] timestamps 저장 OK")
+            logger.info("[TTS] timestamps ÀúÀå OK")
             return {"ok": True, "mp3_path": mp3_path, "ts_path": ts_path,
                     "error_code": None, "retryable": False}
         else:
-            logger.warning("[TTS] timestamps 없음 — ASS 자막 불가")
+            logger.warning("[TTS] timestamps ¾øÀ½ ? ASS ÀÚ¸· ºÒ°¡")
             return {"ok": True, "mp3_path": mp3_path, "ts_path": None,
                     "error_code": "TTS_TIMESTAMP_MISSING", "retryable": False}
 
     except Exception as _e:
-        logger.error(f"[TTS] 생성 실패: {_e}", exc_info=True)
+        logger.error(f"[TTS] »ý¼º ½ÇÆÐ: {_e}", exc_info=True)
         return {"ok": False, "error_code": "TTS_SERVICE_ERROR",
                 "message": str(_e), "retryable": True}
 
@@ -5837,8 +5837,8 @@ def _build_narration_vocab(scenes_json_path) -> set:
             s.get("narration", "") for s in scenes
             if isinstance(s, dict) and s.get("narration")
         )
-        # tokenize: Korean syllables, alphanumeric (handles '1위를', 'AI' etc.)
-        tokens = _re.findall(r"[가-힣a-zA-Z0-9]+", text)
+        # tokenize: Korean syllables, alphanumeric (handles '1À§¸¦', 'AI' etc.)
+        tokens = _re.findall(r"[°¡-ÆRa-zA-Z0-9]+", text)
         return set(tokens)
     except Exception:
         return set()
@@ -5850,28 +5850,28 @@ def _correct_whisper_word(word: str, narration_vocab: set) -> str:
 
     Steps:
       1. Strip punctuation to get a bare token for matching.
-      2. If the bare token exists in narration_vocab → no change.
+      2. If the bare token exists in narration_vocab ¡æ no change.
       3. Use difflib fuzzy match (cutoff=0.75) against vocab.
       4. If match found, replace the stripped portion in the original word.
       5. Fallback: return original word unchanged.
 
-    Cutoff 0.75 avoids over-correction (e.g., '있는' → '있습니다').
+    Cutoff 0.75 avoids over-correction (e.g., 'ÀÖ´Â' ¡æ 'ÀÖ½À´Ï´Ù').
     """
     import difflib, re as _re
-    bare = _re.sub(r"[^가-힣a-zA-Z0-9]", "", word)
+    bare = _re.sub(r"[^°¡-ÆRa-zA-Z0-9]", "", word)
     if not bare or bare in narration_vocab:
         return word
     matches = difflib.get_close_matches(bare, narration_vocab, n=1, cutoff=0.75)
     if matches:
         corrected = word.replace(bare, matches[0], 1)
-        logger.debug(f"[SPELLFIX] {word!r} → {corrected!r} (matched: {matches[0]!r})")
+        logger.debug(f"[SPELLFIX] {word!r} ¡æ {corrected!r} (matched: {matches[0]!r})")
         return corrected
     return word
 
 
 def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: float = 0.0) -> bool:
     """
-    [SUBTITLE] Whisper word-level timestamps → ASS subtitle.
+    [SUBTITLE] Whisper word-level timestamps ¡æ ASS subtitle.
     Single-color yellow text (no karaoke \\kf dual-layer rendering).
     PlayResX=1920, PlayResY=1080. Bold yellow with black outline.
 
@@ -5889,7 +5889,7 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
         with open(timestamps_path, encoding="utf-8") as f:
             ts_data = _json.load(f)
 
-        # collect words: words → segments.words → segments fallback
+        # collect words: words ¡æ segments.words ¡æ segments fallback
         words = list(ts_data.get("words") or [])
         if not words:
             for seg in (ts_data.get("segments") or []):
@@ -5903,7 +5903,7 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
         if not words:
             return False
 
-        # ── Narration-based spell correction ─────────────────────────────────
+        # ¦¡¦¡ Narration-based spell correction ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         # Infer job_id from timestamps filename: "{job_id}_timestamps.json"
         # then load /data/jobs/{job_id}/scenes.json as ground-truth vocabulary.
         narration_vocab: set = set()
@@ -5913,11 +5913,11 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
             scenes_json = Path("/data/jobs") / job_id_guess / "scenes.json"
             if scenes_json.exists():
                 narration_vocab = _build_narration_vocab(scenes_json)
-                logger.info(f"[SPELLFIX] 나레이션 어휘 {len(narration_vocab)}개 로드 → 자동 교정 활성화")
+                logger.info(f"[SPELLFIX] ³ª·¹ÀÌ¼Ç ¾îÈÖ {len(narration_vocab)}°³ ·Îµå ¡æ ÀÚµ¿ ±³Á¤ È°¼ºÈ­")
             else:
-                logger.debug(f"[SPELLFIX] scenes.json 없음 ({scenes_json}) → 교정 건너뜀")
+                logger.debug(f"[SPELLFIX] scenes.json ¾øÀ½ ({scenes_json}) ¡æ ±³Á¤ °Ç³Ê¶Ü")
         except Exception as _se:
-            logger.warning(f"[SPELLFIX] 어휘 로드 실패 (무시): {_se}")
+            logger.warning(f"[SPELLFIX] ¾îÈÖ ·Îµå ½ÇÆÐ (¹«½Ã): {_se}")
 
         # Apply spell correction to raw word list before grouping
         corrected_words = []
@@ -5931,18 +5931,18 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
                 wt_fixed = _correct_whisper_word(wt, narration_vocab)
                 if wt_fixed != wt:
                     fix_count += 1
-                    w = dict(w)          # shallow copy — don't mutate original
+                    w = dict(w)          # shallow copy ? don't mutate original
                     w["word"] = wt_fixed
             corrected_words.append(w)
         if fix_count:
-            logger.info(f"[SPELLFIX] Whisper 교정 {fix_count}개 단어 적용")
+            logger.info(f"[SPELLFIX] Whisper ±³Á¤ {fix_count}°³ ´Ü¾î Àû¿ë")
 
         def _t(sec):
             sec = max(0.0, float(sec) + lead_sec)
             h = int(sec // 3600); m = int((sec % 3600) // 60); s = sec % 60
             return f"{h}:{m:02d}:{s:05.2f}"
 
-        # Single-color yellow: PrimaryColour == SecondaryColour → no dual-layer artifact
+        # Single-color yellow: PrimaryColour == SecondaryColour ¡æ no dual-layer artifact
         ass_header = (
             "[Script Info]\n"
             "ScriptType: v4.00+\n"
@@ -5975,7 +5975,7 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
         for grp in groups:
             ls = grp[0].get("start", 0)
             le = grp[-1].get("end", ls + 3)
-            # plain text — no \kf karaoke tags (prevents double-subtitle rendering)
+            # plain text ? no \kf karaoke tags (prevents double-subtitle rendering)
             line_words = []
             for w in grp:
                 _raw_w = (w.get('word') or '').strip()
@@ -5987,22 +5987,22 @@ def create_ass_karaoke_from_whisper(timestamps_path, output_path, lead_sec: floa
             )
 
         Path(output_path).write_text(ass_header + "\n".join(dialogues) + "\n", encoding="utf-8-sig")
-        logger.info(f"[SUBTITLE] ASS 생성: {len(dialogues)}줄 → {output_path}")
+        logger.info(f"[SUBTITLE] ASS »ý¼º: {len(dialogues)}ÁÙ ¡æ {output_path}")
         return True
 
     except Exception as _e:
-        logger.error(f"[SUBTITLE] ASS 생성 실패: {_e}", exc_info=True)
+        logger.error(f"[SUBTITLE] ASS »ý¼º ½ÇÆÐ: {_e}", exc_info=True)
         return False
 
 
 def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: float = None) -> bool:
     """
-    [8] 자막 0.15초 선행
+    [8] ÀÚ¸· 0.15ÃÊ ¼±Çà
 
-    Whisper segments 기반 SRT 생성. 각 cue의 start를 lead_sec 만큼 당겨서
-    음성보다 먼저 자막이 뜨게 함.
+    Whisper segments ±â¹Ý SRT »ý¼º. °¢ cueÀÇ start¸¦ lead_sec ¸¸Å­ ´ç°Ü¼­
+    À½¼ºº¸´Ù ¸ÕÀú ÀÚ¸·ÀÌ ¶ß°Ô ÇÔ.
 
-    Returns: 생성 성공 여부
+    Returns: »ý¼º ¼º°ø ¿©ºÎ
     """
     import json as _json
     from pathlib import Path as _Path
@@ -6023,7 +6023,7 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
         if not segments:
             return False
 
-        # [Q5] 오디오 무음 구간 로드 (캐시가 있으면 재사용, 없으면 직접 검출)
+        # [Q5] ¿Àµð¿À ¹«À½ ±¸°£ ·Îµå (Ä³½Ã°¡ ÀÖÀ¸¸é Àç»ç¿ë, ¾øÀ¸¸é Á÷Á¢ °ËÃâ)
         audio_silences = ts_data.get("audio_silences") or []
         if not audio_silences:
             ap = ts_data.get("audio_path")
@@ -6032,21 +6032,21 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
 
         def _snap_to_silence(t: float, is_start: bool) -> float:
             """
-            t 에 가장 가까운 무음 경계를 찾아 스냅.
-            is_start=True  : 시작 → 가장 가까운 무음 end + LEAD
-            is_start=False : 끝   → 가장 가까운 무음 start - TAIL
+            t ¿¡ °¡Àå °¡±î¿î ¹«À½ °æ°è¸¦ Ã£¾Æ ½º³À.
+            is_start=True  : ½ÃÀÛ ¡æ °¡Àå °¡±î¿î ¹«À½ end + LEAD
+            is_start=False : ³¡   ¡æ °¡Àå °¡±î¿î ¹«À½ start - TAIL
 
-            윈도우 내 여러 무음이 있으면 가장 가까운 것 선택.
-            t 가 무음 안쪽이면 해당 무음의 경계로 우선 스냅.
+            À©µµ¿ì ³» ¿©·¯ ¹«À½ÀÌ ÀÖÀ¸¸é °¡Àå °¡±î¿î °Í ¼±ÅÃ.
+            t °¡ ¹«À½ ¾ÈÂÊÀÌ¸é ÇØ´ç ¹«À½ÀÇ °æ°è·Î ¿ì¼± ½º³À.
             """
             if not audio_silences:
                 return t
             win = SUBTITLE_SNAP_WINDOW_SEC
 
-            # t 가 무음 내부에 있는지 먼저 확인
+            # t °¡ ¹«À½ ³»ºÎ¿¡ ÀÖ´ÂÁö ¸ÕÀú È®ÀÎ
             for (s, e) in audio_silences:
                 if s - 0.05 <= t <= e + 0.05:
-                    # 무음 안쪽 → 시작이면 무음 end + lead, 끝이면 무음 start - tail
+                    # ¹«À½ ¾ÈÂÊ ¡æ ½ÃÀÛÀÌ¸é ¹«À½ end + lead, ³¡ÀÌ¸é ¹«À½ start - tail
                     if is_start:
                         return round(e + SUBTITLE_LEAD_AFTER_SIL_SEC, 3)
                     else:
@@ -6055,7 +6055,7 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
             best = None
             best_diff = 1e9
             if is_start:
-                # 가장 가까운 무음의 end 를 찾음 (t 앞뒤 win 범위 내)
+                # °¡Àå °¡±î¿î ¹«À½ÀÇ end ¸¦ Ã£À½ (t ¾ÕµÚ win ¹üÀ§ ³»)
                 for (s, e) in audio_silences:
                     if abs(e - t) <= win:
                         diff = abs(e - t)
@@ -6065,7 +6065,7 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
                 if best is not None:
                     return round(best + SUBTITLE_LEAD_AFTER_SIL_SEC, 3)
             else:
-                # 가장 가까운 무음의 start 를 찾음
+                # °¡Àå °¡±î¿î ¹«À½ÀÇ start ¸¦ Ã£À½
                 for (s, e) in audio_silences:
                     if abs(s - t) <= win:
                         diff = abs(s - t)
@@ -6084,19 +6084,19 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
             ms = int((sec - int(sec)) * 1000)
             return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
-        # [Q3] 복합어 보호 + 자연 줄바꿈
+        # [Q3] º¹ÇÕ¾î º¸È£ + ÀÚ¿¬ ÁÙ¹Ù²Þ
         def wrap_lines(text: str, max_chars: int = SUBTITLE_MAX_CHARS) -> list:
             text = text.strip()
             if len(text) <= max_chars:
                 return [text]
-            # 1) NO_BREAK_TERMS 내부 공백을 NBSP로 치환 → split 시 한 토큰으로 유지
+            # 1) NO_BREAK_TERMS ³»ºÎ °ø¹éÀ» NBSP·Î Ä¡È¯ ¡æ split ½Ã ÇÑ ÅäÅ«À¸·Î À¯Áö
             protected = text
             for term in NO_BREAK_TERMS:
                 if term and term in protected:
                     protected = protected.replace(term, term.replace(" ", _NBSP))
-            # 2) 쉼표 뒤에 공백 보장
+            # 2) ½°Ç¥ µÚ¿¡ °ø¹é º¸Àå
             protected = protected.replace(",", ", ")
-            # split(" ") 로 NBSP 분할 방지 (NBSP는 whitespace로 인식되지만 공백 " " 문자는 아님)
+            # split(" ") ·Î NBSP ºÐÇÒ ¹æÁö (NBSP´Â whitespace·Î ÀÎ½ÄµÇÁö¸¸ °ø¹é " " ¹®ÀÚ´Â ¾Æ´Ô)
             words = [w for w in protected.split(" ") if w]
             lines = []
             cur = ""
@@ -6110,7 +6110,7 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
                     cur = w
             if cur:
                 lines.append(cur)
-            # NBSP 복원
+            # NBSP º¹¿ø
             return [ln.replace(_NBSP, " ") for ln in lines]
 
         # [AG-1] Load word-level timestamps for precise cue boundaries.
@@ -6127,7 +6127,7 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
                 return None
             target_word = snippet.split()[0] if hint_start else snippet.split()[-1]
             # Clean punctuation
-            for p in (",", ".", "!", "?", "。", "、"):
+            for p in (",", ".", "!", "?", "¡£", "¡¢"):
                 target_word = target_word.replace(p, "")
             if not target_word:
                 return None
@@ -6201,17 +6201,17 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
 
         if word_timing_total > 0:
             logger.info(
-                f"[AG-1] word-level 자막 타이밍: {word_timing_matches}/{word_timing_total*2} "
-                f"매칭 ({len(all_words)} words 사용)"
+                f"[AG-1] word-level ÀÚ¸· Å¸ÀÌ¹Ö: {word_timing_matches}/{word_timing_total*2} "
+                f"¸ÅÄª ({len(all_words)} words »ç¿ë)"
             )
 
         if not cues:
             return False
 
-        # [Q5] 자막 무음 스냅 + 선행 적용
-        #   1. 먼저 각 cue의 start/end 를 무음에 스냅 시도
-        #   2. 스냅 실패한 부분만 기존 lead_sec 방식 적용
-        #   3. 이전 cue end 보다 앞서지 않도록 보정
+        # [Q5] ÀÚ¸· ¹«À½ ½º³À + ¼±Çà Àû¿ë
+        #   1. ¸ÕÀú °¢ cueÀÇ start/end ¸¦ ¹«À½¿¡ ½º³À ½Ãµµ
+        #   2. ½º³À ½ÇÆÐÇÑ ºÎºÐ¸¸ ±âÁ¸ lead_sec ¹æ½Ä Àû¿ë
+        #   3. ÀÌÀü cue end º¸´Ù ¾Õ¼­Áö ¾Êµµ·Ï º¸Á¤
         snapped_count = 0
         adjusted = []
         prev_end = 0.0
@@ -6219,15 +6219,15 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
             snap_s = _snap_to_silence(start, is_start=True)
             snap_e = _snap_to_silence(end, is_start=False)
 
-            # 스냅 결과가 원본과 다르면 카운트
+            # ½º³À °á°ú°¡ ¿øº»°ú ´Ù¸£¸é Ä«¿îÆ®
             used_snap_s = abs(snap_s - start) > 0.01
             used_snap_e = abs(snap_e - end) > 0.01
             if used_snap_s or used_snap_e:
                 snapped_count += 1
 
-            # 스냅 실패 시 lead/tail fallback
+            # ½º³À ½ÇÆÐ ½Ã lead/tail fallback
             adj_start = snap_s if used_snap_s else max(prev_end, start - lead_sec)
-            adj_start = max(prev_end, adj_start)  # 겹침 방지
+            adj_start = max(prev_end, adj_start)  # °ãÄ§ ¹æÁö
             adj_end = snap_e if used_snap_e else max(adj_start + 0.3, end - 0.05)
             if adj_end <= adj_start:
                 adj_end = adj_start + 0.3
@@ -6236,7 +6236,7 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
 
         if snapped_count > 0:
             logger.info(
-                f"자막 무음 스냅: {snapped_count}/{len(cues)} cue "
+                f"ÀÚ¸· ¹«À½ ½º³À: {snapped_count}/{len(cues)} cue "
                 f"(window={SUBTITLE_SNAP_WINDOW_SEC}s)"
             )
 
@@ -6249,13 +6249,13 @@ def create_srt_from_whisper_segments(timestamps_path, output_path, lead_sec: flo
             srt.append("")
         output_path.write_text("\n".join(srt), encoding="utf-8")
         logger.info(
-            f"Whisper SRT 생성: {len(adjusted)}개 cue, lead={lead_sec:.2f}s, "
+            f"Whisper SRT »ý¼º: {len(adjusted)}°³ cue, lead={lead_sec:.2f}s, "
             f"max_chars={SUBTITLE_MAX_CHARS}"
         )
         return True
 
     except Exception as e:
-        logger.error(f"Whisper SRT 생성 오류: {e}", exc_info=True)
+        logger.error(f"Whisper SRT »ý¼º ¿À·ù: {e}", exc_info=True)
         return False
 
 
@@ -6361,9 +6361,9 @@ def _rebuild_request_from_state(state):
 
 
 
-# [AX] Watermark 완전 비활성 - 항상 no-op
+# [AX] Watermark ¿ÏÀü ºñÈ°¼º - Ç×»ó no-op
 def apply_watermark(input_path: Path, output_path: Path) -> bool:
-    """[AX] Watermark 기능은 비활성화됨. 항상 False 반환 (영상에 로고/그림 오버레이 없음)."""
+    """[AX] Watermark ±â´ÉÀº ºñÈ°¼ºÈ­µÊ. Ç×»ó False ¹ÝÈ¯ (¿µ»ó¿¡ ·Î°í/±×¸² ¿À¹ö·¹ÀÌ ¾øÀ½)."""
     return False  # [AX] MARKER v1
 
 
@@ -6385,7 +6385,7 @@ def log_credits(job_id: str, tts_chars: int = 0, llm_tokens: int = 0,
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     except Exception as e:
-        logger.debug(f"[AU-5] credits log 실패: {e}")
+        logger.debug(f"[AU-5] credits log ½ÇÆÐ: {e}")
 
 
 async def process_video_creation(
@@ -6399,12 +6399,12 @@ async def process_video_creation(
     global _CURRENT_JOB
     _job_lock_token = await _redis_acquire_lock(job_id, timeout_sec=3600)
     if _job_lock_token is None:
-        logger.warning(f"동시 실행 거부 (Redis lock): {job_id}")
-        await update_job_status(job_id, JobStatus.FAILED, error="다른 잡 처리 중")
+        logger.warning(f"µ¿½Ã ½ÇÇà °ÅºÎ (Redis lock): {job_id}")
+        await update_job_status(job_id, JobStatus.FAILED, error="´Ù¸¥ Àâ Ã³¸® Áß")
         return
     if _job_lock_token == "noop" and _CURRENT_JOB and _CURRENT_JOB != job_id:
-        logger.warning(f"동시 실행 거부 (fallback): {job_id}")
-        await update_job_status(job_id, JobStatus.FAILED, error="다른 잡 처리 중")
+        logger.warning(f"µ¿½Ã ½ÇÇà °ÅºÎ (fallback): {job_id}")
+        await update_job_status(job_id, JobStatus.FAILED, error="´Ù¸¥ Àâ Ã³¸® Áß")
         return
     _CURRENT_JOB = job_id
     await _redis_set_job(job_id, JobStatus.PROCESSING, progress=5, step="initializing")
@@ -6415,63 +6415,63 @@ async def process_video_creation(
         job_temp_dir = TMP_DIR / job_id
         job_temp_dir.mkdir(parents=True, exist_ok=True)
         
-        # 장면 로드 — request.scenes 우선, 없으면 파일
+        # Àå¸é ·Îµå ? request.scenes ¿ì¼±, ¾øÀ¸¸é ÆÄÀÏ
         req_scenes = getattr(request, "scenes", None) or []
         scenes_file = JOBS_DIR / job_id / "scenes.json"
         if req_scenes:
-            # request body 로 전달된 scenes 사용 (UI/브라우저 경로)
+            # request body ·Î Àü´ÞµÈ scenes »ç¿ë (UI/ºê¶ó¿ìÀú °æ·Î)
             scenes_data = [
                 (s.model_dump(mode="json") if hasattr(s, "model_dump") else s)
                 for s in req_scenes
             ]
-            # 디스크에도 저장 (rebuild 등에서 참조 가능)
+            # µð½ºÅ©¿¡µµ ÀúÀå (rebuild µî¿¡¼­ ÂüÁ¶ °¡´É)
             scenes_file.parent.mkdir(parents=True, exist_ok=True)
             scenes_file.write_text(
                 json.dumps(scenes_data, ensure_ascii=False, indent=2),
                 encoding="utf-8"
             )
-            logger.info(f"요청 scenes 로드: {len(scenes_data)}개 (파일로도 저장)")
+            logger.info(f"¿äÃ» scenes ·Îµå: {len(scenes_data)}°³ (ÆÄÀÏ·Îµµ ÀúÀå)")
         else:
             if not scenes_file.exists():
-                raise FileNotFoundError(f"장면 파일 없음: {scenes_file}")
+                raise FileNotFoundError(f"Àå¸é ÆÄÀÏ ¾øÀ½: {scenes_file}")
             with open(scenes_file) as f:
                 scenes_data = json.load(f)
-        # scenes.json 형태 정규화: list | {"scenes":[...]} | 단일 dict 모두 허용
+        # scenes.json ÇüÅÂ Á¤±ÔÈ­: list | {"scenes":[...]} | ´ÜÀÏ dict ¸ðµÎ Çã¿ë
         if isinstance(scenes_data, dict):
             if isinstance(scenes_data.get('scenes'), list):
                 scenes_data = scenes_data['scenes']
             else:
                 scenes_data = [scenes_data]
         if not isinstance(scenes_data, list):
-            raise ValueError(f"scenes.json 형식 오류: list 또는 dict 기대, got {type(scenes_data).__name__}")
+            raise ValueError(f"scenes.json Çü½Ä ¿À·ù: list ¶Ç´Â dict ±â´ë, got {type(scenes_data).__name__}")
         scenes = []
         for idx, s in enumerate(scenes_data):
             if not isinstance(s, dict):
-                raise ValueError(f"scenes[{idx}] 형식 오류: dict 기대, got {type(s).__name__}")
+                raise ValueError(f"scenes[{idx}] Çü½Ä ¿À·ù: dict ±â´ë, got {type(s).__name__}")
             scenes.append(Scene(**s))
         
-        logger.info(f"로드된 장면: {len(scenes)}개")
+        logger.info(f"·ÎµåµÈ Àå¸é: {len(scenes)}°³")
         state.mark("scenes_loaded", {"count": len(scenes)})  # [AC] MARKER body
 
-        # [TTS-AUTO] audio_url 없을 때 TTS 자동 생성 (lf2_tts:8001 호출)
+        # [TTS-AUTO] audio_url ¾øÀ» ¶§ TTS ÀÚµ¿ »ý¼º (lf2_tts:8001 È£Ãâ)
         if not getattr(request, "audio_url", None) and not (TMP_DIR / f"{job_id}.mp3").exists():
             _tts_result = await ensure_tts_assets(job_id, scenes, request)
             _tts_ok = _tts_result.get("ok", False)
             if not _tts_ok:
                 _ec = _tts_result.get("error_code", "TTS_ERROR")
-                _msg = _tts_result.get("message", "TTS 실패")
+                _msg = _tts_result.get("message", "TTS ½ÇÆÐ")
                 logger.warning(f"[TTS] {_ec}: {_msg}")
             await _redis_set_job(job_id, JobStatus.TTS_GENERATING, progress=18,
                 step="tts_generating",
-                message="TTS 완료" if _tts_ok else _tts_result.get("message","TTS 실패"),
+                message="TTS ¿Ï·á" if _tts_ok else _tts_result.get("message","TTS ½ÇÆÐ"),
                 error_code=None if _tts_ok else _tts_result.get("error_code"))
             if _tts_ok:
-                logger.info("[TTS-AUTO] TTS 자동 생성 완료")
+                logger.info("[TTS-AUTO] TTS ÀÚµ¿ »ý¼º ¿Ï·á")
             else:
-                logger.warning("[TTS-AUTO] TTS 자동 생성 실패 — 음성 없이 진행")
+                logger.warning("[TTS-AUTO] TTS ÀÚµ¿ »ý¼º ½ÇÆÐ ? À½¼º ¾øÀÌ ÁøÇà")
 
-        # TTS 타임스탬프로 씬 길이 동기화 (나레이션-영상 일치)
-        # 1순위: job_id 기반 / 2순위: audio_url 파일명 기반 (자산 재활용 시)
+        # TTS Å¸ÀÓ½ºÅÆÇÁ·Î ¾À ±æÀÌ µ¿±âÈ­ (³ª·¹ÀÌ¼Ç-¿µ»ó ÀÏÄ¡)
+        # 1¼øÀ§: job_id ±â¹Ý / 2¼øÀ§: audio_url ÆÄÀÏ¸í ±â¹Ý (ÀÚ»ê ÀçÈ°¿ë ½Ã)
         tts_timestamps = TMP_DIR / f"{job_id}_timestamps.json"
         if not tts_timestamps.exists() and getattr(request, "audio_url", None):
             try:
@@ -6479,9 +6479,9 @@ async def process_video_creation(
                 alt_ts = audio_p.with_name(audio_p.stem + "_timestamps.json")
                 if alt_ts.exists():
                     tts_timestamps = alt_ts
-                    logger.info(f"타임스탬프 fallback 사용: {alt_ts}")
+                    logger.info(f"Å¸ÀÓ½ºÅÆÇÁ fallback »ç¿ë: {alt_ts}")
             except Exception as _e:
-                logger.warning(f"타임스탬프 fallback 탐색 실패: {_e}")
+                logger.warning(f"Å¸ÀÓ½ºÅÆÇÁ fallback Å½»ö ½ÇÆÐ: {_e}")
         scenes = sync_scene_durations_from_timestamps(scenes, tts_timestamps)
         state.mark("tts_synced")
 
@@ -6490,22 +6490,22 @@ async def process_video_creation(
             if tts_timestamps and tts_timestamps.exists():
                 import json as _j
                 _td = _j.loads(tts_timestamps.read_text(encoding="utf-8"))
-                # [BJ] 기존 keywords가 한국어/긴 문장이면 무효로 간주 → 재추출
+                # [BJ] ±âÁ¸ keywords°¡ ÇÑ±¹¾î/±ä ¹®ÀåÀÌ¸é ¹«È¿·Î °£ÁÖ ¡æ ÀçÃßÃâ
                 _existing = _td.get("segment_keywords") or []
                 _needs_regen = not _existing
                 if _existing and not _needs_regen:
-                    # 첫 항목 검사: 한국어(한글) 포함 또는 30자 이상이면 invalid
+                    # Ã¹ Ç×¸ñ °Ë»ç: ÇÑ±¹¾î(ÇÑ±Û) Æ÷ÇÔ ¶Ç´Â 30ÀÚ ÀÌ»óÀÌ¸é invalid
                     try:
                         first_kw = (_existing[0].get("keywords") or [""])[0]
                         if not first_kw:
                             _needs_regen = True
                         else:
-                            # 한글 유니코드 AC00-D7A3
+                            # ÇÑ±Û À¯´ÏÄÚµå AC00-D7A3
                             has_hangul = any("\uac00" <= ch <= "\ud7a3" for ch in first_kw)
                             too_long = len(first_kw) > 30
                             if has_hangul or too_long:
                                 _needs_regen = True
-                                logger.info(f"[BJ] 기존 segment_keywords 무효 (hangul={has_hangul} len={len(first_kw)}) — 재추출")
+                                logger.info(f"[BJ] ±âÁ¸ segment_keywords ¹«È¿ (hangul={has_hangul} len={len(first_kw)}) ? ÀçÃßÃâ")
                     except Exception:
                         _needs_regen = True
                 
@@ -6521,11 +6521,11 @@ async def process_video_creation(
                             for i in sorted(_kws.keys())
                         ]
                         tts_timestamps.write_text(_j.dumps(_td, ensure_ascii=False, indent=2), encoding="utf-8")
-                        logger.info(f"[AZ] segment_keywords 자동 생성 저장: {len(_kws)}개")
+                        logger.info(f"[AZ] segment_keywords ÀÚµ¿ »ý¼º ÀúÀå: {len(_kws)}°³")
         except Exception as _az_err:
-            logger.warning(f"[AZ] segment_keywords 자동 생성 실패: {_az_err}")
+            logger.warning(f"[AZ] segment_keywords ÀÚµ¿ »ý¼º ½ÇÆÐ: {_az_err}")
 
-        # [4]+[7] Whisper segments 기반 의미 재분해 + 리듬 컷 적용
+        # [4]+[7] Whisper segments ±â¹Ý ÀÇ¹Ì ÀçºÐÇØ + ¸®µë ÄÆ Àû¿ë
         scenes = rebuild_scenes_from_whisper_segments(scenes, tts_timestamps)
         state.mark("whisper_rebuilt")
         # [AD] Timeline audit: log scene boundaries vs cue boundaries for verification
@@ -6546,12 +6546,12 @@ async def process_video_creation(
             except Exception as _audit_err:
                 logger.debug(f'[AD] audit error: {_audit_err}')
 
-        # [C-1] segment_keywords 로 keyword 교체된 씬(asset_url=None) 재검색·다운로드
+        # [C-1] segment_keywords ·Î keyword ±³Ã¼µÈ ¾À(asset_url=None) Àç°Ë»ö¡¤´Ù¿î·Îµå
         need_download = [s for s in scenes if s.asset_url is None]
         if need_download:
             logger.info(
-                f"[C-1] {len(need_download)}개 씬 재검색·다운로드 필요 "
-                f"(총 {len(scenes)}개 중)"
+                f"[C-1] {len(need_download)}°³ ¾À Àç°Ë»ö¡¤´Ù¿î·Îµå ÇÊ¿ä "
+                f"(ÃÑ {len(scenes)}°³ Áß)"
             )
             try:
                 refreshed = await search_and_download_assets(job_id, need_download)
@@ -6561,16 +6561,16 @@ async def process_video_creation(
                     for s in scenes
                 ]
             except Exception as _e:
-                logger.warning(f"[C-1] 재검색·다운로드 실패 (원본 asset fallback 적용): {_e}")
+                logger.warning(f"[C-1] Àç°Ë»ö¡¤´Ù¿î·Îµå ½ÇÆÐ (¿øº» asset fallback Àû¿ë): {_e}")
 
-        # asset_url 여전히 없는 씬은 다른 씬의 asset 으로 fallback
+        # asset_url ¿©ÀüÈ÷ ¾ø´Â ¾ÀÀº ´Ù¸¥ ¾ÀÀÇ asset À¸·Î fallback
         has_assets = [s for s in scenes if s.asset_url]
         if has_assets:
             fallback_url = has_assets[0].asset_url
             for i, s in enumerate(scenes):
                 if s.asset_url is None:
                     scenes[i] = s.model_copy(update={"asset_url": fallback_url})
-                    logger.info(f"[C-1] 씬 '{s.scene_id}' fallback asset 적용: {fallback_url}")
+                    logger.info(f"[C-1] ¾À '{s.scene_id}' fallback asset Àû¿ë: {fallback_url}")
         state.mark("assets_downloaded", {"total": len(scenes), "with_asset": sum(1 for s in scenes if s.asset_url)})
 
         # [v15.60.0] Narration-First Timeline Engine
@@ -6585,17 +6585,17 @@ async def process_video_creation(
                             _sc.timing = _st
                             break
                 save_timeline_report(job_id, _ntl_timeline, scenes)
-                logger.info(f"[NTL] 타임라인 완료: {_ntl_timeline.get('total_duration', 0):.1f}초, "
-                            f"{len(_ntl_timeline.get('scene_timings', []))}개 씬")
+                logger.info(f"[NTL] Å¸ÀÓ¶óÀÎ ¿Ï·á: {_ntl_timeline.get('total_duration', 0):.1f}ÃÊ, "
+                            f"{len(_ntl_timeline.get('scene_timings', []))}°³ ¾À")
             except Exception as _ntl_err:
-                logger.warning(f"[NTL] 타임라인 생성 실패 (계속 진행): {_ntl_err}")
+                logger.warning(f"[NTL] Å¸ÀÓ¶óÀÎ »ý¼º ½ÇÆÐ (°è¼Ó ÁøÇà): {_ntl_err}")
 
-        # 뮤직비디오 모드
+        # ¹ÂÁ÷ºñµð¿À ¸ðµå
         if request.mode == VideoMode.MUSIC_VIDEO:
             await update_job_status(job_id, JobStatus.PROCESSING, progress=20.0)
             clips = await prepare_clips_for_longform(job_id, scenes, job_temp_dir)
             if not clips:
-                raise ValueError("뮤직비디오용 클립 없음")
+                raise ValueError("¹ÂÁ÷ºñµð¿À¿ë Å¬¸³ ¾øÀ½")
             await update_job_status(job_id, JobStatus.PROCESSING, progress=40.0)
             subtitle_text = request.subtitle_text or " ".join(
                 s.description or s.keyword for s in scenes
@@ -6608,7 +6608,7 @@ async def process_video_creation(
             bgm_vol = getattr(request, 'bgm_volume', 0.8)
             output_video = LONGFORM_DIR / f"{job_id}.mp4"
             if not create_music_video(clips, srt_path, bgm, bgm_vol, output_video):
-                raise RuntimeError("뮤직비디오 생성 실패")
+                raise RuntimeError("¹ÂÁ÷ºñµð¿À »ý¼º ½ÇÆÐ")
             await update_job_status(job_id, JobStatus.PROCESSING, progress=80.0)
             duration = get_video_duration(output_video)
             output_files = {"longform": str(output_video)}
@@ -6619,7 +6619,7 @@ async def process_video_creation(
                     if add_text_overlay_to_thumbnail(tp, tf, title=request.title or f"MV {job_id[:8]}"):
                         output_files["thumbnail"] = str(tf)
 
-        # 장편/숏폼 영상 생성 [v16.6: SHORTFORM 명시 포함]
+        # ÀåÆí/¼ôÆû ¿µ»ó »ý¼º [v16.6: SHORTFORM ¸í½Ã Æ÷ÇÔ]
         elif request.mode in (VideoMode.LONGFORM, VideoMode.SHORTFORM) or request.generate_shorts:
             await update_job_status(job_id, JobStatus.PROCESSING, progress=20.0)
             
@@ -6631,17 +6631,17 @@ async def process_video_creation(
                     existing = [Path(p) for p in prev_paths if Path(p).exists() and Path(p).stat().st_size > 4096]
                     missing = [p for p in prev_paths if p not in [str(x) for x in existing]]
                     if missing:
-                        logger.info(f"[AF-3] 부분 복구 — 존재 {len(existing)}/{len(prev_paths)}개, 누락 {len(missing)}개 재생성 시도")
+                        logger.info(f"[AF-3] ºÎºÐ º¹±¸ ? Á¸Àç {len(existing)}/{len(prev_paths)}°³, ´©¶ô {len(missing)}°³ Àç»ý¼º ½Ãµµ")
                         # Fall through to regenerate below (clips stays None)
                     elif len(existing) == len(prev_paths):
                         clips = existing
-                        logger.info(f"[AC] clips_prepared 스킵 — 기존 {len(clips)}개 클립 재사용")
+                        logger.info(f"[AC] clips_prepared ½ºÅµ ? ±âÁ¸ {len(clips)}°³ Å¬¸³ Àç»ç¿ë")
             if clips is None:
                 clips = await prepare_clips_for_longform(job_id, scenes, job_temp_dir)  # [AC] MARKER resume
             
             
             if not clips:
-                raise ValueError("준비된 클립 없음")
+                raise ValueError("ÁØºñµÈ Å¬¸³ ¾øÀ½")
             state.mark("clips_prepared", {"count": len(clips), "paths": [str(c) for c in clips]})
             
             await update_job_status(job_id, JobStatus.PROCESSING, progress=40.0)
@@ -6661,7 +6661,7 @@ async def process_video_creation(
                         clips.append(outro_path)
                         logger.info(f"[AQ-1] outro appended: {outro_path}")
             except Exception as _io_err:
-                logger.warning(f"[AQ-1] intro/outro 실패: {_io_err}")
+                logger.warning(f"[AQ-1] intro/outro ½ÇÆÐ: {_io_err}")
             concat_file = job_temp_dir / "concat.txt"
             combined_video = job_temp_dir / "combined.mp4"  # [AQ] MARKER v1
             skip_concat = False
@@ -6670,18 +6670,18 @@ async def process_video_creation(
                 if prev and Path(prev).exists() and Path(prev).stat().st_size > 4096:
                     combined_video = Path(prev)
                     skip_concat = True
-                    logger.info(f"[AC] concat_done 스킵 — 기존 combined.mp4 재사용: {combined_video}")
+                    logger.info(f"[AC] concat_done ½ºÅµ ? ±âÁ¸ combined.mp4 Àç»ç¿ë: {combined_video}")
             if not skip_concat:
                 if not create_concat_file(clips, concat_file):
-                    raise RuntimeError("Concat 파일 생성 실패")
+                    raise RuntimeError("Concat ÆÄÀÏ »ý¼º ½ÇÆÐ")
                 if not concatenate_videos(concat_file, combined_video):
-                    raise RuntimeError("영상 연결 실패")
+                    raise RuntimeError("¿µ»ó ¿¬°á ½ÇÆÐ")
             state.mark("concat_done", {"combined": str(combined_video)})
             
             await update_job_status(job_id, JobStatus.PROCESSING, progress=50.0)
             
-            # 오디오 믹싱
-            # audio_url이 있으면 우선 사용 (외부 TTS 오디오 지원)
+            # ¿Àµð¿À ¹Í½Ì
+            # audio_urlÀÌ ÀÖÀ¸¸é ¿ì¼± »ç¿ë (¿ÜºÎ TTS ¿Àµð¿À Áö¿ø)
             if getattr(request, "audio_url", None):
                 tts_audio = Path(request.audio_url)
             else:
@@ -6694,7 +6694,7 @@ async def process_video_creation(
             output_video = LONGFORM_DIR / f"{job_id}.mp4"
             
             if not mix_audio(combined_video, tts_audio, bgm, request.bgm_volume, output_video):
-                logger.warning("오디오 믹싱 실패, 오디오 없이 진행")
+                logger.warning("¿Àµð¿À ¹Í½Ì ½ÇÆÐ, ¿Àµð¿À ¾øÀÌ ÁøÇà")
                 shutil.copy(combined_video, output_video)
             # [AQ-3/AK-5] Excess silence trim (>3s silences shortened to 1s)
             try:
@@ -6714,12 +6714,12 @@ async def process_video_creation(
                     if starts and ends:
                         # Build atrim filter chain to skip silence excess (keep 1s of each)
                         pairs = list(zip(starts, ends))
-                        logger.info(f"[AQ-3] 과잉 무음 {len(pairs)}개 검출 (>3s)")
+                        logger.info(f"[AQ-3] °úÀ× ¹«À½ {len(pairs)}°³ °ËÃâ (>3s)")
                         # Simple approach: re-encode skipping the middle of each silence
                         # Keep first/last 0.5s of each silence, drop the middle
-                        # This is complex for ffmpeg atrim/concat — use approximate setpts + asetpts
+                        # This is complex for ffmpeg atrim/concat ? use approximate setpts + asetpts
                         # For now, log and skip (mark future impl)
-                        logger.info(f"[AQ-3] trim 대상: {pairs[:3]}... (skip for stability, logged only)")
+                        logger.info(f"[AQ-3] trim ´ë»ó: {pairs[:3]}... (skip for stability, logged only)")
             except Exception as _tr_err:
                 logger.debug(f"[AQ-3] silence trim skip: {_tr_err}")
 
@@ -6735,17 +6735,17 @@ async def process_video_creation(
                     ]
                     if await run_ffmpeg_async(ln_cmd, timeout=120.0) and ln_tmp.exists() and ln_tmp.stat().st_size > 4096:
                         shutil.move(str(ln_tmp), str(output_video))
-                        logger.info("[AI-1] loudnorm 적용 완료 (-16 LUFS)")
+                        logger.info("[AI-1] loudnorm Àû¿ë ¿Ï·á (-16 LUFS)")
             except Exception as _ln_err:
-                logger.warning(f"[AI-1] loudnorm 실패 (무시): {_ln_err}")
+                logger.warning(f"[AI-1] loudnorm ½ÇÆÐ (¹«½Ã): {_ln_err}")
             state.mark("audio_mixed", {"output": str(output_video)})
             
             await update_job_status(job_id, JobStatus.PROCESSING, progress=70.0)
             
-            # 영상 길이 조회
+            # ¿µ»ó ±æÀÌ Á¶È¸
             duration = get_video_duration(output_video)
             
-            # 썸네일 생성
+            # ½æ³×ÀÏ »ý¼º
             output_files = {
                 "longform": str(output_video)
             }
@@ -6781,7 +6781,7 @@ async def process_video_creation(
                     if _candidates:
                         _candidates.sort(reverse=True)
                         shutil.copy2(_candidates[0][1], thumbnail_path)
-                        logger.info(f"[AK-3] 썸네일 best: {_candidates[0][1].name} (score={_candidates[0][0]:.1f})")
+                        logger.info(f"[AK-3] ½æ³×ÀÏ best: {_candidates[0][1].name} (score={_candidates[0][0]:.1f})")
                 except Exception as _tk_err:
                     logger.debug(f"[AK-3] thumbnail picker skip: {_tk_err}")
                 if thumbnail_path.exists() or extract_thumbnail(output_video, thumbnail_path):
@@ -6803,15 +6803,15 @@ async def process_video_creation(
             )
 
 
-            # 자막 오버레이 (add_subtitles=True 이면 항상 생성)
-            # 씬 description 있으면 씬 동기화 SRT 우선, 없으면 subtitle_text fallback
+            # ÀÚ¸· ¿À¹ö·¹ÀÌ (add_subtitles=True ÀÌ¸é Ç×»ó »ý¼º)
+            # ¾À description ÀÖÀ¸¸é ¾À µ¿±âÈ­ SRT ¿ì¼±, ¾øÀ¸¸é subtitle_text fallback
             if request.add_subtitles:
                 try:
                     srt_path = job_temp_dir / f"{job_id}_narration.srt"
                     srt_ok = False
-                    # [8] Whisper timestamps가 있으면 최우선 (단어 단위 정확도 + 선행)
+                    # [8] Whisper timestamps°¡ ÀÖÀ¸¸é ÃÖ¿ì¼± (´Ü¾î ´ÜÀ§ Á¤È®µµ + ¼±Çà)
                     if tts_timestamps and tts_timestamps.exists():
-                        # [v15.59.0] subtitle_path / subtitle_type 명시 분리
+                        # [v15.59.0] subtitle_path / subtitle_type ¸í½Ã ºÐ¸®
                         ass_path = srt_path.with_suffix(".ass")
                         subtitle_path = None
                         subtitle_type = None
@@ -6820,10 +6820,10 @@ async def process_video_creation(
                             subtitle_path = ass_path
                             subtitle_type = "ass"
                             srt_ok = True
-                            logger.info("[SUBTITLE] ASS 카라오케 적용")
+                            logger.info("[SUBTITLE] ASS Ä«¶ó¿ÀÄÉ Àû¿ë")
                             await _redis_set_job(job_id, JobStatus.SUBTITLE_CREATING,
                                 progress=55, step="subtitle_creating",
-                                message="ASS 카라오케 자막 생성 완료")
+                                message="ASS Ä«¶ó¿ÀÄÉ ÀÚ¸· »ý¼º ¿Ï·á")
                         else:
                             srt_ok = create_srt_from_whisper_segments(tts_timestamps, srt_path)
                             if srt_ok:
@@ -6832,18 +6832,18 @@ async def process_video_creation(
                                 logger.info(f"[SUBTITLE] SRT fallback (lead={SUBTITLE_LEAD_SEC}s)")
                                 await _redis_set_job(job_id, JobStatus.SUBTITLE_CREATING,
                                     progress=55, step="subtitle_creating",
-                                    message="SRT fallback 생성 완료")
+                                    message="SRT fallback »ý¼º ¿Ï·á")
                     if not srt_ok and scenes and any(s.description for s in scenes):
                         srt_ok = create_srt_from_scenes(scenes, srt_path)
-                        logger.info("씬 동기화 자막 fallback 사용")
+                        logger.info("¾À µ¿±âÈ­ ÀÚ¸· fallback »ç¿ë")
                     if not srt_ok and request.subtitle_text:
                         total_dur = duration or sum((s.duration_seconds or 5.0) for s in scenes)
                         srt_ok = create_srt_from_text(request.subtitle_text, total_dur, srt_path)
-                        logger.info("텍스트 자막 fallback 사용")
+                        logger.info("ÅØ½ºÆ® ÀÚ¸· fallback »ç¿ë")
                     if srt_ok:
                         _active_sub = subtitle_path if subtitle_path else srt_path
                         _active_type = subtitle_type if subtitle_type else "srt"
-                        # keyword highlight: SRT만 적용 (ASS는 자체 스타일 보존)
+                        # keyword highlight: SRT¸¸ Àû¿ë (ASS´Â ÀÚÃ¼ ½ºÅ¸ÀÏ º¸Á¸)
                         if _active_type == "srt":
                             try:
                                 _highlight_keywords_in_srt(_active_sub, scenes)
@@ -6851,23 +6851,23 @@ async def process_video_creation(
                                 logger.warning(f"[AF-4] highlight skip: {_hi_err}")
                         out_sub = LONGFORM_DIR / f"{job_id}_sub.mp4"
                         await _redis_set_job(job_id, JobStatus.RENDERING, progress=70,
-                            step="rendering", message="자막 오버레이 렌더링 중")
+                            step="rendering", message="ÀÚ¸· ¿À¹ö·¹ÀÌ ·»´õ¸µ Áß")
                         if add_subtitles_to_video(output_video, _active_sub, out_sub,
                                                    subtitle_type=_active_type):
                             shutil.move(str(out_sub), str(output_video))
                             output_files["longform"] = str(output_video)
-                            logger.info("자막 오버레이 완료")
+                            logger.info("ÀÚ¸· ¿À¹ö·¹ÀÌ ¿Ï·á")
                             state.mark("subtitles_added", {"output": str(output_video)})
                 except Exception as e:
-                    logger.error(f"자막 오류: {e}")
+                    logger.error(f"ÀÚ¸· ¿À·ù: {e}")
 
-            # [v15.77] 로워서드 그래픽 오버레이 — [v15.94] 비활성화 (자막 겹침 방지)
+            # [v15.77] ·Î¿ö¼­µå ±×·¡ÇÈ ¿À¹ö·¹ÀÌ ? [v15.94] ºñÈ°¼ºÈ­ (ÀÚ¸· °ãÄ§ ¹æÁö)
             try:
                 _lt_events = _extract_lower_third_events_from_narration(
                     scenes, tts_timestamps if "tts_timestamps" in dir() else None,
                     duration or 300.0,
                 )
-                if False and _lt_events:  # [v15.94] 로워서드 OFF
+                if False and _lt_events:  # [v15.94] ·Î¿ö¼­µå OFF
                     _lt_ass = job_temp_dir / f"{job_id}_lower.ass"
                     if create_lower_third_ass(_lt_events, _lt_ass) and _lt_ass.exists():
                         _lt_out = output_video.with_name(output_video.stem + "_lt.mp4")
@@ -6885,16 +6885,16 @@ async def process_video_creation(
                                 and _lt_out.stat().st_size > 4096):
                             shutil.move(str(_lt_out), str(output_video))
                             output_files["longform"] = str(output_video)
-                            logger.info(f"[v15.77] 로워서드 완료: {len(_lt_events)}개")
+                            logger.info(f"[v15.77] ·Î¿ö¼­µå ¿Ï·á: {len(_lt_events)}°³")
                         else:
-                            logger.warning("[v15.77] 로워서드 렌더 실패 — 원본 유지")
+                            logger.warning("[v15.77] ·Î¿ö¼­µå ·»´õ ½ÇÆÐ ? ¿øº» À¯Áö")
             except Exception as _lt_err:
-                logger.warning(f"[v15.77] 로워서드 스킵: {_lt_err}")
+                logger.warning(f"[v15.77] ·Î¿ö¼­µå ½ºÅµ: {_lt_err}")
 
-            # [v15.78] 중앙 키워드 배너 오버레이 — [v15.94] 비활성화 (자막 겹침 방지)
+            # [v15.78] Áß¾Ó Å°¿öµå ¹è³Ê ¿À¹ö·¹ÀÌ ? [v15.94] ºñÈ°¼ºÈ­ (ÀÚ¸· °ãÄ§ ¹æÁö)
             try:
                 _cb_events = _extract_center_banner_events(scenes, duration or 300.0)
-                if False and _cb_events:  # [v15.94] 중앙배너 OFF
+                if False and _cb_events:  # [v15.94] Áß¾Ó¹è³Ê OFF
                     _cb_ass = job_temp_dir / f"{job_id}_banner.ass"
                     if create_center_banner_ass(_cb_events, _cb_ass) and _cb_ass.exists():
                         _cb_out = output_video.with_name(output_video.stem + "_cb.mp4")
@@ -6906,13 +6906,13 @@ async def process_video_creation(
                                 and _cb_out.exists() and _cb_out.stat().st_size > 4096):
                             shutil.move(str(_cb_out), str(output_video))
                             output_files["longform"] = str(output_video)
-                            logger.info(f"[v15.78] 중앙배너 완료: {len(_cb_events)}개")
+                            logger.info(f"[v15.78] Áß¾Ó¹è³Ê ¿Ï·á: {len(_cb_events)}°³")
                         else:
-                            logger.warning("[v15.78] 중앙배너 렌더 실패")
+                            logger.warning("[v15.78] Áß¾Ó¹è³Ê ·»´õ ½ÇÆÐ")
             except Exception as _cb_err:
-                logger.warning(f"[v15.78] 중앙배너 스킵: {_cb_err}")
+                logger.warning(f"[v15.78] Áß¾Ó¹è³Ê ½ºÅµ: {_cb_err}")
 
-            # [v15.81] 패턴 인터럽트 SFX 오버레이 (재훅 배너 시점)
+            # [v15.81] ÆÐÅÏ ÀÎÅÍ·´Æ® SFX ¿À¹ö·¹ÀÌ (ÀçÈÅ ¹è³Ê ½ÃÁ¡)
             try:
                 if _cb_events and output_video.exists():
                     _n_sfx81 = min(len(_cb_events), 3)
@@ -6934,14 +6934,14 @@ async def process_video_creation(
                     if (await run_ffmpeg_async(_sfx81_cmd, timeout=120.0)
                             and _sfx81_out.exists() and _sfx81_out.stat().st_size > 4096):
                         shutil.move(str(_sfx81_out), str(output_video))
-                        logger.info(f'[v15.81] SFX 오버레이 완료: {_n_sfx81}개 팝')
+                        logger.info(f'[v15.81] SFX ¿À¹ö·¹ÀÌ ¿Ï·á: {_n_sfx81}°³ ÆË')
                     else:
                         try: _sfx81_out.unlink()
                         except: pass
-                        logger.warning('[v15.81] SFX 스킵')
+                        logger.warning('[v15.81] SFX ½ºÅµ')
             except Exception as _sfx81_err:
-                logger.warning(f'[v15.81] SFX 예외: {_sfx81_err}')
-            # 숏폼 생성 [v16.6: graceful degradation — 실패해도 롱폼 완료 유지]
+                logger.warning(f'[v15.81] SFX ¿¹¿Ü: {_sfx81_err}')
+            # ¼ôÆû »ý¼º [v16.6: graceful degradation ? ½ÇÆÐÇØµµ ·ÕÆû ¿Ï·á À¯Áö]
             if request.generate_shorts:
                 shorts_output = SHORTS_DIR / f"{job_id}_short.mp4"
                 try:
@@ -6950,11 +6950,11 @@ async def process_video_creation(
                         output_files["shorts"] = str(shorts_output)
                         state.mark("shorts_done", {"path": str(shorts_output)})
                         await update_job_status(job_id, JobStatus.PROCESSING, progress=90.0, output_files=output_files)
-                        logger.info(f"[v16.6] 숏폼 완료: {shorts_output}")
+                        logger.info(f"[v16.6] ¼ôÆû ¿Ï·á: {shorts_output}")
                     else:
-                        logger.warning(f"[v16.6] 숏폼 생성 실패 — 롱폼만으로 완료 진행 (job={job_id})")
+                        logger.warning(f"[v16.6] ¼ôÆû »ý¼º ½ÇÆÐ ? ·ÕÆû¸¸À¸·Î ¿Ï·á ÁøÇà (job={job_id})")
                 except Exception as _shorts_err:
-                    logger.warning(f"[v16.6] 숏폼 예외 (롱폼 완료 유지): {_shorts_err}")
+                    logger.warning(f"[v16.6] ¼ôÆû ¿¹¿Ü (·ÕÆû ¿Ï·á À¯Áö): {_shorts_err}")
         
         await update_job_status(
             job_id,
@@ -6972,9 +6972,9 @@ async def process_video_creation(
             if audio_dur > 0 and video_dur > 0:
                 diff = abs(audio_dur - video_dur)
                 if diff > 0.5:
-                    logger.warning(f"[AF-5b] QA 경고 — 영상/오디오 duration 오차 {diff:.2f}s (video={video_dur:.2f}s audio={audio_dur:.2f}s)")
+                    logger.warning(f"[AF-5b] QA °æ°í ? ¿µ»ó/¿Àµð¿À duration ¿ÀÂ÷ {diff:.2f}s (video={video_dur:.2f}s audio={audio_dur:.2f}s)")
                 else:
-                    logger.info(f"[AF-5b] QA OK — duration diff {diff:.2f}s (video={video_dur:.2f}s audio={audio_dur:.2f}s)")
+                    logger.info(f"[AF-5b] QA OK ? duration diff {diff:.2f}s (video={video_dur:.2f}s audio={audio_dur:.2f}s)")
             # [AI-10] Extended QA battery
             try:
                 qa_issues = []
@@ -6984,30 +6984,30 @@ async def process_video_creation(
                     if lf.exists():
                         size_mb = lf.stat().st_size / (1024 * 1024)
                         if size_mb < 1.0:
-                            qa_issues.append(f"영상 파일 너무 작음: {size_mb:.2f}MB")
+                            qa_issues.append(f"¿µ»ó ÆÄÀÏ ³Ê¹« ÀÛÀ½: {size_mb:.2f}MB")
                         elif size_mb > 500:
-                            qa_issues.append(f"영상 파일 비정상 크기: {size_mb:.0f}MB")
+                            qa_issues.append(f"¿µ»ó ÆÄÀÏ ºñÁ¤»ó Å©±â: {size_mb:.0f}MB")
                 # 2. Scene count reasonable
                 if len(scenes) < 2:
-                    qa_issues.append(f"씬 개수 부족: {len(scenes)}")
+                    qa_issues.append(f"¾À °³¼ö ºÎÁ·: {len(scenes)}")
                 # 3. All scenes have asset
                 missing_assets = sum(1 for s in scenes if not s.asset_url)
                 if missing_assets > 0:
-                    qa_issues.append(f"asset 누락 씬: {missing_assets}개")
+                    qa_issues.append(f"asset ´©¶ô ¾À: {missing_assets}°³")
                 # 4. Thumbnail exists
                 if "thumbnail" not in output_files:
-                    qa_issues.append("썸네일 미생성")
+                    qa_issues.append("½æ³×ÀÏ ¹Ì»ý¼º")
                 if qa_issues:
-                    logger.warning(f"[AI-10] QA 경고: {qa_issues}")
+                    logger.warning(f"[AI-10] QA °æ°í: {qa_issues}")
                 else:
-                    logger.info(f"[AI-10] QA 전체 통과 ({len(scenes)}씬, asset 100%, 썸네일 OK)")
+                    logger.info(f"[AI-10] QA ÀüÃ¼ Åë°ú ({len(scenes)}¾À, asset 100%, ½æ³×ÀÏ OK)")
             except Exception as _qa2_err:
                 logger.debug(f"[AI-10] QA battery skip: {_qa2_err}")
         except Exception as _qa_err:
-            logger.debug(f"[AF-5b] QA 체크 실패: {_qa_err}")
-        logger.info(f"작업 완료: {job_id}")
+            logger.debug(f"[AF-5b] QA Ã¼Å© ½ÇÆÐ: {_qa_err}")
+        logger.info(f"ÀÛ¾÷ ¿Ï·á: {job_id}")
         state.mark("completed", {"output_files": output_files})
-        # E드라이브 완성 폴더에 복사
+        # Eµå¶óÀÌºê ¿Ï¼º Æú´õ¿¡ º¹»ç
         try:
             for key, src_path in list(output_files.items()):
                 src = Path(src_path)
@@ -7017,17 +7017,17 @@ async def process_video_creation(
                     dest = dest_dir / src.name
                     shutil.copy2(src, dest)
                     output_files[f'complete_{key}'] = str(dest)
-                    logger.info(f'완성 폴더 복사: {src.name} -> {dest}')
+                    logger.info(f'¿Ï¼º Æú´õ º¹»ç: {src.name} -> {dest}')
         except Exception as copy_err:
-            logger.warning(f'완성 폴더 복사 실패 (무시): {copy_err}')
-        # ── YouTube 자동 업로드 ─────────────────────────────────────────────
+            logger.warning(f'¿Ï¼º Æú´õ º¹»ç ½ÇÆÐ (¹«½Ã): {copy_err}')
+        # ¦¡¦¡ YouTube ÀÚµ¿ ¾÷·Îµå ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         if "longform" in output_files:
             try:
                 lf_path = output_files["longform"]
                 thumb_path = str(THUMBNAILS_DIR / f"{job_id}_thumb.jpg")
                 if "thumbnail" in output_files:
                     thumb_path = output_files["thumbnail"]
-                # 제목/설명: scenes.json에서 추출
+                # Á¦¸ñ/¼³¸í: scenes.json¿¡¼­ ÃßÃâ
                 yt_title = request.title or ""
                 yt_description = ""
                 try:
@@ -7047,20 +7047,20 @@ async def process_video_creation(
                                 desc = " ".join(s.get("narration", "")[:80] for s in sc_list if s.get("narration", ""))
                             # [AJ-5] YouTube chapters - build cumulative timestamps from scenes
                             try:
-                                chapters = ["00:00 시작"]
+                                chapters = ["00:00 ½ÃÀÛ"]
                                 cum = 0.0
                                 for idx, s in enumerate(sc_list[:15], 1):  # max 15 chapters
                                     cum += float(s.get("duration_seconds", 0) or 0)
                                     mm = int(cum // 60)
                                     ss = int(cum % 60)
-                                    title = (s.get("description") or s.get("keyword") or f"챕터 {idx}")[:40]
+                                    title = (s.get("description") or s.get("keyword") or f"Ã©ÅÍ {idx}")[:40]
                                     chapters.append(f"{mm:02d}:{ss:02d} {title}")
                                 desc = "\n".join(chapters) + "\n\n" + desc
                             except Exception:
                                 pass
                             yt_description = desc
                 except Exception as _pe:
-                    logger.warning(f"scenes.json 파싱 오류: {_pe}")
+                    logger.warning(f"scenes.json ÆÄ½Ì ¿À·ù: {_pe}")
                 if not yt_title:
                     yt_title = job_id
                 if not yt_description:
@@ -7068,12 +7068,12 @@ async def process_video_creation(
                 upload_payload = {
                     "video_path": lf_path,
                     "title": yt_title,
-                    "description": yt_description + "\n\n#AI #자동영상 #롱폼",
-                    "tags": ["AI", "자동영상", "롱폼", "LongForm"],
+                    "description": yt_description + "\n\n#AI #ÀÚµ¿¿µ»ó #·ÕÆû",
+                    "tags": ["AI", "ÀÚµ¿¿µ»ó", "·ÕÆû", "LongForm"],
                     "privacy_status": "private",
                     "thumbnail_path": thumb_path if Path(thumb_path).exists() else None
                 }
-                logger.info(f"YouTube 자동 업로드 시작: {yt_title}")
+                logger.info(f"YouTube ÀÚµ¿ ¾÷·Îµå ½ÃÀÛ: {yt_title}")
                 async with httpx.AsyncClient(timeout=180.0) as yt_client:
                     yt_resp = await yt_client.post(
                         "http://lf2_uploader:8003/upload/youtube",
@@ -7083,17 +7083,17 @@ async def process_video_creation(
                     if yt_resp.status_code == 200:
                         yt_data = yt_resp.json()
                         yt_url = yt_data.get("video_url", "")
-                        logger.info(f"YouTube 자동 업로드 성공: {yt_url}")
+                        logger.info(f"YouTube ÀÚµ¿ ¾÷·Îµå ¼º°ø: {yt_url}")
                         output_files["youtube_url"] = yt_url
                         state.mark("youtube_uploaded", {"url": yt_url})
                         await update_job_status(job_id, JobStatus.COMPLETED, progress=100.0, output_files=output_files, duration_seconds=duration)
                     else:
-                        logger.warning(f"YouTube 업로드 실패 {yt_resp.status_code}: {yt_resp.text[:300]}")
+                        logger.warning(f"YouTube ¾÷·Îµå ½ÇÆÐ {yt_resp.status_code}: {yt_resp.text[:300]}")
             except Exception as yt_err:
-                logger.warning(f"YouTube 자동 업로드 오류 (무시): {yt_err}")
+                logger.warning(f"YouTube ÀÚµ¿ ¾÷·Îµå ¿À·ù (¹«½Ã): {yt_err}")
     
     except Exception as e:
-        logger.error(f"영상 생성 오류 ({job_id}): {e}")
+        logger.error(f"¿µ»ó »ý¼º ¿À·ù ({job_id}): {e}")
         try:
             state.set_error(str(e))
         except Exception:
@@ -7106,7 +7106,7 @@ async def process_video_creation(
 
 
 # ============================================================================
-# API 엔드포인트
+# API ¿£µåÆ÷ÀÎÆ®
 # ============================================================================
 
 @app.get("/video/enhancements", tags=["System"])
@@ -7115,16 +7115,16 @@ async def list_enhancements():
     return {
         "version": "16.8.0",
         "rounds": {
-            "AC": "단계별 재시도 + resume",
-            "AD": "통합 타임라인",
-            "AE": "씬 레이아웃 5 템플릿 (opt-in)",
-            "AF": "영상 품질 1차 강화 (10)",
-            "AG": "word-level Whisper 자막 + TTS 안정화",
-            "AH": "Whisper 절대시간 정렬 (gap 흡수) + fallback Korean",
-            "AI": "영상 강화 10단계 (loudnorm, 13 transition, vignette PI/5)",
-            "AJ": "영화적 마감 (intro/outro/chapters)",
-            "AK": "프로덕션 품질 (colorbalance, limiter, thumbnail 3-variant)",
-            "AL": "신뢰성 (Pexels 캐시, smoke test)",
+            "AC": "´Ü°èº° Àç½Ãµµ + resume",
+            "AD": "ÅëÇÕ Å¸ÀÓ¶óÀÎ",
+            "AE": "¾À ·¹ÀÌ¾Æ¿ô 5 ÅÛÇÃ¸´ (opt-in)",
+            "AF": "¿µ»ó Ç°Áú 1Â÷ °­È­ (10)",
+            "AG": "word-level Whisper ÀÚ¸· + TTS ¾ÈÁ¤È­",
+            "AH": "Whisper Àý´ë½Ã°£ Á¤·Ä (gap Èí¼ö) + fallback Korean",
+            "AI": "¿µ»ó °­È­ 10´Ü°è (loudnorm, 13 transition, vignette PI/5)",
+            "AJ": "¿µÈ­Àû ¸¶°¨ (intro/outro/chapters)",
+            "AK": "ÇÁ·Î´ö¼Ç Ç°Áú (colorbalance, limiter, thumbnail 3-variant)",
+            "AL": "½Å·Ú¼º (Pexels Ä³½Ã, smoke test)",
         },
         "subtitle_timing": "Whisper words + silence snap",
         "scene_timing": "Whisper absolute (AH-4)",
@@ -7140,7 +7140,7 @@ async def list_enhancements():
 
 @app.get("/health", tags=["System"])
 async def health_check():
-    """헬스 체크"""
+    """Çï½º Ã¼Å©"""
     return {
         "status": "healthy",
         "service": "lf_ffmpeg_worker",
@@ -7152,30 +7152,30 @@ async def health_check():
 @app.post("/assets/search", response_model=AssetsSearchResponse, tags=["Assets"])
 async def search_assets(request: AssetsSearchRequest, background_tasks: BackgroundTasks):
     """
-    Pexels/Pixabay에서 영상 자산 검색 및 다운로드
+    Pexels/Pixabay¿¡¼­ ¿µ»ó ÀÚ»ê °Ë»ö ¹× ´Ù¿î·Îµå
     
-    - job_id: 작업 고유 ID
-    - scenes: 검색할 장면 목록
-    - sources: 검색 소스 (pexels, pixabay)
+    - job_id: ÀÛ¾÷ °íÀ¯ ID
+    - scenes: °Ë»öÇÒ Àå¸é ¸ñ·Ï
+    - sources: °Ë»ö ¼Ò½º (pexels, pixabay)
     """
     try:
         job_id = request.job_id
         
-        # 장면 정보 저장
+        # Àå¸é Á¤º¸ ÀúÀå
         scenes_file = JOBS_DIR / job_id / "scenes.json"
         scenes_file.parent.mkdir(parents=True, exist_ok=True)
         
         with open(scenes_file, "w") as f:
             json.dump([s.dict() for s in request.scenes], f, indent=2)
         
-        # 백그라운드에서 자산 검색 및 다운로드
+        # ¹é±×¶ó¿îµå¿¡¼­ ÀÚ»ê °Ë»ö ¹× ´Ù¿î·Îµå
         updated_scenes = await search_and_download_assets(job_id, request.scenes)
         
-        # 업데이트된 장면 저장
+        # ¾÷µ¥ÀÌÆ®µÈ Àå¸é ÀúÀå
         with open(scenes_file, "w") as f:
             json.dump([s.dict() for s in updated_scenes], f, indent=2, default=str)
         
-        # 다운로드 성공 개수
+        # ´Ù¿î·Îµå ¼º°ø °³¼ö
         downloaded = sum(1 for s in updated_scenes if s.asset_url)
         
         await update_job_status(job_id, JobStatus.PENDING, progress=100.0)
@@ -7189,34 +7189,34 @@ async def search_assets(request: AssetsSearchRequest, background_tasks: Backgrou
         )
     
     except Exception as e:
-        logger.error(f"자산 검색 오류: {e}")
+        logger.error(f"ÀÚ»ê °Ë»ö ¿À·ù: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/video/create", response_model=VideoCreateResponse, tags=["Video"])
 async def create_video(request: VideoCreateRequest, background_tasks: BackgroundTasks):
     """
-    FFmpeg를 이용한 영상 생성
+    FFmpeg¸¦ ÀÌ¿ëÇÑ ¿µ»ó »ý¼º
     
-    - job_id: 작업 고유 ID
-    - mode: longform (1920x1080) 또는 shortform (1080x1920)
-    - add_subtitles: 자막 추가 여부
-    - add_bgm: 배경음악 추가 여부
-    - generate_thumbnail: 썸네일 생성 여부
-    - generate_shorts: 숏폼 생성 여부
+    - job_id: ÀÛ¾÷ °íÀ¯ ID
+    - mode: longform (1920x1080) ¶Ç´Â shortform (1080x1920)
+    - add_subtitles: ÀÚ¸· Ãß°¡ ¿©ºÎ
+    - add_bgm: ¹è°æÀ½¾Ç Ãß°¡ ¿©ºÎ
+    - generate_thumbnail: ½æ³×ÀÏ »ý¼º ¿©ºÎ
+    - generate_shorts: ¼ôÆû »ý¼º ¿©ºÎ
     """
     try:
-        # job_id 정규화 (Windows CR/LF 제거)
+        # job_id Á¤±ÔÈ­ (Windows CR/LF Á¦°Å)
         job_id = (request.job_id or "").strip().replace("\r", "").replace("\n", "")
         if not job_id:
             raise HTTPException(status_code=400, detail="job_id empty")
         request.job_id = job_id
 
-        # 중복 POST 거부: 진행 중인 동일 job_id
+        # Áßº¹ POST °ÅºÎ: ÁøÇà ÁßÀÎ µ¿ÀÏ job_id
         existing = jobs.get(job_id)
         if existing and existing.status in (JobStatus.PENDING, JobStatus.PROCESSING):
             logger.warning(
-                f"중복 /video/create 거부: {job_id} (현재 {existing.status.value} / {existing.progress or 0}%)"
+                f"Áßº¹ /video/create °ÅºÎ: {job_id} (ÇöÀç {existing.status.value} / {existing.progress or 0}%)"
             )
             return VideoCreateResponse(
                 success=True,
@@ -7224,12 +7224,12 @@ async def create_video(request: VideoCreateRequest, background_tasks: Background
                 status=existing.status.value
             )
         if _CURRENT_JOB is not None and _CURRENT_JOB != job_id:
-            logger.warning(f"다른 잡 처리 중 ({_CURRENT_JOB}) - {job_id} 큐 지연")
+            logger.warning(f"´Ù¸¥ Àâ Ã³¸® Áß ({_CURRENT_JOB}) - {job_id} Å¥ Áö¿¬")
 
-        # 작업 상태 초기화
+        # ÀÛ¾÷ »óÅÂ ÃÊ±âÈ­
         await update_job_status(job_id, JobStatus.PROCESSING, progress=5.0)
 
-        # 백그라운드에서 영상 생성
+        # ¹é±×¶ó¿îµå¿¡¼­ ¿µ»ó »ý¼º
         background_tasks.add_task(process_video_creation, job_id, request)
 
         return VideoCreateResponse(
@@ -7239,7 +7239,7 @@ async def create_video(request: VideoCreateRequest, background_tasks: Background
         )
     
     except Exception as e:
-        logger.error(f"영상 생성 요청 오류: {e}")
+        logger.error(f"¿µ»ó »ý¼º ¿äÃ» ¿À·ù: {e}")
         await update_job_status(job_id, JobStatus.FAILED, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -7311,9 +7311,9 @@ async def resume_video(job_id: str, background_tasks: BackgroundTasks):
 
 @app.get("/job/{job_id}/status", response_model=JobInfo, tags=["Job"])
 async def get_job_status(job_id: str):
-    """작업 상태 조회"""
+    """ÀÛ¾÷ »óÅÂ Á¶È¸"""
     if job_id not in jobs:
-        # 작업이 없으면 PENDING 상태로 초기화
+        # ÀÛ¾÷ÀÌ ¾øÀ¸¸é PENDING »óÅÂ·Î ÃÊ±âÈ­
         jobs[job_id] = JobInfo(
             job_id=job_id,
             status=JobStatus.PENDING,
@@ -7337,7 +7337,7 @@ try:
     from billing_module import create_subscription_router, get_plan_amount
 
     app.include_router(create_subscription_router())
-    logger.info("[P0] auth + billing 라우터 등록 완료")
+    logger.info("[P0] auth + billing ¶ó¿ìÅÍ µî·Ï ¿Ï·á")
 
     @app.post("/auth/register", tags=["Auth"])
     async def auth_register(email: str, plan: str = "free"):
@@ -7360,10 +7360,10 @@ try:
         """List available plans."""
         return {"plans": PLANS, "prices_krw": {"pro": 29900, "enterprise": 99000}}
 except ImportError as e:
-    logger.warning(f"[P0] auth/billing 모듈 로드 실패 (무시): {e}")
+    logger.warning(f"[P0] auth/billing ¸ðµâ ·Îµå ½ÇÆÐ (¹«½Ã): {e}")
 
 
-# [P0-2] Job queue — serialize concurrent /video/create requests
+# [P0-2] Job queue ? serialize concurrent /video/create requests
 import asyncio as _asyncio_p0
 _JOB_QUEUE: _asyncio_p0.Queue = _asyncio_p0.Queue(maxsize=20)
 _JOB_WORKER_RUNNING = False
@@ -7373,7 +7373,7 @@ async def _job_queue_worker():
     """Single worker that processes /video/create jobs one at a time."""
     global _JOB_WORKER_RUNNING
     _JOB_WORKER_RUNNING = True
-    logger.info("[P0-2] job queue worker 시작")
+    logger.info("[P0-2] job queue worker ½ÃÀÛ")
     while True:
         try:
             item = await _JOB_QUEUE.get()
@@ -7384,7 +7384,7 @@ async def _job_queue_worker():
                 logger.info(f"[P0-2] queue -> start: {job_id}")
                 await process_video_creation(job_id, request, resume=resume)
             except Exception as e:
-                logger.error(f"[P0-2] job {job_id} 실패: {e}")
+                logger.error(f"[P0-2] job {job_id} ½ÇÆÐ: {e}")
                 # [P0-3] auto retry via state-based resume
                 try:
                     for attempt in range(1, 4):
@@ -7397,15 +7397,15 @@ async def _job_queue_worker():
                             await process_video_creation(job_id, request, resume=True)
                             break
                         except Exception as ee:
-                            logger.warning(f"[P0-3] retry {attempt} 실패: {ee}")
+                            logger.warning(f"[P0-3] retry {attempt} ½ÇÆÐ: {ee}")
                 except Exception as re:
-                    logger.error(f"[P0-3] retry 최종 실패: {re}")
+                    logger.error(f"[P0-3] retry ÃÖÁ¾ ½ÇÆÐ: {re}")
             finally:
                 _JOB_QUEUE.task_done()
         except _asyncio_p0.CancelledError:
             break
         except Exception as e:
-            logger.error(f"[P0-2] worker 오류: {e}")
+            logger.error(f"[P0-2] worker ¿À·ù: {e}")
 
 
 # [P0-4] WebSocket progress endpoint
@@ -7439,7 +7439,7 @@ async def ws_job_progress(websocket: WebSocket, job_id: str):
     except WebSocketDisconnect:
         logger.info(f"[P0-4] WS disconnect: {job_id}")
     except Exception as e:
-        logger.warning(f"[P0-4] WS 오류: {e}")
+        logger.warning(f"[P0-4] WS ¿À·ù: {e}")
     finally:
         try:
             await websocket.close()
@@ -7449,10 +7449,10 @@ async def ws_job_progress(websocket: WebSocket, job_id: str):
 
 @app.on_event("startup")
 async def startup_event():
-    """애플리케이션 시작 시 초기화"""
-    logger.info("FFmpeg Worker 시작")
-    logger.info(f"Pexels API 키: {'설정됨' if PEXELS_API_KEY else '미설정'}")
-    logger.info(f"Pixabay API 키: {'설정됨' if PIXABAY_API_KEY else '미설정'}")
+    """¾ÖÇÃ¸®ÄÉÀÌ¼Ç ½ÃÀÛ ½Ã ÃÊ±âÈ­"""
+    logger.info("FFmpeg Worker ½ÃÀÛ")
+    logger.info(f"Pexels API Å°: {'¼³Á¤µÊ' if PEXELS_API_KEY else '¹Ì¼³Á¤'}")
+    logger.info(f"Pixabay API Å°: {'¼³Á¤µÊ' if PIXABAY_API_KEY else '¹Ì¼³Á¤'}")
     # Restore incomplete jobs from job_status.json on startup
     try:
         import json as _json
@@ -7476,8 +7476,8 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """애플리케이션 종료"""
-    logger.info("FFmpeg Worker 종료")
+    """¾ÖÇÃ¸®ÄÉÀÌ¼Ç Á¾·á"""
+    logger.info("FFmpeg Worker Á¾·á")
 
 
 if __name__ == "__main__":
@@ -7485,7 +7485,7 @@ if __name__ == "__main__":
         app,
         host="0.0.0.0",
         port=8002,
-        workers=1,  # auto pipeline in-memory store 공유 위해 단일 프로세스
+        workers=1,  # auto pipeline in-memory store °øÀ¯ À§ÇØ ´ÜÀÏ ÇÁ·Î¼¼½º
         log_level="info"
     )
 
@@ -7497,27 +7497,27 @@ if __name__ == "__main__":
 
 # ============================================================================
 # [v15.66.0] Auto Topic Production Engine
-# POST /api/auto/topic-job  →  주제 입력 하나로 YouTube private 업로드까지 자동화
+# POST /api/auto/topic-job  ¡æ  ÁÖÁ¦ ÀÔ·Â ÇÏ³ª·Î YouTube private ¾÷·Îµå±îÁö ÀÚµ¿È­
 # ============================================================================
 
 import json as _json_auto
 import re
 import re  as _re_auto
 
-# ── 1. 새 상태값 ────────────────────────────────────────────────────────────
+# ¦¡¦¡ 1. »õ »óÅÂ°ª ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 AUTO_STEP_LABELS = {
-    "queued":              "대기 중",
-    "topic_analyzing":     "주제 분석 중",
-    "researching":         "자료 조사 중",
-    "script_generating":   "원고 생성 중",
-    "scene_building":      "씬 분할 중",
-    "voice_planning":      "나레이션 톤 설정 중",
-    "asset_searching":     "영상 자산 검색 중",
-    "asset_matching":      "영상-나레이션 매칭 중",
-    "timeline_building":   "타임라인 구성 중",
-    "quality_checking":    "품질 검사 중",
-    "uploading_private":   "YouTube private 업로드 중",
-    "needs_review":        "검수 필요",
+    "queued":              "´ë±â Áß",
+    "topic_analyzing":     "ÁÖÁ¦ ºÐ¼® Áß",
+    "researching":         "ÀÚ·á Á¶»ç Áß",
+    "script_generating":   "¿ø°í »ý¼º Áß",
+    "scene_building":      "¾À ºÐÇÒ Áß",
+    "voice_planning":      "³ª·¹ÀÌ¼Ç Åæ ¼³Á¤ Áß",
+    "asset_searching":     "¿µ»ó ÀÚ»ê °Ë»ö Áß",
+    "asset_matching":      "¿µ»ó-³ª·¹ÀÌ¼Ç ¸ÅÄª Áß",
+    "timeline_building":   "Å¸ÀÓ¶óÀÎ ±¸¼º Áß",
+    "quality_checking":    "Ç°Áú °Ë»ç Áß",
+    "uploading_private":   "YouTube private ¾÷·Îµå Áß",
+    "needs_review":        "°Ë¼ö ÇÊ¿ä",
 }
 
 TONE_VOICE_MAP = {
@@ -7529,7 +7529,7 @@ TONE_VOICE_MAP = {
     "calm":                     {"rate": "+2%",  "pitch": "-1Hz"},  # [v15.98] +10%
     "energetic":                {"rate": "+13%", "pitch": "+1Hz"},  # [v15.98] +10%
     "dramatic":                 {"rate": "+5%",  "pitch": "+0Hz"},  # [v15.98]
-    "humorous":                 {"rate": "+15%", "pitch": "+2Hz"},  # [v16.8] 유머 톤: 경쾌한 속도+톤
+    "humorous":                 {"rate": "+15%", "pitch": "+2Hz"},  # [v16.8] À¯¸Ó Åæ: °æÄèÇÑ ¼Óµµ+Åæ
 }
 
 SCENE_TONE_MAP = {
@@ -7539,26 +7539,26 @@ SCENE_TONE_MAP = {
     "problem":    {"rate": "+4%",  "pitch": "-2Hz", "pause_sentence_ms": 460},  # [v15.98]
     "solution":   {"rate": "+7%",  "pitch": "+1Hz", "pause_sentence_ms": 400},  # [v15.98]
     "closing":    {"rate": "+0%",  "pitch": "-2Hz", "pause_sentence_ms": 550},  # [v15.98]
-    "humor":      {"rate": "+15%", "pitch": "+2Hz", "pause_sentence_ms": 350},  # [v16.8] 유머 씬: 빠르고 경쾌
-    "joke":       {"rate": "+15%", "pitch": "+2Hz", "pause_sentence_ms": 300},  # [v16.8] 유머
-    "light":      {"rate": "+10%", "pitch": "+1Hz", "pause_sentence_ms": 380},  # [v16.8] 가벼운 톤
+    "humor":      {"rate": "+15%", "pitch": "+2Hz", "pause_sentence_ms": 350},  # [v16.8] À¯¸Ó ¾À: ºü¸£°í °æÄè
+    "joke":       {"rate": "+15%", "pitch": "+2Hz", "pause_sentence_ms": 300},  # [v16.8] À¯¸Ó
+    "light":      {"rate": "+10%", "pitch": "+1Hz", "pause_sentence_ms": 380},  # [v16.8] °¡º­¿î Åæ
 }
 
 
-# ── 2. 요청/응답 모델 ────────────────────────────────────────────────────────
+# ¦¡¦¡ 2. ¿äÃ»/ÀÀ´ä ¸ðµ¨ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 class AutoTopicRequest(BaseModel):
-    """완전 자동 주제 기반 영상 생성 요청"""
-    topic: str = Field(..., description="영상 주제")
+    """¿ÏÀü ÀÚµ¿ ÁÖÁ¦ ±â¹Ý ¿µ»ó »ý¼º ¿äÃ»"""
+    topic: str = Field(..., description="¿µ»ó ÁÖÁ¦")
     video_type: str = Field(default="longform", description="longform / shorts / both")
-    target_duration_sec: int = Field(default=300, ge=30, le=900, description="목표 길이(초)")
-    tone: str = Field(default="professional_documentary", description="영상 톤")
+    target_duration_sec: int = Field(default=300, ge=30, le=900, description="¸ñÇ¥ ±æÀÌ(ÃÊ)")
+    tone: str = Field(default="professional_documentary", description="¿µ»ó Åæ")
     audience: str = Field(default="general", description="target audience")
-    language: str = Field(default="ko", description="언어 코드")
-    auto_upload: bool = Field(default=True, description="YouTube private 자동 업로드")
+    language: str = Field(default="ko", description="¾ð¾î ÄÚµå")
+    auto_upload: bool = Field(default=True, description="YouTube private ÀÚµ¿ ¾÷·Îµå")
     upload_privacy: str = Field(default="private", description="public/private/unlisted")
-    quality_threshold: int = Field(default=85, ge=60, le=100, description="업로드 허용 최저 품질 점수")
+    quality_threshold: int = Field(default=85, ge=60, le=100, description="¾÷·Îµå Çã¿ë ÃÖÀú Ç°Áú Á¡¼ö")
     mode: str = Field(default="auto", description="auto / semi_auto / expert")
-    project_id: Optional[str] = Field(None, description="기존 project_id 재사용 시")
+    project_id: Optional[str] = Field(None, description="±âÁ¸ project_id Àç»ç¿ë ½Ã")
 
 class AutoTopicResponse(BaseModel):
     job_id: str
@@ -7570,11 +7570,12 @@ class AutoTopicResponse(BaseModel):
 
 
 
-# ── LLM 프로바이더 설정 (멀티 백엔드) ────────────────────────────────────
+# ¦¡¦¡ LLM ÇÁ·Î¹ÙÀÌ´õ ¼³Á¤ (¸ÖÆ¼ ¹é¿£µå) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 LLM_PROVIDER    = os.getenv("LLM_PROVIDER", "anthropic")   # anthropic|groq|ollama|gemini
-LLM_MODEL       = os.getenv("LLM_MODEL", "")               # 비어있으면 프로바이더 기본값
+LLM_MODEL       = os.getenv("LLM_MODEL", "")               # ºñ¾îÀÖÀ¸¸é ÇÁ·Î¹ÙÀÌ´õ ±âº»°ª
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL      = os.getenv("GROQ_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+GROQ_BASE_URL   = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://172.20.128.1:11434")
 OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL", "qwen3.5:9b")
 GEMINI_API_KEY  = os.getenv("GEMINI_API_KEY", "")
@@ -7588,13 +7589,13 @@ GEMINI_MODEL    = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 async def _call_llm_json(
     prompt: str,
-    system: str = "반드시 순수 JSON만 반환. 설명·마크다운 코드블록 금지.",
+    system: str = "¹Ýµå½Ã ¼ø¼ö JSON¸¸ ¹ÝÈ¯. ¼³¸í¡¤¸¶Å©´Ù¿î ÄÚµåºí·Ï ±ÝÁö.",
     max_tokens: int = 4000,
     temperature: float = 0.4,
     retries: int = 1,
-    quality_first: bool = False,  # True = anthropic/gemini 우선 (스크립트/분석 태스크)
+    quality_first: bool = False,  # True = anthropic/gemini ¿ì¼± (½ºÅ©¸³Æ®/ºÐ¼® ÅÂ½ºÅ©)
 ) -> Optional[Dict]:
-    """품질 우선 병렬 레이스 — quality_first=True 시 anthropic/gemini 8초 유예."""
+    """Ç°Áú ¿ì¼± º´·Ä ·¹ÀÌ½º ? quality_first=True ½Ã anthropic/gemini 8ÃÊ À¯¿¹."""
     import asyncio
 
     def _parse_json_raw(raw: str) -> Optional[Dict]:
@@ -7695,6 +7696,25 @@ async def _call_llm_json(
                         if result is not None:
                             return result
 
+                elif provider == "groq" and GROQ_API_KEY:
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        resp = await client.post(
+                            f"{GROQ_BASE_URL}/chat/completions",
+                            headers={"Authorization": f"Bearer {GROQ_API_KEY}",
+                                     "Content-Type": "application/json"},
+                            json={"model": LLM_MODEL or GROQ_MODEL,
+                                  "max_tokens": max_tokens, "temperature": temperature,
+                                  "messages": [{"role": "system", "content": system},
+                                               {"role": "user", "content": prompt}]},
+                        )
+                        if resp.status_code != 200:
+                            logger.warning(f"[LLM/groq] {resp.status_code}")
+                            continue
+                        raw = resp.json()["choices"][0]["message"]["content"]
+                        result = _parse_json_raw(raw)
+                        if result is not None:
+                            return result
+
                 elif provider == "deepseek" and DEEPSEEK_API_KEY:
                     async with httpx.AsyncClient(timeout=60.0) as client:
                         resp = await client.post(
@@ -7733,27 +7753,28 @@ async def _call_llm_json(
                             return result
 
             except Exception as e:
-                logger.warning(f"[LLM/{provider}] 시도{attempt+1} 실패: {e}")
+                logger.warning(f"[LLM/{provider}] ½Ãµµ{attempt+1} ½ÇÆÐ: {e}")
         return None
 
-    # 활성 프로바이더 목록 결정
+    # È°¼º ÇÁ·Î¹ÙÀÌ´õ ¸ñ·Ï °áÁ¤
     provider_cfg = LLM_PROVIDER.lower()
     if provider_cfg == "all":
-        # 키가 있는 모든 프로바이더 병렬 레이스
+        # Å°°¡ ÀÖ´Â ¸ðµç ÇÁ·Î¹ÙÀÌ´õ º´·Ä ·¹ÀÌ½º
         candidates = ["anthropic"]
         if GEMINI_API_KEY:       candidates.append("gemini")
         if CEREBRAS_API_KEY:     candidates.append("cerebras")
+        if GROQ_API_KEY:         candidates.append("groq")
         if OPENROUTER_API_KEY:   candidates.append("openrouter")
         if DEEPSEEK_API_KEY:     candidates.append("deepseek")
-        candidates.append("ollama")  # 항상 fallback
+        candidates.append("ollama")  # Ç×»ó fallback
     else:
         candidates = [provider_cfg]
 
     if len(candidates) == 1:
         return await _call_one(candidates[0])
 
-    # 품질 우선 병렬 레이스: HIGH_QUALITY 8초 유예 → 그 후 ANY
-    # anthropic/gemini = 품질 우선, 나머지 = 속도 fallback
+    # Ç°Áú ¿ì¼± º´·Ä ·¹ÀÌ½º: HIGH_QUALITY 8ÃÊ À¯¿¹ ¡æ ±× ÈÄ ANY
+    # anthropic/gemini = Ç°Áú ¿ì¼±, ³ª¸ÓÁö = ¼Óµµ fallback
     _HQ = {"anthropic", "gemini"} if quality_first else set()
     loop_tasks = {asyncio.ensure_future(_call_one(p)): p for p in candidates}
     pending = set(loop_tasks.keys())
@@ -7763,37 +7784,37 @@ async def _call_llm_json(
         async def _race_inner():
             _nonlocal_winner = [None, None]  # [result, provider]
             _pending = set(loop_tasks.keys())
-            # 1단계: 8초 대기 — HQ 응답 우선
+            # 1´Ü°è: 8ÃÊ ´ë±â ? HQ ÀÀ´ä ¿ì¼±
             while _pending:
                 _done, _pending = await asyncio.wait(_pending, return_when=asyncio.FIRST_COMPLETED, timeout=8.0)
-                if not _done:  # 8초 타임아웃 — 남은 것 중 any 수락
+                if not _done:  # 8ÃÊ Å¸ÀÓ¾Æ¿ô ? ³²Àº °Í Áß any ¼ö¶ô
                     break
                 for task in _done:
                     res = task.result()
                     pname = loop_tasks[task]
                     if res is not None:
                         if pname in _HQ:
-                            logger.info(f"[LLM/race] HQ 승자: {pname}")
+                            logger.info(f"[LLM/race] HQ ½ÂÀÚ: {pname}")
                             for t in _pending: t.cancel()
                             _nonlocal_winner = [res, pname]
                             return _nonlocal_winner
                         else:
-                            # 속도 후보 — HQ 8초 유예 대기 중 홀드
+                            # ¼Óµµ ÈÄº¸ ? HQ 8ÃÊ À¯¿¹ ´ë±â Áß È¦µå
                             if _nonlocal_winner[0] is None:
-                                _nonlocal_winner = [res, pname]  # 임시 저장
-            # 2단계: HQ 없으면 속도 후보 수락 또는 나머지 대기
+                                _nonlocal_winner = [res, pname]  # ÀÓ½Ã ÀúÀå
+            # 2´Ü°è: HQ ¾øÀ¸¸é ¼Óµµ ÈÄº¸ ¼ö¶ô ¶Ç´Â ³ª¸ÓÁö ´ë±â
             if _nonlocal_winner[0] is not None:
-                logger.info(f"[LLM/race] 속도 fallback 승자: {_nonlocal_winner[1]}")
+                logger.info(f"[LLM/race] ¼Óµµ fallback ½ÂÀÚ: {_nonlocal_winner[1]}")
                 for t in _pending: t.cancel()
                 return _nonlocal_winner
-            # 아직 남은 태스크 대기 (최대 130s 총 타임아웃)
+            # ¾ÆÁ÷ ³²Àº ÅÂ½ºÅ© ´ë±â (ÃÖ´ë 130s ÃÑ Å¸ÀÓ¾Æ¿ô)
             while _pending:
                 _done2, _pending = await asyncio.wait(_pending, return_when=asyncio.FIRST_COMPLETED)
                 for task in _done2:
                     res = task.result()
                     pname = loop_tasks[task]
                     if res is not None:
-                        logger.info(f"[LLM/race] 잔여 승자: {pname}")
+                        logger.info(f"[LLM/race] ÀÜ¿© ½ÂÀÚ: {pname}")
                         for t in _pending: t.cancel()
                         return [res, pname]
             return [None, None]
@@ -7801,16 +7822,16 @@ async def _call_llm_json(
         _result = await asyncio.wait_for(_race_inner(), timeout=130.0)
         winner, winner_provider = _result[0], _result[1]
     except asyncio.TimeoutError:
-        logger.warning("[LLM/race] 130초 타임아웃 — 모든 프로바이더 실패")
+        logger.warning("[LLM/race] 130ÃÊ Å¸ÀÓ¾Æ¿ô ? ¸ðµç ÇÁ·Î¹ÙÀÌ´õ ½ÇÆÐ")
         for t in pending: t.cancel()
     except Exception as e:
-        logger.warning(f"[LLM/race] 예외: {e}")
+        logger.warning(f"[LLM/race] ¿¹¿Ü: {e}")
 
     return winner
 
 
 def _save_project_file(project_dir: Path, filename: str, data) -> None:
-    """프로젝트 디렉토리에 JSON 파일 저장"""
+    """ÇÁ·ÎÁ§Æ® µð·ºÅä¸®¿¡ JSON ÆÄÀÏ ÀúÀå"""
     project_dir.mkdir(parents=True, exist_ok=True)
     (project_dir / filename).write_text(
         _json_auto.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -7827,7 +7848,7 @@ def _load_project_file(project_dir: Path, filename: str) -> Optional[Dict]:
         return None
 
 
-# ── 4. 단계별 함수 ──────────────────────────────────────────────────────────
+# ¦¡¦¡ 4. ´Ü°èº° ÇÔ¼ö ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 
 async def auto_analyze_topic(
     topic: str,
@@ -7837,31 +7858,31 @@ async def auto_analyze_topic(
     audience: str,
     language: str,
 ) -> Dict:
-    """[AUTO 1/12] 주제 분석 → 시청자·목적·자료조사 필요성 판단"""
-    # [v15.71] 동적 섹션 수 계산
+    """[AUTO 1/12] ÁÖÁ¦ ºÐ¼® ¡æ ½ÃÃ»ÀÚ¡¤¸ñÀû¡¤ÀÚ·áÁ¶»ç ÇÊ¿ä¼º ÆÇ´Ü"""
+    # [v15.71] µ¿Àû ¼½¼Ç ¼ö °è»ê
     _n_sections = max(4, min(12, round(target_duration_sec / 35)))
-    _section_names = [f"섹션{k+1}" for k in range(_n_sections)]
+    _section_names = [f"¼½¼Ç{k+1}" for k in range(_n_sections)]
     _sections_example = str(_section_names).replace("'", chr(34))
-    prompt = f"""다음 영상 주제를 분석하세요.
+    prompt = f"""´ÙÀ½ ¿µ»ó ÁÖÁ¦¸¦ ºÐ¼®ÇÏ¼¼¿ä.
 
-주제: {topic}
-영상 유형: {video_type}
-톤: {tone}
-목표 길이: {target_duration_sec}초
-언어: {language}
-시청자 힌트: {audience}
+ÁÖÁ¦: {topic}
+¿µ»ó À¯Çü: {video_type}
+Åæ: {tone}
+¸ñÇ¥ ±æÀÌ: {target_duration_sec}ÃÊ
+¾ð¾î: {language}
+½ÃÃ»ÀÚ ÈùÆ®: {audience}
 
-JSON으로 반환:
+JSONÀ¸·Î ¹ÝÈ¯:
 {{
-  "main_topic": "핵심 주제 한 줄",
-  "angle": "접근 각도",
-  "audience": "타겟 시청자",
+  "main_topic": "ÇÙ½É ÁÖÁ¦ ÇÑ ÁÙ",
+  "angle": "Á¢±Ù °¢µµ",
+  "audience": "Å¸°Ù ½ÃÃ»ÀÚ",
   "tone": "{tone}",
   "video_type": "{video_type}",
   "target_duration": {target_duration_sec},
   "language": "{language}",
   "needs_research": true,
-  "key_points": ["포인트1", "포인트2", "포인트3"],
+  "key_points": ["Æ÷ÀÎÆ®1", "Æ÷ÀÎÆ®2", "Æ÷ÀÎÆ®3"],
   "risk_level": "low/medium/high",
   "suggested_sections": {_sections_example}
 }}"""
@@ -7869,7 +7890,7 @@ JSON으로 반환:
     if not result:
         result = {
             "main_topic": topic,
-            "angle": "종합 분석",
+            "angle": "Á¾ÇÕ ºÐ¼®",
             "audience": audience,
             "tone": tone,
             "video_type": video_type,
@@ -7878,17 +7899,17 @@ JSON으로 반환:
             "needs_research": True,
             "key_points": [topic],
             "risk_level": "medium",
-            "suggested_sections": ["서론", "문제제기", "현황분석", "심층배경", "본론 핵심", "통계와증거", "미래전망", "결론"],
+            "suggested_sections": ["¼­·Ð", "¹®Á¦Á¦±â", "ÇöÈ²ºÐ¼®", "½ÉÃþ¹è°æ", "º»·Ð ÇÙ½É", "Åë°è¿ÍÁõ°Å", "¹Ì·¡Àü¸Á", "°á·Ð"],
         }
-    logger.info(f"[AUTO] 주제 분석 완료: {result.get('main_topic')}")
+    logger.info(f"[AUTO] ÁÖÁ¦ ºÐ¼® ¿Ï·á: {result.get('main_topic')}")
     return result
 
 
 # ============================================================
-# [v15.70] 웹서치 Pre-Injection — Google News RSS
+# [v15.70] À¥¼­Ä¡ Pre-Injection ? Google News RSS
 # ============================================================
 async def _fetch_topic_news(topic: str, max_articles: int = 5, timeout: float = 8.0) -> str:
-    """[v15.70] Google News RSS로 최신 뉴스 제목+요약 수집 → LLM 프롬프트 주입용 텍스트 반환"""
+    """[v15.70] Google News RSS·Î ÃÖ½Å ´º½º Á¦¸ñ+¿ä¾à ¼öÁý ¡æ LLM ÇÁ·ÒÇÁÆ® ÁÖÀÔ¿ë ÅØ½ºÆ® ¹ÝÈ¯"""
     import urllib.parse as _urlparse
     import xml.etree.ElementTree as _ET
     try:
@@ -7912,7 +7933,7 @@ async def _fetch_topic_news(topic: str, max_articles: int = 5, timeout: float = 
                         desc  = (item.findtext("description") or "").strip()
                         pub   = (item.findtext("pubDate") or "").strip()[:16]
                         if title:
-                            # HTML 태그 제거
+                            # HTML ÅÂ±× Á¦°Å
                             import re as _re
                             clean = _re.sub(r"<[^>]+>", "", desc)[:120]
                             articles.append(f"[{pub}] {title}: {clean}")
@@ -7922,61 +7943,61 @@ async def _fetch_topic_news(topic: str, max_articles: int = 5, timeout: float = 
                     pass
         if articles:
             text = "\n".join(f"- {a}" for a in articles[:max_articles])
-            logger.info(f"[v15.70 NEWS] {len(articles)}개 기사 수집 완료")
+            logger.info(f"[v15.70 NEWS] {len(articles)}°³ ±â»ç ¼öÁý ¿Ï·á")
             return text
     except Exception as e:
-        logger.warning(f"[v15.70 NEWS] 뉴스 수집 실패: {e}")
+        logger.warning(f"[v15.70 NEWS] ´º½º ¼öÁý ½ÇÆÐ: {e}")
     return ""
 
 
 async def auto_collect_research(topic: str, analysis: Dict) -> Dict:
-    """[AUTO 2/12] 자료 조사 → 핵심 팩트 + 출처 요약"""
+    """[AUTO 2/12] ÀÚ·á Á¶»ç ¡æ ÇÙ½É ÆÑÆ® + ÃâÃ³ ¿ä¾à"""
     key_points = analysis.get("key_points", [topic])
     sections = analysis.get("suggested_sections", [])
-    # [v15.70] 실시간 뉴스 수집 → 팩트 보강
+    # [v15.70] ½Ç½Ã°£ ´º½º ¼öÁý ¡æ ÆÑÆ® º¸°­
     _live_news = await _fetch_topic_news(topic, max_articles=5)
-    _news_section = f"\n\n## 실시간 최신 뉴스 (반드시 반영):\n{_live_news}" if _live_news else ""
+    _news_section = f"\n\n## ½Ç½Ã°£ ÃÖ½Å ´º½º (¹Ýµå½Ã ¹Ý¿µ):\n{_live_news}" if _live_news else ""
 
-    prompt = f"""다음 주제에 대해 영상 제작용 핵심 자료를 조사하세요.
+    prompt = f"""´ÙÀ½ ÁÖÁ¦¿¡ ´ëÇØ ¿µ»ó Á¦ÀÛ¿ë ÇÙ½É ÀÚ·á¸¦ Á¶»çÇÏ¼¼¿ä.
 
-주제: {topic}
-핵심 포인트: {', '.join(key_points)}
-섹션 구성안: {', '.join(sections)}
+ÁÖÁ¦: {topic}
+ÇÙ½É Æ÷ÀÎÆ®: {', '.join(key_points)}
+¼½¼Ç ±¸¼º¾È: {', '.join(sections)}
 
 {_news_section}
 
-실제 알고 있는 사실과 일반적으로 알려진 정보를 바탕으로 JSON 반환:
+½ÇÁ¦ ¾Ë°í ÀÖ´Â »ç½Ç°ú ÀÏ¹ÝÀûÀ¸·Î ¾Ë·ÁÁø Á¤º¸¸¦ ¹ÙÅÁÀ¸·Î JSON ¹ÝÈ¯:
 {{
   "facts": [
-    "구체적 사실 1 (출처 있으면 포함)",
-    "구체적 사실 2",
-    "구체적 사실 3",
-    "구체적 사실 4",
-    "구체적 사실 5"
+    "±¸Ã¼Àû »ç½Ç 1 (ÃâÃ³ ÀÖÀ¸¸é Æ÷ÇÔ)",
+    "±¸Ã¼Àû »ç½Ç 2",
+    "±¸Ã¼Àû »ç½Ç 3",
+    "±¸Ã¼Àû »ç½Ç 4",
+    "±¸Ã¼Àû »ç½Ç 5"
   ],
   "statistics": [
-    "수치·통계 1",
-    "수치·통계 2"
+    "¼öÄ¡¡¤Åë°è 1",
+    "¼öÄ¡¡¤Åë°è 2"
   ],
-  "source_summary": "자료 출처 요약",
+  "source_summary": "ÀÚ·á ÃâÃ³ ¿ä¾à",
   "risk_notes": [
-    "최신 자료 확인 필요 항목"
+    "ÃÖ½Å ÀÚ·á È®ÀÎ ÇÊ¿ä Ç×¸ñ"
   ],
   "key_messages": [
-    "핵심 메시지 1",
-    "핵심 메시지 2"
+    "ÇÙ½É ¸Þ½ÃÁö 1",
+    "ÇÙ½É ¸Þ½ÃÁö 2"
   ]
 }}"""
     result = await _call_llm_json(prompt, max_tokens=2000)
     if not result:
         result = {
-            "facts": [f"{topic}에 관한 핵심 정보"],
+            "facts": [f"{topic}¿¡ °üÇÑ ÇÙ½É Á¤º¸"],
             "statistics": [],
-            "source_summary": "일반 자료 기반",
-            "risk_notes": ["최신 자료 확인 권장"],
+            "source_summary": "ÀÏ¹Ý ÀÚ·á ±â¹Ý",
+            "risk_notes": ["ÃÖ½Å ÀÚ·á È®ÀÎ ±ÇÀå"],
             "key_messages": [topic],
         }
-    logger.info(f"[AUTO] 자료 조사 완료: {len(result.get('facts', []))}개 팩트")
+    logger.info(f"[AUTO] ÀÚ·á Á¶»ç ¿Ï·á: {len(result.get('facts', []))}°³ ÆÑÆ®")
     return result
 
 
@@ -7988,9 +8009,9 @@ async def auto_generate_script(
     language: str,
     sections: List[str],
 ) -> Dict:
-    """[AUTO 3/12] 영상 원고 자동 작성"""
-    # 섹션당 예상 나레이션 길이 계산 (한국어 약 4음절/초)
-    words_per_sec = 5.5  # [v15.71] KO TTS 5-6char/sec  # 약간 여유있게
+    """[AUTO 3/12] ¿µ»ó ¿ø°í ÀÚµ¿ ÀÛ¼º"""
+    # ¼½¼Ç´ç ¿¹»ó ³ª·¹ÀÌ¼Ç ±æÀÌ °è»ê (ÇÑ±¹¾î ¾à 4À½Àý/ÃÊ)
+    words_per_sec = 5.5  # [v15.71] KO TTS 5-6char/sec  # ¾à°£ ¿©À¯ÀÖ°Ô
     total_words = int(target_duration_sec * words_per_sec)
     section_words = max(total_words // max(len(sections), 1), 80)
     min_section_chars = max(section_words, 200)  # [v15.71]
@@ -7999,104 +8020,104 @@ async def auto_generate_script(
     facts_text = "\n".join(f"- {f}" for f in research.get("facts", []))
     msgs_text  = "\n".join(f"- {m}" for m in research.get("key_messages", []))
 
-    # [v16.8] humorous 톤: 유머 전용 프롬프트 분기
+    # [v16.8] humorous Åæ: À¯¸Ó Àü¿ë ÇÁ·ÒÇÁÆ® ºÐ±â
     _is_humorous = tone.lower() in ("humorous", "humor", "funny", "comic", "comedic")
     _persona = (
-        "당신은 유머 감각 넘치는 유튜브 코미디 나레이터입니다.\n"
-        "시청자를 웃기면서도 핵심 정보를 전달하는 원고를 작성하세요. 예상치 못한 반전, 자조적 유머, 과장법을 활용합니다."
+        "´ç½ÅÀº À¯¸Ó °¨°¢ ³ÑÄ¡´Â À¯Æ©ºê ÄÚ¹Ìµð ³ª·¹ÀÌÅÍÀÔ´Ï´Ù.\n"
+        "½ÃÃ»ÀÚ¸¦ ¿ô±â¸é¼­µµ ÇÙ½É Á¤º¸¸¦ Àü´ÞÇÏ´Â ¿ø°í¸¦ ÀÛ¼ºÇÏ¼¼¿ä. ¿¹»óÄ¡ ¸øÇÑ ¹ÝÀü, ÀÚÁ¶Àû À¯¸Ó, °úÀå¹ýÀ» È°¿ëÇÕ´Ï´Ù."
         if _is_humorous else
-        "당신은 KBS 시사기획 창 수석 방송작가입니다.\n"
-        "심층 다큐멘터리 원고를 작성하세요. 시청자가 끝까지 보도록 긴장감과 정보를 교차합니다."
+        "´ç½ÅÀº KBS ½Ã»ç±âÈ¹ Ã¢ ¼ö¼® ¹æ¼ÛÀÛ°¡ÀÔ´Ï´Ù.\n"
+        "½ÉÃþ ´ÙÅ¥¸àÅÍ¸® ¿ø°í¸¦ ÀÛ¼ºÇÏ¼¼¿ä. ½ÃÃ»ÀÚ°¡ ³¡±îÁö º¸µµ·Ï ±äÀå°¨°ú Á¤º¸¸¦ ±³Â÷ÇÕ´Ï´Ù."
     )
     _hook_guide = (
-        "## [v16.8] 유머 영상 필수 구조\n"
-        "  - **Hook**: 황당한 사실 또는 자기 비하 오프닝 → 공감 유발 (예: '저도 이거 몰랐는데요')\n"
-        "  - **반전 포인트**: 예상 뒤집기 → '그런데 사실은...' 방식으로 웃음+정보 동시 전달\n"
-        "  - **리듬감**: 짧고 끊어지는 문장. 타이밍이 생명.\n"
-        "  - **공감 유머**: 시청자가 '맞아맞아'하는 일상 상황 빗대기\n"
-        "  - **마무리**: 예상 못한 반전 + 공유 유도 멘트"
+        "## [v16.8] À¯¸Ó ¿µ»ó ÇÊ¼ö ±¸Á¶\n"
+        "  - **Hook**: È²´çÇÑ »ç½Ç ¶Ç´Â ÀÚ±â ºñÇÏ ¿ÀÇÁ´× ¡æ °ø°¨ À¯¹ß (¿¹: 'Àúµµ ÀÌ°Å ¸ô¶ú´Âµ¥¿ä')\n"
+        "  - **¹ÝÀü Æ÷ÀÎÆ®**: ¿¹»ó µÚÁý±â ¡æ '±×·±µ¥ »ç½ÇÀº...' ¹æ½ÄÀ¸·Î ¿ôÀ½+Á¤º¸ µ¿½Ã Àü´Þ\n"
+        "  - **¸®µë°¨**: Âª°í ²÷¾îÁö´Â ¹®Àå. Å¸ÀÌ¹ÖÀÌ »ý¸í.\n"
+        "  - **°ø°¨ À¯¸Ó**: ½ÃÃ»ÀÚ°¡ '¸Â¾Æ¸Â¾Æ'ÇÏ´Â ÀÏ»ó »óÈ² ºø´ë±â\n"
+        "  - **¸¶¹«¸®**: ¿¹»ó ¸øÇÑ ¹ÝÀü + °øÀ¯ À¯µµ ¸àÆ®"
         if _is_humorous else
-        "## [v15.81] 100만뷰 필수 구조\n"
-        "  - **Hook (first 5s)**: 충격 수치 선공개 + Bold Promise + 결말 예고 (시청유지율 +25%)\n"
-        "    예: `지금부터 3년 안에 사라질 직업 1위를 공개합니다.`\n"
-        "    예: `이 영상 끝까지 보면 연봉 3000만원 격차 이유를 알게 됩니다.`\n"
-        "  - **오픈루프**: 2~3번째 섹션에서 미해결 질문 → `왜 갑자기 이 현상이? 답은 후반부에.`\n"
-        "  - **재훅 포인트 (매 60~90 (target 70)초)**: `잠깐, 더 놀라운 사실이 있습니다` 류의 긴장 재주입\n\n"
-        "## 방송 다큐 3막 구조 필수\n"
-        "  - 1막(오프닝/도발): 충격적 사실로 시작, \"지금 이 순간~\", \"당신이 모르는~\" 형식. 안녕하세요 금지.\n"
-        "  - 2막(심층분석): 전문가 인용, 통계, 사례, 반전 포인트. 매 60초 새 긴장 요소.\n"
-        "  - 3막(해법/전망): 구체적 결론 + 시청자 행동 촉구"
+        "## [v15.81] 100¸¸ºä ÇÊ¼ö ±¸Á¶\n"
+        "  - **Hook (first 5s)**: Ãæ°Ý ¼öÄ¡ ¼±°ø°³ + Bold Promise + °á¸» ¿¹°í (½ÃÃ»À¯ÁöÀ² +25%)\n"
+        "    ¿¹: `Áö±ÝºÎÅÍ 3³â ¾È¿¡ »ç¶óÁú Á÷¾÷ 1À§¸¦ °ø°³ÇÕ´Ï´Ù.`\n"
+        "    ¿¹: `ÀÌ ¿µ»ó ³¡±îÁö º¸¸é ¿¬ºÀ 3000¸¸¿ø °ÝÂ÷ ÀÌÀ¯¸¦ ¾Ë°Ô µË´Ï´Ù.`\n"
+        "  - **¿ÀÇÂ·çÇÁ**: 2~3¹øÂ° ¼½¼Ç¿¡¼­ ¹ÌÇØ°á Áú¹® ¡æ `¿Ö °©ÀÚ±â ÀÌ Çö»óÀÌ? ´äÀº ÈÄ¹ÝºÎ¿¡.`\n"
+        "  - **ÀçÈÅ Æ÷ÀÎÆ® (¸Å 60~90 (target 70)ÃÊ)**: `Àá±ñ, ´õ ³î¶ó¿î »ç½ÇÀÌ ÀÖ½À´Ï´Ù` ·ùÀÇ ±äÀå ÀçÁÖÀÔ\n\n"
+        "## ¹æ¼Û ´ÙÅ¥ 3¸· ±¸Á¶ ÇÊ¼ö\n"
+        "  - 1¸·(¿ÀÇÁ´×/µµ¹ß): Ãæ°ÝÀû »ç½Ç·Î ½ÃÀÛ, \"Áö±Ý ÀÌ ¼ø°£~\", \"´ç½ÅÀÌ ¸ð¸£´Â~\" Çü½Ä. ¾È³çÇÏ¼¼¿ä ±ÝÁö.\n"
+        "  - 2¸·(½ÉÃþºÐ¼®): Àü¹®°¡ ÀÎ¿ë, Åë°è, »ç·Ê, ¹ÝÀü Æ÷ÀÎÆ®. ¸Å 60ÃÊ »õ ±äÀå ¿ä¼Ò.\n"
+        "  - 3¸·(ÇØ¹ý/Àü¸Á): ±¸Ã¼Àû °á·Ð + ½ÃÃ»ÀÚ Çàµ¿ ÃË±¸"
     )
     _style_rules = (
-        "## 유머 나레이션 규칙\n"
-        "  - 한 문장 10~20자. 리듬감 있게 끊어라.\n"
-        "  - 과장법 적극 활용: '진짜로요', '이게 말이 됩니까', '놀라지 마세요'\n"
-        "  - 구체적 수치도 유머로: '무려 1,247번이나. 누가 샌 거야.'\n"
-        "  - [하이라이트: ...] 마커 사용 금지  # [v15.94]\n"
-        "  - 맞춤법·띄어쓰기 엄수.\n"
-        "  - 패턴 인터럽트: 20초마다 반전 개그 포인트"
+        "## À¯¸Ó ³ª·¹ÀÌ¼Ç ±ÔÄ¢\n"
+        "  - ÇÑ ¹®Àå 10~20ÀÚ. ¸®µë°¨ ÀÖ°Ô ²÷¾î¶ó.\n"
+        "  - °úÀå¹ý Àû±Ø È°¿ë: 'ÁøÂ¥·Î¿ä', 'ÀÌ°Ô ¸»ÀÌ µË´Ï±î', '³î¶óÁö ¸¶¼¼¿ä'\n"
+        "  - ±¸Ã¼Àû ¼öÄ¡µµ À¯¸Ó·Î: '¹«·Á 1,247¹øÀÌ³ª. ´©°¡ »÷ °Å¾ß.'\n"
+        "  - [ÇÏÀÌ¶óÀÌÆ®: ...] ¸¶Ä¿ »ç¿ë ±ÝÁö  # [v15.94]\n"
+        "  - ¸ÂÃã¹ý¡¤¶ç¾î¾²±â ¾ö¼ö.\n"
+        "  - ÆÐÅÏ ÀÎÅÍ·´Æ®: 20ÃÊ¸¶´Ù ¹ÝÀü °³±× Æ÷ÀÎÆ®"
         if _is_humorous else
-        "## 나레이션 규칙\n"
-        "  - 한 문장 15~25자. 짧고 힘있게.\n"
-        "  - 숫자/통계를 직접 문장에 포함 (마커 없이): \"전 세계 470조원 규모의 시장이 열리고 있습니다.\"\n"
-        "  - [하이라이트: ...] 마커 사용 금지 — 자막에 깨진 텍스트로 출력됨  # [v15.94]\n"
-        "  - 맞춤법·띄어쓰기 엄수. 오류 발생 시 영상 품질 저하.\n"
-        "  - 패턴 인터럽트: 30초마다 반전 질문/충격 포인트"
+        "## ³ª·¹ÀÌ¼Ç ±ÔÄ¢\n"
+        "  - ÇÑ ¹®Àå 15~25ÀÚ. Âª°í ÈûÀÖ°Ô.\n"
+        "  - ¼ýÀÚ/Åë°è¸¦ Á÷Á¢ ¹®Àå¿¡ Æ÷ÇÔ (¸¶Ä¿ ¾øÀÌ): \"Àü ¼¼°è 470Á¶¿ø ±Ô¸ðÀÇ ½ÃÀåÀÌ ¿­¸®°í ÀÖ½À´Ï´Ù.\"\n"
+        "  - [ÇÏÀÌ¶óÀÌÆ®: ...] ¸¶Ä¿ »ç¿ë ±ÝÁö ? ÀÚ¸·¿¡ ±úÁø ÅØ½ºÆ®·Î Ãâ·ÂµÊ  # [v15.94]\n"
+        "  - ¸ÂÃã¹ý¡¤¶ç¾î¾²±â ¾ö¼ö. ¿À·ù ¹ß»ý ½Ã ¿µ»ó Ç°Áú ÀúÇÏ.\n"
+        "  - ÆÐÅÏ ÀÎÅÍ·´Æ®: 30ÃÊ¸¶´Ù ¹ÝÀü Áú¹®/Ãæ°Ý Æ÷ÀÎÆ®"
     )
 
     prompt = f"""{_persona}
 
-주제: {topic}
-톤: {tone}
-목표 길이: {target_duration_sec}초
-언어: {language}
+ÁÖÁ¦: {topic}
+Åæ: {tone}
+¸ñÇ¥ ±æÀÌ: {target_duration_sec}ÃÊ
+¾ð¾î: {language}
 
-핵심 팩트:
+ÇÙ½É ÆÑÆ®:
 {facts_text}
 
-핵심 메시지:
+ÇÙ½É ¸Þ½ÃÁö:
 {msgs_text}
 
-섹션 구성: {', '.join(sections)}
+¼½¼Ç ±¸¼º: {', '.join(sections)}
 
-목표 나레이션 길이: 총 {target_total_chars}자 이상 (각 섹션 {min_section_chars}자 이상 필수)
+¸ñÇ¥ ³ª·¹ÀÌ¼Ç ±æÀÌ: ÃÑ {target_total_chars}ÀÚ ÀÌ»ó (°¢ ¼½¼Ç {min_section_chars}ÀÚ ÀÌ»ó ÇÊ¼ö)
 
 {_hook_guide}
 
 {_style_rules}
 
-## 금지 사항
-  - "안녕하세요", "오늘은", "~에 대해 알아보겠습니다" 금지
-  - 추상적 표현 금지 → 구체적 수치/사례로 대체
-  - 나레이션 문장 재사용/paraphrase 금지 [최우선]
-  - 모든 섹션 narration 상호 교차 중복 확인 후 제출 필수
+## ±ÝÁö »çÇ×
+  - "¾È³çÇÏ¼¼¿ä", "¿À´ÃÀº", "~¿¡ ´ëÇØ ¾Ë¾Æº¸°Ú½À´Ï´Ù" ±ÝÁö
+  - Ãß»óÀû Ç¥Çö ±ÝÁö ¡æ ±¸Ã¼Àû ¼öÄ¡/»ç·Ê·Î ´ëÃ¼
+  - ³ª·¹ÀÌ¼Ç ¹®Àå Àç»ç¿ë/paraphrase ±ÝÁö [ÃÖ¿ì¼±]
+  - ¸ðµç ¼½¼Ç narration »óÈ£ ±³Â÷ Áßº¹ È®ÀÎ ÈÄ Á¦Ãâ ÇÊ¼ö
 
 JSON:
 {{
-  "title": "클릭유발 제목 (파워워드+숫자, 30자 이내)",
-  "title_candidates": ["후보 1(최고CTR)", "후보 2", "후보 3"],
+  "title": "Å¬¸¯À¯¹ß Á¦¸ñ (ÆÄ¿ö¿öµå+¼ýÀÚ, 30ÀÚ ÀÌ³»)",
+  "title_candidates": ["ÈÄº¸ 1(ÃÖ°íCTR)", "ÈÄº¸ 2", "ÈÄº¸ 3"],
   "title_ctr": [85, 72, 68],
-  "hook": "충격 오프닝 (30~50자, 방송 어체)",
+  "hook": "Ãæ°Ý ¿ÀÇÁ´× (30~50ÀÚ, ¹æ¼Û ¾îÃ¼)",
   "sections": [
     {{
-      "section_title": "제목",
+      "section_title": "Á¦¸ñ",
       "section_type": "opening/problem/analysis/expert/stats/turning_point/solution/cta/closing",
-      "narration": "나레이션 (최소 {min_section_chars}자, 방송 어체, 타 섹션과 중복 금지, [하이라이트:] 마커 절대 금지)",
-      "pattern_interrupt": "반전/충격 포인트 (선택)"
+      "narration": "³ª·¹ÀÌ¼Ç (ÃÖ¼Ò {min_section_chars}ÀÚ, ¹æ¼Û ¾îÃ¼, Å¸ ¼½¼Ç°ú Áßº¹ ±ÝÁö, [ÇÏÀÌ¶óÀÌÆ®:] ¸¶Ä¿ Àý´ë ±ÝÁö)",
+      "pattern_interrupt": "¹ÝÀü/Ãæ°Ý Æ÷ÀÎÆ® (¼±ÅÃ)"
     }}
   ],
-  "closing": "강력한 CTA 마무리 (구독/공유 + 핵심 메시지 재강조)",
+  "closing": "°­·ÂÇÑ CTA ¸¶¹«¸® (±¸µ¶/°øÀ¯ + ÇÙ½É ¸Þ½ÃÁö Àç°­Á¶)",
   "total_estimated_duration_sec": {target_duration_sec}
 }}"""
-    _script_temp = 0.85 if _is_humorous else 0.6  # [v16.8] 유머 톤: 창의성 높임
+    _script_temp = 0.85 if _is_humorous else 0.6  # [v16.8] À¯¸Ó Åæ: Ã¢ÀÇ¼º ³ôÀÓ
     result = await _call_llm_json(prompt, max_tokens=6000, temperature=_script_temp, quality_first=True)  # [v15.71]
     if not result:
         result = {
             "title": topic,
-            "hook": f"{topic}에 대해 알아보겠습니다.",
+            "hook": f"{topic}¿¡ ´ëÇØ ¾Ë¾Æº¸°Ú½À´Ï´Ù.",
             "sections": [{"section_title": s, "section_type": "main",
-                          "narration": f"{s}에 대한 내용입니다."} for s in sections],
-            "closing": "이상으로 마치겠습니다.",
+                          "narration": f"{s}¿¡ ´ëÇÑ ³»¿ëÀÔ´Ï´Ù."} for s in sections],
+            "closing": "ÀÌ»óÀ¸·Î ¸¶Ä¡°Ú½À´Ï´Ù.",
             "total_estimated_duration_sec": target_duration_sec,
         }
     # [v15.98] pick best CTR title from candidates
@@ -8111,31 +8132,31 @@ JSON:
     except Exception as _ce:
         logger.warning('[v15.98] CTR select skip: %s' % _ce)
 
-    # [v15.96] Hook 품질 게이트 — 충격도 부족 시 재생성
+    # [v15.96] Hook Ç°Áú °ÔÀÌÆ® ? Ãæ°Ýµµ ºÎÁ· ½Ã Àç»ý¼º
     _hook = result.get("hook", "")
     _hook_weak = (
         len(_hook) < 20 or
-        not any(c.isdigit() for c in _hook) and  # 숫자 없으면 약함
-        not any(w in _hook for w in ["충격", "공개", "실패", "붕괴", "비밀", "경고", "파격", "최초", "폭로"])
+        not any(c.isdigit() for c in _hook) and  # ¼ýÀÚ ¾øÀ¸¸é ¾àÇÔ
+        not any(w in _hook for w in ["Ãæ°Ý", "°ø°³", "½ÇÆÐ", "ºØ±«", "ºñ¹Ð", "°æ°í", "ÆÄ°Ý", "ÃÖÃÊ", "Æø·Î"])
     )
     if _hook_weak:
-        logger.warning(f"[v15.96] Hook 품질 미달 ({len(_hook)}자, 수치 없음) → 보강 시도")
-        _rehook_prompt = f"""다음 훅을 100만뷰 기준으로 강화하세요.
+        logger.warning(f"[v15.96] Hook Ç°Áú ¹Ì´Þ ({len(_hook)}ÀÚ, ¼öÄ¡ ¾øÀ½) ¡æ º¸°­ ½Ãµµ")
+        _rehook_prompt = f"""´ÙÀ½ ÈÅÀ» 100¸¸ºä ±âÁØÀ¸·Î °­È­ÇÏ¼¼¿ä.
 
-원본: {_hook}
-주제: {topic}
+¿øº»: {_hook}
+ÁÖÁ¦: {topic}
 
-## 조건
-- 30~50자
-- 충격 수치 필수 (%, 조원, 만명 등)
-- "지금부터", "당신이 모르는", "충격" 류 파워워드 포함
-- 결말 예고 포함
+## Á¶°Ç
+- 30~50ÀÚ
+- Ãæ°Ý ¼öÄ¡ ÇÊ¼ö (%, Á¶¿ø, ¸¸¸í µî)
+- "Áö±ÝºÎÅÍ", "´ç½ÅÀÌ ¸ð¸£´Â", "Ãæ°Ý" ·ù ÆÄ¿ö¿öµå Æ÷ÇÔ
+- °á¸» ¿¹°í Æ÷ÇÔ
 
-강화된 훅만 텍스트로 반환:"""
-        # [v16.0] _call_llm_text 제거 → _call_llm_json 사용
+°­È­µÈ ÈÅ¸¸ ÅØ½ºÆ®·Î ¹ÝÈ¯:"""
+        # [v16.0] _call_llm_text Á¦°Å ¡æ _call_llm_json »ç¿ë
         try:
             _hook_resp = await _call_llm_json(
-                _rehook_prompt + '\n\nJSON 형식: {"hook": "훅 텍스트만"}',
+                _rehook_prompt + '\n\nJSON Çü½Ä: {"hook": "ÈÅ ÅØ½ºÆ®¸¸"}',
                 max_tokens=150, temperature=0.7
             )
             _new_hook = (_hook_resp or {}).get("hook", "") if isinstance(_hook_resp, dict) else str(_hook_resp or "").strip()
@@ -8144,30 +8165,30 @@ JSON:
             logger.warning(f"[v16.0] hook regen error: {_he}")
         if _new_hook and len(_new_hook.strip()) > 20:
             result["hook"] = _new_hook.strip()[:60]
-            logger.info(f"[v15.96] Hook 재생성: {result['hook']}")
+            logger.info(f"[v15.96] Hook Àç»ý¼º: {result['hook']}")
 
-    # [v15.95] Python 레벨 중복 나레이션 감지 및 정리
+    # [v15.95] Python ·¹º§ Áßº¹ ³ª·¹ÀÌ¼Ç °¨Áö ¹× Á¤¸®
     _seen_narr: list = []
     for _sec in result.get("sections", []):
         _nr = _sec.get("narration", "").strip()
         if not _nr:
             continue
-        # 유사도 체크 (앞 30자가 같으면 중복으로 간주)
+        # À¯»çµµ Ã¼Å© (¾Õ 30ÀÚ°¡ °°À¸¸é Áßº¹À¸·Î °£ÁÖ)
         _prefix = _nr[:30]
         _dup = any(_prefix in _s or _s[:30] in _nr[:30] for _s in _seen_narr)
         if _dup:
-            logger.warning(f"[v15.95] 중복 나레이션 감지 → 섹션 {_sec.get('section_title','?')} truncated")
-            # 중복 제거: 빈 placeholder로 마킹 (나중에 TTS에서 skip됨)
+            logger.warning(f"[v15.95] Áßº¹ ³ª·¹ÀÌ¼Ç °¨Áö ¡æ ¼½¼Ç {_sec.get('section_title','?')} truncated")
+            # Áßº¹ Á¦°Å: ºó placeholder·Î ¸¶Å· (³ªÁß¿¡ TTS¿¡¼­ skipµÊ)
             _sec["narration"] = _sec.get("narration", "")  # keep but log
         else:
             _seen_narr.append(_nr)
-    logger.info(f"[AUTO] 원고 생성 완료: {len(result.get('sections', []))}개 섹션")
+    logger.info(f"[AUTO] ¿ø°í »ý¼º ¿Ï·á: {len(result.get('sections', []))}°³ ¼½¼Ç")
     # [v15.98] spell check via _call_llm_json (corrected)
     try:
         _sp_secs = result.get('sections', [])
         if _sp_secs:
             _sp_list = [{'i': _si, 'n': _sec.get('narration', '')} for _si, _sec in enumerate(_sp_secs) if _sec.get('narration', '').strip()]
-            _sp_prompt = '다음 JSON의 각 항목 n(나레이션)의 맞춤법·띄어쓰기를 교정하세요. 내용 변경 금지, 형식 유지:\n' + str(_sp_list)
+            _sp_prompt = '´ÙÀ½ JSONÀÇ °¢ Ç×¸ñ n(³ª·¹ÀÌ¼Ç)ÀÇ ¸ÂÃã¹ý¡¤¶ç¾î¾²±â¸¦ ±³Á¤ÇÏ¼¼¿ä. ³»¿ë º¯°æ ±ÝÁö, Çü½Ä À¯Áö:\n' + str(_sp_list)
             _sp_res = await _call_llm_json(_sp_prompt, max_tokens=4000, temperature=0.1)
             if isinstance(_sp_res, list):
                 for _item in _sp_res:
@@ -8193,13 +8214,13 @@ async def auto_generate_seo_metadata(
     tone: str = "news",
     language: str = "ko",
 ) -> dict:
-    """[v15.96] 100만뷰 YouTube SEO 메타데이터 자동생성"""
+    """[v15.96] 100¸¸ºä YouTube SEO ¸ÞÅ¸µ¥ÀÌÅÍ ÀÚµ¿»ý¼º"""
     hook = script.get("hook", "")
     title_raw = script.get("title", topic)
     sections_preview = " ".join(
         s.get("narration", "")[:50] for s in script.get("sections", [])[:5]
     )
-    # 씬 타임스탬프 계산 (5씬마다)
+    # ¾À Å¸ÀÓ½ºÅÆÇÁ °è»ê (5¾À¸¶´Ù)
     _ts_lines = []
     _elapsed = 0.0
     for i, sc in enumerate(scenes[:60]):
@@ -8212,44 +8233,44 @@ async def auto_generate_seo_metadata(
         _elapsed += dur
     timestamps_str = "\n".join(_ts_lines[:12])
 
-    prompt = f"""YouTube SEO 최적화 메타데이터를 생성하세요. 100만뷰 영상 기준.
+    prompt = f"""YouTube SEO ÃÖÀûÈ­ ¸ÞÅ¸µ¥ÀÌÅÍ¸¦ »ý¼ºÇÏ¼¼¿ä. 100¸¸ºä ¿µ»ó ±âÁØ.
 
-주제: {topic}
-훅: {hook}
-제목(초안): {title_raw}
-내용 요약: {sections_preview}
-언어: {language}
+ÁÖÁ¦: {topic}
+ÈÅ: {hook}
+Á¦¸ñ(ÃÊ¾È): {title_raw}
+³»¿ë ¿ä¾à: {sections_preview}
+¾ð¾î: {language}
 
-## 요구사항
-1. title: 파워워드+숫자+감정어, 30자 이내, 클릭률 최대화 (예: "충격! 삼성 반도체 점유율 30% 붕괴의 진짜 이유")
-2. description: 3줄 요약 + 타임스탬프 + CTA (구독/좋아요) + 해시태그 5개, 총 500자 이내
-3. tags: YouTube 검색 상위 노출 태그 25개 (핵심어 → 연관어 → 트렌드어 순)
-4. chapters: 타임스탬프 목록 (아래 자동 계산된 것 기반, JSON 배열로)
+## ¿ä±¸»çÇ×
+1. title: ÆÄ¿ö¿öµå+¼ýÀÚ+°¨Á¤¾î, 30ÀÚ ÀÌ³», Å¬¸¯·ü ÃÖ´ëÈ­ (¿¹: "Ãæ°Ý! »ï¼º ¹ÝµµÃ¼ Á¡À¯À² 30% ºØ±«ÀÇ ÁøÂ¥ ÀÌÀ¯")
+2. description: 3ÁÙ ¿ä¾à + Å¸ÀÓ½ºÅÆÇÁ + CTA (±¸µ¶/ÁÁ¾Æ¿ä) + ÇØ½ÃÅÂ±× 5°³, ÃÑ 500ÀÚ ÀÌ³»
+3. tags: YouTube °Ë»ö »óÀ§ ³ëÃâ ÅÂ±× 25°³ (ÇÙ½É¾î ¡æ ¿¬°ü¾î ¡æ Æ®·»µå¾î ¼ø)
+4. chapters: Å¸ÀÓ½ºÅÆÇÁ ¸ñ·Ï (¾Æ·¡ ÀÚµ¿ °è»êµÈ °Í ±â¹Ý, JSON ¹è¿­·Î)
 
-타임스탬프 기준:
+Å¸ÀÓ½ºÅÆÇÁ ±âÁØ:
 {timestamps_str}
 
 JSON:
 {{
-  "title": "최적화 제목",
-  "description": "설명 500자 이내",
-  "tags": ["태그1", "태그2", ...25개],
-  "chapters": [{{"time": "00:00", "label": "인트로"}}, ...],
-  "thumbnail_text": "썸네일 임팩트 텍스트 (10자 이내, 파워워드)",
-  "hook_score": 1~10 (훅 임팩트 점수)
+  "title": "ÃÖÀûÈ­ Á¦¸ñ",
+  "description": "¼³¸í 500ÀÚ ÀÌ³»",
+  "tags": ["ÅÂ±×1", "ÅÂ±×2", ...25°³],
+  "chapters": [{{"time": "00:00", "label": "ÀÎÆ®·Î"}}, ...],
+  "thumbnail_text": "½æ³×ÀÏ ÀÓÆÑÆ® ÅØ½ºÆ® (10ÀÚ ÀÌ³», ÆÄ¿ö¿öµå)",
+  "hook_score": 1~10 (ÈÅ ÀÓÆÑÆ® Á¡¼ö)
 }}"""
 
     result = await _call_llm_json(prompt, max_tokens=2000, temperature=0.4, quality_first=True)
     if not result or not isinstance(result, dict):
         result = {
             "title": title_raw,
-            "description": f"{topic} — AI 자동 생성 영상\n\n{timestamps_str}\n\n#AI #뉴스 #{topic[:10]}",
-            "tags": [topic, "AI", "뉴스", "최신", "2026"],
+            "description": f"{topic} ? AI ÀÚµ¿ »ý¼º ¿µ»ó\n\n{timestamps_str}\n\n#AI #´º½º #{topic[:10]}",
+            "tags": [topic, "AI", "´º½º", "ÃÖ½Å", "2026"],
             "chapters": [],
             "thumbnail_text": topic[:10],
             "hook_score": 5,
         }
-    logger.info(f"[v15.96] SEO 메타 생성: 제목={result.get('title','?')[:30]} / 태그={len(result.get('tags',[]))}개 / hook={result.get('hook_score')}")
+    logger.info(f"[v15.96] SEO ¸ÞÅ¸ »ý¼º: Á¦¸ñ={result.get('title','?')[:30]} / ÅÂ±×={len(result.get('tags',[]))}°³ / hook={result.get('hook_score')}")
     return result
 
 
@@ -8258,56 +8279,56 @@ async def auto_build_scenes(
     target_duration_sec: int,
     tone: str,
 ) -> List[Dict]:
-    """[AUTO 4/12] 원고 → 씬 자동 분할 (target_duration 비례)"""
-    # [v15.70] target_duration 기반 동적 씬 수 계산
+    """[AUTO 4/12] ¿ø°í ¡æ ¾À ÀÚµ¿ ºÐÇÒ (target_duration ºñ·Ê)"""
+    # [v15.70] target_duration ±â¹Ý µ¿Àû ¾À ¼ö °è»ê
     _target_dur = max(target_duration_sec, 60)
-    _avg_scene_sec = 7.5  # [v15.81] 7-9min optimal: 70씬 기준 (이전: 5.5)
+    _avg_scene_sec = 7.5  # [v15.81] 7-9min optimal: 70¾À ±âÁØ (ÀÌÀü: 5.5)
     _min_scenes = max(8, int(_target_dur / 7))
     _max_scenes = max(15, int(_target_dur / 4))
     _rec_scenes = max(10, int(_target_dur / _avg_scene_sec))
-    logger.info(f"[v15.70] 씬 수 계산: target={_target_dur}s → {_min_scenes}~{_max_scenes}개 (권장 {_rec_scenes}개)")
+    logger.info(f"[v15.70] ¾À ¼ö °è»ê: target={_target_dur}s ¡æ {_min_scenes}~{_max_scenes}°³ (±ÇÀå {_rec_scenes}°³)")
     sections_text = _json_auto.dumps(script.get("sections", []), ensure_ascii=False)
     hook = script.get("hook", "")
     closing = script.get("closing", "")
 
-    prompt = f"""다음 영상 원고를 6~12초 단위의 씬으로 분할하세요.
+    prompt = f"""´ÙÀ½ ¿µ»ó ¿ø°í¸¦ 6~12ÃÊ ´ÜÀ§ÀÇ ¾ÀÀ¸·Î ºÐÇÒÇÏ¼¼¿ä.
 
-훅(오프닝): {hook}
-섹션 원고: {sections_text}
-마무리: {closing}
-목표 길이: {target_duration_sec}초
-톤: {tone}
+ÈÅ(¿ÀÇÁ´×): {hook}
+¼½¼Ç ¿ø°í: {sections_text}
+¸¶¹«¸®: {closing}
+¸ñÇ¥ ±æÀÌ: {target_duration_sec}ÃÊ
+Åæ: {tone}
 
-## 씬 규칙 (프로):
-- 총 씬 수: {_min_scenes}~{_max_scenes}개 (권장 {_rec_scenes}개, target_duration={_target_dur}초 기준)
-- B-roll 교체: 최대 5초 (시청유지율 핵심)
-- visual_keywords: 씬마다 완전히 다른 영어 키워드 (반복 금지! 한국어/조사/단음절 절대 금지)
-- visual_keywords 형식: 영어 명사구 2~4단어 ("semiconductor factory", "AI robot lab")
-- narration: 각 씬마다 완전히 다른 고유 내용, 인접 씬 복사 금지 [최우선 — 위반 시 품질 즉시 저하]
-- 중복 감지: 씬 전체에서 동일/유사 문장이 2개 이상이면 반드시 수정 후 제출
-- 각 씬은 sections_text에서 유도하되 핵심 정보만 추출, 동일 문장 그대로 복붙 금지
-- 나레이션 내용과 영상 일치: economy → stock market trading floor
+## ¾À ±ÔÄ¢ (ÇÁ·Î):
+- ÃÑ ¾À ¼ö: {_min_scenes}~{_max_scenes}°³ (±ÇÀå {_rec_scenes}°³, target_duration={_target_dur}ÃÊ ±âÁØ)
+- B-roll ±³Ã¼: ÃÖ´ë 5ÃÊ (½ÃÃ»À¯ÁöÀ² ÇÙ½É)
+- visual_keywords: ¾À¸¶´Ù ¿ÏÀüÈ÷ ´Ù¸¥ ¿µ¾î Å°¿öµå (¹Ýº¹ ±ÝÁö! ÇÑ±¹¾î/Á¶»ç/´ÜÀ½Àý Àý´ë ±ÝÁö)
+- visual_keywords Çü½Ä: ¿µ¾î ¸í»ç±¸ 2~4´Ü¾î ("semiconductor factory", "AI robot lab")
+- narration: °¢ ¾À¸¶´Ù ¿ÏÀüÈ÷ ´Ù¸¥ °íÀ¯ ³»¿ë, ÀÎÁ¢ ¾À º¹»ç ±ÝÁö [ÃÖ¿ì¼± ? À§¹Ý ½Ã Ç°Áú Áï½Ã ÀúÇÏ]
+- Áßº¹ °¨Áö: ¾À ÀüÃ¼¿¡¼­ µ¿ÀÏ/À¯»ç ¹®ÀåÀÌ 2°³ ÀÌ»óÀÌ¸é ¹Ýµå½Ã ¼öÁ¤ ÈÄ Á¦Ãâ
+- °¢ ¾ÀÀº sections_text¿¡¼­ À¯µµÇÏµÇ ÇÙ½É Á¤º¸¸¸ ÃßÃâ, µ¿ÀÏ ¹®Àå ±×´ë·Î º¹ºÙ ±ÝÁö
+- ³ª·¹ÀÌ¼Ç ³»¿ë°ú ¿µ»ó ÀÏÄ¡: economy ¡æ stock market trading floor
 - negative_keywords: cartoon, animation, low quality
 - tone_profile: hook/problem/agitation/stats/solution/cta/closing
 
-## 키워드 다양성:
-- 구체적: "business meeting" X → "executive board meeting presentation" O
-- 추상→시각화: "economy" → "GDP growth chart", "stock market trading"
+## Å°¿öµå ´Ù¾ç¼º:
+- ±¸Ã¼Àû: "business meeting" X ¡æ "executive board meeting presentation" O
+- Ãß»ó¡æ½Ã°¢È­: "economy" ¡æ "GDP growth chart", "stock market trading"
 - preferred_motion: slow_zoom_in/out, pan_left/right, fast_cut, aerial_shot
 
-## [v15.69] 단어·문맥·음절 기반 영상 매핑 규칙 (필수):
-- visual_keywords 금지: "wide shot","close up","side angle","aerial","zoom","panning","tilt","cutaway","overhead","angle","shot","zoom"
-- visual_keywords 형식: 반드시 "명사+명사" → "semiconductor factory worker", "CPU chip extreme closeup"
-    - narration: 반드시 해당 섹션 sections_text의 narration 원문 전체 복사. 절대 제목/placeholder 금지. 최소 100자 이상\n- narration_en: 나레이션을 20~30단어 영어 시각 묘사로 변환 (Kling T2V 프롬프트)
-  예: "semiconductor chips manufacturing process, engineers inspecting circuit boards, high-tech facility, cinematic 4K"
-- 단어 매핑: 나레이션 핵심 명사→구체적 시각 장면 (반도체→semiconductor chip, 수출규제→trade sanctions document)
-- 음절 기반 타이밍: expected_duration = max(len(narration_text.replace(" ","")) / 4.0, 4.0)
+## [v15.69] ´Ü¾î¡¤¹®¸Æ¡¤À½Àý ±â¹Ý ¿µ»ó ¸ÅÇÎ ±ÔÄ¢ (ÇÊ¼ö):
+- visual_keywords ±ÝÁö: "wide shot","close up","side angle","aerial","zoom","panning","tilt","cutaway","overhead","angle","shot","zoom"
+- visual_keywords Çü½Ä: ¹Ýµå½Ã "¸í»ç+¸í»ç" ¡æ "semiconductor factory worker", "CPU chip extreme closeup"
+    - narration: ¹Ýµå½Ã ÇØ´ç ¼½¼Ç sections_textÀÇ narration ¿ø¹® ÀüÃ¼ º¹»ç. Àý´ë Á¦¸ñ/placeholder ±ÝÁö. ÃÖ¼Ò 100ÀÚ ÀÌ»ó\n- narration_en: ³ª·¹ÀÌ¼ÇÀ» 20~30´Ü¾î ¿µ¾î ½Ã°¢ ¹¦»ç·Î º¯È¯ (Kling T2V ÇÁ·ÒÇÁÆ®)
+  ¿¹: "semiconductor chips manufacturing process, engineers inspecting circuit boards, high-tech facility, cinematic 4K"
+- ´Ü¾î ¸ÅÇÎ: ³ª·¹ÀÌ¼Ç ÇÙ½É ¸í»ç¡æ±¸Ã¼Àû ½Ã°¢ Àå¸é (¹ÝµµÃ¼¡æsemiconductor chip, ¼öÃâ±ÔÁ¦¡ætrade sanctions document)
+- À½Àý ±â¹Ý Å¸ÀÌ¹Ö: expected_duration = max(len(narration_text.replace(" ","")) / 4.0, 4.0)
 
 JSON:
 [
   {{
     "scene_id": "scene_001",
-    "narration": "섹션 narration에서 해당 씬 부분만 추출 (최소 40자, 타 씬과 중복 금지, [하이라이트:] 마커 절대 금지)",
+    "narration": "¼½¼Ç narration¿¡¼­ ÇØ´ç ¾À ºÎºÐ¸¸ ÃßÃâ (ÃÖ¼Ò 40ÀÚ, Å¸ ¾À°ú Áßº¹ ±ÝÁö, [ÇÏÀÌ¶óÀÌÆ®:] ¸¶Ä¿ Àý´ë ±ÝÁö)",
     "narration_en": "cinematic description 20-30 words for AI video generation",
     "section_type": "hook",
     "visual_intent": "dramatic opening conveying urgency",
@@ -8321,7 +8342,7 @@ JSON:
 ]"""
     result = await _call_llm_json(prompt, max_tokens=8000, temperature=0.5, quality_first=True)  # [v15.74]
 
-    # [v15.82] LLM dict 래퍼 언팩: {scenes:[...]}, {data:[...]}, {result:[...]}
+    # [v15.82] LLM dict ·¡ÆÛ ¾ðÆÑ: {scenes:[...]}, {data:[...]}, {result:[...]}
     if isinstance(result, dict) and not isinstance(result, list):
         for _k82 in ('scenes','data','result','items','clips','list'):
             if _k82 in result and isinstance(result[_k82], list):
@@ -8329,9 +8350,9 @@ JSON:
         else:
             _vals82 = [v for v in result.values() if isinstance(v, list) and v]
             if _vals82: result = max(_vals82, key=len)
-        logger.info(f'[v15.82] dict 래퍼 언팩 완료: {len(result) if isinstance(result,list) else 0}개')
+        logger.info(f'[v15.82] dict ·¡ÆÛ ¾ðÆÑ ¿Ï·á: {len(result) if isinstance(result,list) else 0}°³')
     if not isinstance(result, list) or not result:
-        # fallback: 섹션별로 단순 씬 생성
+        # fallback: ¼½¼Çº°·Î ´Ü¼ø ¾À »ý¼º
         result = []
         scene_idx = 1
         all_narrations = [{"text": hook, "type": "opening"}]
@@ -8343,7 +8364,7 @@ JSON:
             text = item["text"]
             if not text:
                 continue
-            # 단순 분할 (50자 기준)
+            # ´Ü¼ø ºÐÇÒ (50ÀÚ ±âÁØ)
             chunks = [text[i:i+50] for i in range(0, len(text), 50)] or [text]
             for chunk in chunks:
                 result.append({
@@ -8360,36 +8381,36 @@ JSON:
                 })
                 scene_idx += 1
 
-    # [v15.95] 씬 레벨 중복 나레이션 정화
+    # [v15.95] ¾À ·¹º§ Áßº¹ ³ª·¹ÀÌ¼Ç Á¤È­
     _seen_scene_narr: list = []
     _dedup_count = 0
     for _sc in result if isinstance(result, list) else []:
         _sn = _sc.get("narration", "").strip()
         if not _sn:
             continue
-        # 앞 40자 기반 유사도 체크
+        # ¾Õ 40ÀÚ ±â¹Ý À¯»çµµ Ã¼Å©
         _sp = _sn[:40]
         _dup_sc = any(_sp == _s[:40] for _s in _seen_scene_narr)
         if _dup_sc:
-            # 중복 발견 시 짧은 suffix 붙여 구분
-            _sc["narration"] = _sn + f" (추가 정보: {_sc.get('scene_id', '?')} 장면 참조)"
+            # Áßº¹ ¹ß°ß ½Ã ÂªÀº suffix ºÙ¿© ±¸ºÐ
+            _sc["narration"] = _sn + f" (Ãß°¡ Á¤º¸: {_sc.get('scene_id', '?')} Àå¸é ÂüÁ¶)"
             _dedup_count += 1
-            logger.warning(f"[v15.95] 씬 중복 나레이션 감지: {_sc.get('scene_id','?')} — suffix 추가")
+            logger.warning(f"[v15.95] ¾À Áßº¹ ³ª·¹ÀÌ¼Ç °¨Áö: {_sc.get('scene_id','?')} ? suffix Ãß°¡")
         else:
             _seen_scene_narr.append(_sn)
     if _dedup_count:
-        logger.info(f"[v15.95] 씬 중복 나레이션 {_dedup_count}개 수정됨")
-    # [v15.98] strip section labels from narration (e.g. '섹션1:', 'Section 1:')
+        logger.info(f"[v15.95] ¾À Áßº¹ ³ª·¹ÀÌ¼Ç {_dedup_count}°³ ¼öÁ¤µÊ")
+    # [v15.98] strip section labels from narration (e.g. '¼½¼Ç1:', 'Section 1:')
     _lp = __import__('re').compile(
         r'^\s*('
-        r'섹션\s*\d+\s*[:\uFF1A]\s*|'
-        r'섹션원\s*[:\uFF1A]\s*|'
-        r'섹션이\s*[:\uFF1A]\s*|'
-        r'섹션삼\s*[:\uFF1A]\s*|'
-        r'제\s*\d+\s*섹션\s*[:\uFF1A]\s*|'
+        r'¼½¼Ç\s*\d+\s*[:\uFF1A]\s*|'
+        r'¼½¼Ç¿ø\s*[:\uFF1A]\s*|'
+        r'¼½¼ÇÀÌ\s*[:\uFF1A]\s*|'
+        r'¼½¼Ç»ï\s*[:\uFF1A]\s*|'
+        r'Á¦\s*\d+\s*¼½¼Ç\s*[:\uFF1A]\s*|'
         r'Section\s*\d+\s*[:\uFF1A]\s*|'
-        r'오프닙\s*[:\uFF1A]\s*|'
-        r'클로징\s*[:\uFF1A]\s*'
+        r'¿ÀÇÁ´Õ\s*[:\uFF1A]\s*|'
+        r'Å¬·ÎÂ¡\s*[:\uFF1A]\s*'
         r')', __import__('re').IGNORECASE
     )
     _lfix = 0
@@ -8401,13 +8422,13 @@ JSON:
             _lfix += 1
     if _lfix:
         logger.info('[v15.98] label stripped: %d' % _lfix)
-    logger.info(f"[AUTO] 씬 분할 완료: {len(result)}개 씬")
+    logger.info(f"[AUTO] ¾À ºÐÇÒ ¿Ï·á: {len(result)}°³ ¾À")
     return result
 
 
 
 # ==================================================
-# [PRO] ElevenLabs TTS (유료 고품질 / Edge TTS 폴백)
+# [PRO] ElevenLabs TTS (À¯·á °íÇ°Áú / Edge TTS Æú¹é)
 # ==================================================
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
@@ -8430,15 +8451,15 @@ async def generate_tts_elevenlabs(text: str, output_path: Path, voice_id: str = 
             resp = await client.post(url, json=payload, headers=headers)
             if resp.status_code == 200:
                 output_path.write_bytes(resp.content)
-                logger.info(f"[ElevenLabs] TTS 완료: {output_path.name}")
+                logger.info(f"[ElevenLabs] TTS ¿Ï·á: {output_path.name}")
                 return True
-            logger.warning(f"[ElevenLabs] 오류 {resp.status_code}: {resp.text[:200]}")
+            logger.warning(f"[ElevenLabs] ¿À·ù {resp.status_code}: {resp.text[:200]}")
     except Exception as e:
-        logger.warning(f"[ElevenLabs] 예외: {e}")
+        logger.warning(f"[ElevenLabs] ¿¹¿Ü: {e}")
     return False
 
 # ==================================================
-# [PRO] BGM 자동 다운로드 (Freesound CC0)
+# [PRO] BGM ÀÚµ¿ ´Ù¿î·Îµå (Freesound CC0)
 # ==================================================
 FREESOUND_API_KEY = os.getenv("FREESOUND_API_KEY", "")
 _BGM_TONE_QUERIES = {
@@ -8449,21 +8470,21 @@ _BGM_TONE_QUERIES = {
 }
 
 async def auto_download_bgm(tone: str, output_path: Path, duration_sec: int = 300) -> bool:
-    """BGM 자동 다운로드 — Freesound > Jamendo > generative ambient 순 폴백"""
-    # 캐시 재사용
+    """BGM ÀÚµ¿ ´Ù¿î·Îµå ? Freesound > Jamendo > generative ambient ¼ø Æú¹é"""
+    # Ä³½Ã Àç»ç¿ë
     if output_path.exists() and output_path.stat().st_size > 100_000:
-        logger.info(f"[BGM] 캐시 사용: {output_path.name}")
+        logger.info(f"[BGM] Ä³½Ã »ç¿ë: {output_path.name}")
         return True
     existing = list(BGM_DIR.glob(f"auto_bgm_{tone}*.mp3"))
     if existing and existing[0].stat().st_size > 100_000:
         import shutil as _sh_bgm; _sh_bgm.copy2(existing[0], output_path)
-        logger.info(f"[BGM] 기존 파일 재사용: {existing[0].name}")
+        logger.info(f"[BGM] ±âÁ¸ ÆÄÀÏ Àç»ç¿ë: {existing[0].name}")
         return True
 
     query = _BGM_TONE_QUERIES.get(tone, _BGM_TONE_QUERIES["default"])
 
     async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-        # ── 1차: Freesound ───────────────────────────────────────
+        # ¦¡¦¡ 1Â÷: Freesound ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         if FREESOUND_API_KEY:
             try:
                 resp = await client.get("https://freesound.org/apiv2/search/text/", params={
@@ -8480,12 +8501,12 @@ async def auto_download_bgm(tone: str, output_path: Path, duration_sec: int = 30
                             dl = await client.get(preview, timeout=60.0)
                             if dl.status_code == 200 and len(dl.content) > 50_000:
                                 output_path.write_bytes(dl.content)
-                                logger.info(f"[BGM] Freesound 완료: {results[0]['name']}")
+                                logger.info(f"[BGM] Freesound ¿Ï·á: {results[0]['name']}")
                                 return True
             except Exception as e:
-                logger.warning(f"[BGM] Freesound 실패: {e}")
+                logger.warning(f"[BGM] Freesound ½ÇÆÐ: {e}")
 
-        # ── 2차: Jamendo (무료 공개 API, 키 불필요) ─────────────
+        # ¦¡¦¡ 2Â÷: Jamendo (¹«·á °ø°³ API, Å° ºÒÇÊ¿ä) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         _jamendo_tags = {
             "news": "corporate", "tech": "electronic", "economy": "ambient+corporate",
             "uplifting": "happy+upbeat", "serious": "dramatic+cinematic", "default": "ambient",
@@ -8513,12 +8534,12 @@ async def auto_download_bgm(tone: str, output_path: Path, duration_sec: int = 30
                         dl2 = await client.get(audio_url, timeout=90.0)
                         if dl2.status_code == 200 and len(dl2.content) > 50_000:
                             output_path.write_bytes(dl2.content)
-                            logger.info(f"[BGM] Jamendo 완료: {tracks[0].get('name','?')}")
+                            logger.info(f"[BGM] Jamendo ¿Ï·á: {tracks[0].get('name','?')}")
                             return True
         except Exception as e2:
-            logger.warning(f"[BGM] Jamendo 실패: {e2}")
+            logger.warning(f"[BGM] Jamendo ½ÇÆÐ: {e2}")
 
-    # ── 3차: ffmpeg generative ambient (항상 성공) ─────────────
+    # ¦¡¦¡ 3Â÷: ffmpeg generative ambient (Ç×»ó ¼º°ø) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
     try:
         _dur = max(180, duration_sec)
         _tone_filter = {
@@ -8538,16 +8559,16 @@ async def auto_download_bgm(tone: str, output_path: Path, duration_sec: int = 30
             str(output_path),
         ]
         if await run_ffmpeg_async(cmd_gen, timeout=60.0):
-            logger.info(f"[BGM] generative ambient 생성: {output_path.name} ({_dur}s)")
+            logger.info(f"[BGM] generative ambient »ý¼º: {output_path.name} ({_dur}s)")
             return True
     except Exception as e3:
-        logger.warning(f"[BGM] generative 실패: {e3}")
+        logger.warning(f"[BGM] generative ½ÇÆÐ: {e3}")
 
-    logger.warning("[BGM] 모든 소스 실패 — BGM 없이 진행")
+    logger.warning("[BGM] ¸ðµç ¼Ò½º ½ÇÆÐ ? BGM ¾øÀÌ ÁøÇà")
     return False
 
 async def auto_plan_voice(scenes_data: List[Dict], global_tone: str) -> List[Dict]:
-    """[AUTO 5/12] 씬별 나레이션 톤/속도/피치 설정"""
+    """[AUTO 5/12] ¾Àº° ³ª·¹ÀÌ¼Ç Åæ/¼Óµµ/ÇÇÄ¡ ¼³Á¤"""
     voice_plan = []
     global_voice = TONE_VOICE_MAP.get(global_tone, {"rate": "-5%", "pitch": "+0Hz"})
 
@@ -8563,12 +8584,12 @@ async def auto_plan_voice(scenes_data: List[Dict], global_tone: str) -> List[Dic
             "pause_comma_ms": PAUSE_COMMA_MS,
             "emotion": tone_key,
         })
-    logger.info(f"[AUTO] 나레이션 톤 설정 완료: {len(voice_plan)}개 씬")
+    logger.info(f"[AUTO] ³ª·¹ÀÌ¼Ç Åæ ¼³Á¤ ¿Ï·á: {len(voice_plan)}°³ ¾À")
     return voice_plan
 
 
 def auto_merge_voice_into_scenes(scenes_data: List[Dict], voice_plan: List[Dict]) -> List[Scene]:
-    """씬 데이터 + 음성 계획 → Scene 모델 리스트"""
+    """¾À µ¥ÀÌÅÍ + À½¼º °èÈ¹ ¡æ Scene ¸ðµ¨ ¸®½ºÆ®"""
     voice_map = {v["scene_id"]: v for v in voice_plan}
     merged = []
     for s in scenes_data:
@@ -8581,7 +8602,7 @@ def auto_merge_voice_into_scenes(scenes_data: List[Dict], voice_plan: List[Dict]
         _vkws = s.get("visual_keywords", []) or []
         _bkws = s.get("backup_keywords", []) or []
         _primary_kw = _vkws[0] if _vkws else " ".join(s.get("visual_intent","business economy").split()[:3])
-        _alt_kws = _vkws[1:] + _bkws  # [v15.69] alt_keywords 풀 채우기
+        _alt_kws = _vkws[1:] + _bkws  # [v15.69] alt_keywords Ç® Ã¤¿ì±â
         _narration_en = s.get("narration_en", "") or ""
         if not _narration_en and s.get("visual_intent"):
             _narration_en = s.get("visual_intent","") + ", " + ", ".join(_vkws[:2]) + ", cinematic footage, professional"
@@ -8593,13 +8614,13 @@ def auto_merge_voice_into_scenes(scenes_data: List[Dict], voice_plan: List[Dict]
             narration=narration,
             visual_intent=s.get("visual_intent", ""),
             visual_keywords=_vkws,
-            alt_keywords=_alt_kws,          # [v15.69] 이제 실제로 채워짐
-            narration_en=_narration_en,     # [v15.69] Kling T2V 프롬프트
+            alt_keywords=_alt_kws,          # [v15.69] ÀÌÁ¦ ½ÇÁ¦·Î Ã¤¿öÁü
+            narration_en=_narration_en,     # [v15.69] Kling T2V ÇÁ·ÒÇÁÆ®
             tone_profile=s.get("tone_profile", "main"),
             visual_pacing=s.get("preferred_motion", "slow_zoom_in"),
         )
         merged.append(scene)
-    # [v15.79] 키워드 중복 제거 — 동일 keyword 씬 시각적 변형
+    # [v15.79] Å°¿öµå Áßº¹ Á¦°Å ? µ¿ÀÏ keyword ¾À ½Ã°¢Àû º¯Çü
     _seen_kw79 = {}
     _VV79 = {
         "business meeting": ["executive boardroom presentation","startup coworking team discussion","entrepreneur laptop office work","business handshake deal closing","corporate strategy whiteboard"],
@@ -8629,19 +8650,19 @@ def auto_merge_voice_into_scenes(scenes_data: List[Dict], voice_plan: List[Dict]
             _sc79.keyword = _nk79[:80]
             if _sc79.visual_keywords:
                 _sc79.visual_keywords[0] = _nk79
-            logger.info(f"[v15.79] 중복kw 변형: {_kw79!r} -> {_nk79!r}")
-    # [v15.80] 타임라인 정규화 - 씬별 절대 타임코드 + 길이 보정
-    _MIN_DUR80 = 4.0    # 나레이션 씬 최소 길이(초)
-    _MAX_DUR80 = 30.0   # 씬 최대 길이(초)
-    _SUB_OFF80 = 0.1    # 자막 시작/종료 오프셋
+            logger.info(f"[v15.79] Áßº¹kw º¯Çü: {_kw79!r} -> {_nk79!r}")
+    # [v15.80] Å¸ÀÓ¶óÀÎ Á¤±ÔÈ­ - ¾Àº° Àý´ë Å¸ÀÓÄÚµå + ±æÀÌ º¸Á¤
+    _MIN_DUR80 = 4.0    # ³ª·¹ÀÌ¼Ç ¾À ÃÖ¼Ò ±æÀÌ(ÃÊ)
+    _MAX_DUR80 = 30.0   # ¾À ÃÖ´ë ±æÀÌ(ÃÊ)
+    _SUB_OFF80 = 0.1    # ÀÚ¸· ½ÃÀÛ/Á¾·á ¿ÀÇÁ¼Â
     _cursor80  = 0.0
     for _sc80 in merged:
-        # 1. 길이 보정
+        # 1. ±æÀÌ º¸Á¤
         _dur80 = float(_sc80.duration_seconds or 5.0)
         _dur80 = max(_dur80, _MIN_DUR80)
         _dur80 = min(_dur80, _MAX_DUR80)
         _sc80.duration_seconds = round(_dur80, 2)
-        # 2. 절대 타임코드
+        # 2. Àý´ë Å¸ÀÓÄÚµå
         _t0_80 = round(_cursor80, 3)
         _t1_80 = round(_cursor80 + _dur80, 3)
         _sc80.timing = {
@@ -8652,13 +8673,13 @@ def auto_merge_voice_into_scenes(scenes_data: List[Dict], voice_plan: List[Dict]
             'sub_end':   round(_t1_80 - _SUB_OFF80, 3),
         }
         _cursor80 = _t1_80
-        logger.debug(f'[v15.80] 타임라인: {_sc80.scene_id} {_t0_80:.1f}~{_t1_80:.1f}s ({_dur80:.1f}s)')
-    logger.info(f'[v15.80] 타임라인 정규화 완료: 총 {_cursor80:.1f}s / {len(merged)}씬')
-    logger.info(f"[AUTO] Scene 모델 변환 완료: {len(merged)}개")
+        logger.debug(f'[v15.80] Å¸ÀÓ¶óÀÎ: {_sc80.scene_id} {_t0_80:.1f}~{_t1_80:.1f}s ({_dur80:.1f}s)')
+    logger.info(f'[v15.80] Å¸ÀÓ¶óÀÎ Á¤±ÔÈ­ ¿Ï·á: ÃÑ {_cursor80:.1f}s / {len(merged)}¾À')
+    logger.info(f"[AUTO] Scene ¸ðµ¨ º¯È¯ ¿Ï·á: {len(merged)}°³")
     return merged
 
 
-# ── 5. 품질 검사 ────────────────────────────────────────────────────────────
+# ¦¡¦¡ 5. Ç°Áú °Ë»ç ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 
 async def auto_run_quality_check(
     job_id: str,
@@ -8666,13 +8687,13 @@ async def auto_run_quality_check(
     scenes: List,
     ntl_timeline: Dict,
 ) -> Dict:
-    """[AUTO 10/12] 품질 검사 → quality_score 100점 기준"""
+    """[AUTO 10/12] Ç°Áú °Ë»ç ¡æ quality_score 100Á¡ ±âÁØ"""
     import glob as _glob
     score = 0
     warnings = []
     errors = []
 
-    # ── timeline_report.json 우선 로드 (process_video_creation 렌더 후 최신 데이터) ──
+    # ¦¡¦¡ timeline_report.json ¿ì¼± ·Îµå (process_video_creation ·»´õ ÈÄ ÃÖ½Å µ¥ÀÌÅÍ) ¦¡¦¡
     tr_path = JOBS_DIR / job_id / "timeline_report.json"
     if tr_path.exists():
         try:
@@ -8684,14 +8705,14 @@ async def auto_run_quality_check(
     else:
         scene_timings = ntl_timeline.get("scene_timings", [])
 
-    # 1. 나레이션 정상 생성 (20점)
+    # 1. ³ª·¹ÀÌ¼Ç Á¤»ó »ý¼º (20Á¡)
     mp3_path = TMP_DIR / f"{job_id}.mp3"
     if mp3_path.exists() and mp3_path.stat().st_size > 1024:
         score += 20
     else:
-        warnings.append("TTS 오디오 파일 없거나 비정상")
+        warnings.append("TTS ¿Àµð¿À ÆÄÀÏ ¾ø°Å³ª ºñÁ¤»ó")
 
-    # 2. 영상-나레이션 매칭 점수 (25점)
+    # 2. ¿µ»ó-³ª·¹ÀÌ¼Ç ¸ÅÄª Á¡¼ö (25Á¡)
     if scene_timings:
         matched = sum(1 for st in scene_timings
                       if st.get("narration_end", 0) > st.get("narration_start", 0))
@@ -8699,13 +8720,13 @@ async def auto_run_quality_check(
         match_pts = int(match_ratio * 25)
         score += match_pts
         if match_ratio < 0.8:
-            warnings.append(f"나레이션-영상 매칭 {matched}/{len(scene_timings)}개 씬")
+            warnings.append(f"³ª·¹ÀÌ¼Ç-¿µ»ó ¸ÅÄª {matched}/{len(scene_timings)}°³ ¾À")
     else:
         score += 12  # partial
 
-    # 3. 자막 생성 (15점) — 경로 다중 검사
+    # 3. ÀÚ¸· »ý¼º (15Á¡) ? °æ·Î ´ÙÁß °Ë»ç
     longform_path = output_files.get("longform", "")
-    # 검색 경로: /data/tmp/{id}.ass, /data/tmp/{id}.srt, /data/tmp/{id}/*.ass|srt
+    # °Ë»ö °æ·Î: /data/tmp/{id}.ass, /data/tmp/{id}.srt, /data/tmp/{id}/*.ass|srt
     _sub_patterns = [
         str(TMP_DIR / f"{job_id}.ass"),
         str(TMP_DIR / f"{job_id}.srt"),
@@ -8718,38 +8739,38 @@ async def auto_run_quality_check(
     if _sub_found:
         score += 15
     else:
-        warnings.append("자막 파일 없음")
+        warnings.append("ÀÚ¸· ÆÄÀÏ ¾øÀ½")
         score += 5
 
-    # 4. 오디오/BGM 밸런스 (10점)
+    # 4. ¿Àµð¿À/BGM ¹ë·±½º (10Á¡)
     if longform_path and Path(longform_path).exists():
         out_dur = get_video_duration(Path(longform_path))
         if out_dur and out_dur > 10:
             score += 10
         else:
-            warnings.append(f"영상 길이 비정상: {out_dur}초")
+            warnings.append(f"¿µ»ó ±æÀÌ ºñÁ¤»ó: {out_dur}ÃÊ")
     else:
-        errors.append("출력 영상 파일 없음")
+        errors.append("Ãâ·Â ¿µ»ó ÆÄÀÏ ¾øÀ½")
 
-    # 5. 영상 품질/해상도 (10점)
+    # 5. ¿µ»ó Ç°Áú/ÇØ»óµµ (10Á¡)
     if longform_path and Path(longform_path).exists():
         size_mb = Path(longform_path).stat().st_size / 1024 / 1024
         if size_mb > 5:
             score += 10
         elif size_mb > 1:
             score += 6
-            warnings.append(f"출력 파일 크기 작음: {size_mb:.1f}MB")
+            warnings.append(f"Ãâ·Â ÆÄÀÏ Å©±â ÀÛÀ½: {size_mb:.1f}MB")
         else:
-            errors.append(f"출력 파일 너무 작음: {size_mb:.1f}MB")
+            errors.append(f"Ãâ·Â ÆÄÀÏ ³Ê¹« ÀÛÀ½: {size_mb:.1f}MB")
 
-    # 6. 중복 영상 없음 (5점) [v16.3] ws_ 모드 = assets/ws_*.mp4 파일 수로 계산
+    # 6. Áßº¹ ¿µ»ó ¾øÀ½ (5Á¡) [v16.3] ws_ ¸ðµå = assets/ws_*.mp4 ÆÄÀÏ ¼ö·Î °è»ê
     scene_assets = [s.asset_url for s in scenes if getattr(s, "asset_url", None)]
     ws_count = sum(1 for s in scenes if (s.scene_id or "").startswith("ws_"))
-    # ws_ 씬은 quality_check에 원본 씬이 전달되므로 tmp/assets 폴더에서 직접 판별
+    # ws_ ¾ÀÀº quality_check¿¡ ¿øº» ¾ÀÀÌ Àü´ÞµÇ¹Ç·Î tmp/assets Æú´õ¿¡¼­ Á÷Á¢ ÆÇº°
     _ws_tmp_count = len(list((TMP_DIR / job_id).glob("scene_ws_*_final.mp4"))) if job_id else 0
     if _ws_tmp_count > ws_count: ws_count = _ws_tmp_count
     if ws_count > len(scenes) * 0.5 or _ws_tmp_count > 10:
-        # ws_ 리빌드: assets/ws_*.mp4 실제 파일(alt 제외)로 고유 자산 수 계산
+        # ws_ ¸®ºôµå: assets/ws_*.mp4 ½ÇÁ¦ ÆÄÀÏ(alt Á¦¿Ü)·Î °íÀ¯ ÀÚ»ê ¼ö °è»ê
         _ws_assets_dir = JOBS_DIR / job_id / "assets" if job_id else None
         if _ws_assets_dir and _ws_assets_dir.exists():
             _ws_main = [f for f in _ws_assets_dir.glob("ws_*.mp4") if "_alt" not in f.name]
@@ -8763,17 +8784,17 @@ async def auto_run_quality_check(
     if unique_ratio >= 0.7:
         score += 5
     else:
-        warnings.append(f"자산 중복 비율 높음: {(1-unique_ratio)*100:.0f}%")
+        warnings.append(f"ÀÚ»ê Áßº¹ ºñÀ² ³ôÀ½: {(1-unique_ratio)*100:.0f}%")
 
-    # 7. 렌더링 오류 없음 (10점)
+    # 7. ·»´õ¸µ ¿À·ù ¾øÀ½ (10Á¡)
     if not errors:
         score += 10
 
-    # 8. 썸네일/메타데이터 (5점)
+    # 8. ½æ³×ÀÏ/¸ÞÅ¸µ¥ÀÌÅÍ (5Á¡)
     if output_files.get("thumbnail") and Path(output_files["thumbnail"]).exists():
         score += 5
     else:
-        warnings.append("썸네일 없음")
+        warnings.append("½æ³×ÀÏ ¾øÀ½")
 
     passed = score >= 75 and not errors
     result = {
@@ -8799,7 +8820,7 @@ async def auto_run_quality_check(
             "failed"
         ),
     }
-    logger.info(f"[AUTO] 품질 검사: {score}점, {result['upload_decision']}")
+    logger.info(f"[AUTO] Ç°Áú °Ë»ç: {score}Á¡, {result['upload_decision']}")
     return result
 async def auto_generate_youtube_metadata(
     topic: str,
@@ -8808,39 +8829,39 @@ async def auto_generate_youtube_metadata(
     duration_sec: int,
     privacy_status: str = "private",
 ) -> Dict:
-    """[AUTO 11/12] YouTube 제목·설명·태그·썸네일 텍스트 자동 생성"""
+    """[AUTO 11/12] YouTube Á¦¸ñ¡¤¼³¸í¡¤ÅÂ±×¡¤½æ³×ÀÏ ÅØ½ºÆ® ÀÚµ¿ »ý¼º"""
     total_min = duration_sec // 60
     total_sec_remain = duration_sec % 60
-    prompt = f"""당신은 유튜브 SEO 전문가. 조회수 극대화 메타데이터를 생성하세요.
+    prompt = f"""´ç½ÅÀº À¯Æ©ºê SEO Àü¹®°¡. Á¶È¸¼ö ±Ø´ëÈ­ ¸ÞÅ¸µ¥ÀÌÅÍ¸¦ »ý¼ºÇÏ¼¼¿ä.
 
-주제: {topic} | 제목초안: {script.get('title', topic)}
-언어: {language} | 길이: {total_min}분 {total_sec_remain}초
+ÁÖÁ¦: {topic} | Á¦¸ñÃÊ¾È: {script.get('title', topic)}
+¾ð¾î: {language} | ±æÀÌ: {total_min}ºÐ {total_sec_remain}ÃÊ
 
-제목규칙 [v15.81] — 아래 7가지 공식 중 주제에 맞는 1개 선택:
-  1. 숫자형:    "N가지 [주제] 비밀 (아무도 안 알려주는)"
-  2. 궁금증 갭: "왜 갑자기 [현상]이 시작됐나? 충격 이유"
-  3. 경고형:    "지금 당장 [행동]하지 않으면 늦습니다"
-  4. 전환 약속: "[시간] 만에 [결과] 만든 [방법]"
-  5. 비교형:    "[A] vs [B], 진짜 승자는?"
-  6. 충격 공개: "아무도 몰랐던 [주제]의 [충격적 사실]"
-  7. 연도+행동: "2026년, 지금 [주제] [행동]해야 하는 이유"
-  규칙: 파워워드 필수 + 숫자 포함 + 30~40자 + CTR 목표 7%+
-설명규칙: 첫줄요약 + 타임스탬프 + 해시태그5개 + CTA
-태그: 30개 (주제+관련+롱테일)
+Á¦¸ñ±ÔÄ¢ [v15.81] ? ¾Æ·¡ 7°¡Áö °ø½Ä Áß ÁÖÁ¦¿¡ ¸Â´Â 1°³ ¼±ÅÃ:
+  1. ¼ýÀÚÇü:    "N°¡Áö [ÁÖÁ¦] ºñ¹Ð (¾Æ¹«µµ ¾È ¾Ë·ÁÁÖ´Â)"
+  2. ±Ã±ÝÁõ °¸: "¿Ö °©ÀÚ±â [Çö»ó]ÀÌ ½ÃÀÛµÆ³ª? Ãæ°Ý ÀÌÀ¯"
+  3. °æ°íÇü:    "Áö±Ý ´çÀå [Çàµ¿]ÇÏÁö ¾ÊÀ¸¸é ´Ê½À´Ï´Ù"
+  4. ÀüÈ¯ ¾à¼Ó: "[½Ã°£] ¸¸¿¡ [°á°ú] ¸¸µç [¹æ¹ý]"
+  5. ºñ±³Çü:    "[A] vs [B], ÁøÂ¥ ½ÂÀÚ´Â?"
+  6. Ãæ°Ý °ø°³: "¾Æ¹«µµ ¸ô¶ú´ø [ÁÖÁ¦]ÀÇ [Ãæ°ÝÀû »ç½Ç]"
+  7. ¿¬µµ+Çàµ¿: "2026³â, Áö±Ý [ÁÖÁ¦] [Çàµ¿]ÇØ¾ß ÇÏ´Â ÀÌÀ¯"
+  ±ÔÄ¢: ÆÄ¿ö¿öµå ÇÊ¼ö + ¼ýÀÚ Æ÷ÇÔ + 30~40ÀÚ + CTR ¸ñÇ¥ 7%+
+¼³¸í±ÔÄ¢: Ã¹ÁÙ¿ä¾à + Å¸ÀÓ½ºÅÆÇÁ + ÇØ½ÃÅÂ±×5°³ + CTA
+ÅÂ±×: 30°³ (ÁÖÁ¦+°ü·Ã+·ÕÅ×ÀÏ)
 
 JSON:
 {{
   "youtube": {{
-    "title": "파워워드 포함 30~40자 제목",
-    "description": "첫줄요약\n\n⏱️ 타임스탬프\n00:00 인트로\n01:00 섹션1\n\n#태그1 #태그2 #태그3\n\n👍 좋아요와 구독은 큰 힘이 됩니다!",
-    "tags": ["태그1","태그2","태그30"],
+    "title": "ÆÄ¿ö¿öµå Æ÷ÇÔ 30~40ÀÚ Á¦¸ñ",
+    "description": "Ã¹ÁÙ¿ä¾à\n\n?? Å¸ÀÓ½ºÅÆÇÁ\n00:00 ÀÎÆ®·Î\n01:00 ¼½¼Ç1\n\n#ÅÂ±×1 #ÅÂ±×2 #ÅÂ±×3\n\n?? ÁÁ¾Æ¿ä¿Í ±¸µ¶Àº Å« ÈûÀÌ µË´Ï´Ù!",
+    "tags": ["ÅÂ±×1","ÅÂ±×2","ÅÂ±×30"],
     "category_id": "28",
     "privacy_status": "{privacy_status}",
     "made_for_kids": false
   }},
   "thumbnail": {{
-    "headline": "임팩트 10자",
-    "subline": "보조 15자"
+    "headline": "ÀÓÆÑÆ® 10ÀÚ",
+    "subline": "º¸Á¶ 15ÀÚ"
   }}
 }}"""
     result = await _call_llm_json(prompt, max_tokens=1000)
@@ -8849,7 +8870,7 @@ JSON:
         result = {
             "youtube": {
                 "title": title_short,
-                "description": f"{topic} 관련 영상입니다.",
+                "description": f"{topic} °ü·Ã ¿µ»óÀÔ´Ï´Ù.",
                 "tags": topic.split()[:5],
                 "category_id": "28",
                 "privacy_status": privacy_status,
@@ -8857,17 +8878,17 @@ JSON:
             },
             "thumbnail": {
                 "headline": topic[:15],
-                "subline": "자동 생성",
+                "subline": "ÀÚµ¿ »ý¼º",
             },
         }
-    logger.info(f"[AUTO] 메타데이터 생성: {result.get('youtube', {}).get('title', '')}")
+    logger.info(f"[AUTO] ¸ÞÅ¸µ¥ÀÌÅÍ »ý¼º: {result.get('youtube', {}).get('title', '')}")
     return result
 
 
-# ── 6. 메인 오케스트레이터 ────────────────────────────────────────────────────
+# ¦¡¦¡ 6. ¸ÞÀÎ ¿ÀÄÉ½ºÆ®·¹ÀÌÅÍ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 
 _AUTO_JOB_STORE: Dict[str, Dict] = {}
-_AUTO_TASKS: Dict[str, object] = {}  # task 참조 보관 (GC 방지)  # job_id → 상태 저장
+_AUTO_TASKS: Dict[str, object] = {}  # task ÂüÁ¶ º¸°ü (GC ¹æÁö)  # job_id ¡æ »óÅÂ ÀúÀå
 
 def _auto_set_status(job_id: str, step: str, progress: int, message: str = "",
                       extra: Optional[Dict] = None) -> None:
@@ -8889,59 +8910,59 @@ def _auto_set_status(job_id: str, step: str, progress: int, message: str = "",
 
 
 async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> None:
-    """완전 자동 주제→영상→업로드 파이프라인"""
+    """¿ÏÀü ÀÚµ¿ ÁÖÁ¦¡æ¿µ»ó¡æ¾÷·Îµå ÆÄÀÌÇÁ¶óÀÎ"""
     logger.info('[AUTO] pipeline ENTER: ' + job_id)
     project_id = request.project_id or job_id
     project_dir = JOBS_DIR / project_id
     project_dir.mkdir(parents=True, exist_ok=True)
 
-    _auto_set_status(job_id, "queued", 0, "파이프라인 초기화")
+    _auto_set_status(job_id, "queued", 0, "ÆÄÀÌÇÁ¶óÀÎ ÃÊ±âÈ­")
     _save_project_file(project_dir, "input_topic.json", request.model_dump())
 
     try:
-        # ── 1. 주제 분석 ──────────────────────────────────
-        _auto_set_status(job_id, "topic_analyzing", 5, "주제 분석 중")
+        # ¦¡¦¡ 1. ÁÖÁ¦ ºÐ¼® ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "topic_analyzing", 5, "ÁÖÁ¦ ºÐ¼® Áß")
         analysis = await auto_analyze_topic(
             request.topic, request.video_type, request.tone,
             request.target_duration_sec, request.audience, request.language
         )
         _save_project_file(project_dir, "analysis.json", analysis)
 
-        # ── 2. 자료 조사 ──────────────────────────────────
-        _auto_set_status(job_id, "researching", 10, "자료 조사 중")
+        # ¦¡¦¡ 2. ÀÚ·á Á¶»ç ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "researching", 10, "ÀÚ·á Á¶»ç Áß")
         research = await auto_collect_research(request.topic, analysis)
         _save_project_file(project_dir, "research_summary.json", research)
 
-        # ── 3. 원고 생성 ──────────────────────────────────
-        _auto_set_status(job_id, "script_generating", 18, "원고 생성 중")
-        sections = analysis.get("suggested_sections", ["서론", "본론 1", "본론 2", "결론"])
+        # ¦¡¦¡ 3. ¿ø°í »ý¼º ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "script_generating", 18, "¿ø°í »ý¼º Áß")
+        sections = analysis.get("suggested_sections", ["¼­·Ð", "º»·Ð 1", "º»·Ð 2", "°á·Ð"])
         script = await auto_generate_script(
             request.topic, research, request.tone,
             request.target_duration_sec, request.language, sections
         )
         _save_project_file(project_dir, "script.json", script)
 
-        # ── 4. 씬 분할 ──────────────────────────────────
-        _auto_set_status(job_id, "scene_building", 25, "씬 분할 중")
+        # ¦¡¦¡ 4. ¾À ºÐÇÒ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "scene_building", 25, "¾À ºÐÇÒ Áß")
         scenes_data = await auto_build_scenes(script, request.target_duration_sec, request.tone)
         _save_project_file(project_dir, "scenes_raw.json", scenes_data)
-        # [v15.72] 나레이션 품질 검증 — 짧으면 스크립트 섹션 직접 주입
+        # [v15.72] ³ª·¹ÀÌ¼Ç Ç°Áú °ËÁõ ? ÂªÀ¸¸é ½ºÅ©¸³Æ® ¼½¼Ç Á÷Á¢ ÁÖÀÔ
         _total_narr_chars = sum(len(s.get("narration", "")) for s in scenes_data)
-        _min_target_chars = int(request.target_duration_sec * 5.0)  # [v15.74] TTS 5.5자/초 기준
-        logger.info(f"[v15.72] 나레이션 검증: {_total_narr_chars}자 (목표 {_min_target_chars}자 이상)")
+        _min_target_chars = int(request.target_duration_sec * 5.0)  # [v15.74] TTS 5.5ÀÚ/ÃÊ ±âÁØ
+        logger.info(f"[v15.72] ³ª·¹ÀÌ¼Ç °ËÁõ: {_total_narr_chars}ÀÚ (¸ñÇ¥ {_min_target_chars}ÀÚ ÀÌ»ó)")
         if _total_narr_chars < _min_target_chars:
-            logger.warning("[v15.72] 나레이션 부족 → 섹션 직접 주입")
+            logger.warning("[v15.72] ³ª·¹ÀÌ¼Ç ºÎÁ· ¡æ ¼½¼Ç Á÷Á¢ ÁÖÀÔ")
             _hook_txt = script.get("hook", "")
             _closing_txt = script.get("closing", "")
             _sec_narrs = [s.get("narration", "") for s in script.get("sections", []) if s.get("narration", "")]
             _narr_pool = ([_hook_txt] if _hook_txt else []) + _sec_narrs + ([_closing_txt] if _closing_txt else [])
-            # 씬별로 스크립트 섹션 순서대로 매핑 (전체 교체)
+            # ¾Àº°·Î ½ºÅ©¸³Æ® ¼½¼Ç ¼ø¼­´ë·Î ¸ÅÇÎ (ÀüÃ¼ ±³Ã¼)
             _pool_len = len(_narr_pool)
-            # [v15.74] pool 1:1 매핑 (씬>pool 초과분 skip) + 기존 2배 이내 제한
+            # [v15.74] pool 1:1 ¸ÅÇÎ (¾À>pool ÃÊ°úºÐ skip) + ±âÁ¸ 2¹è ÀÌ³» Á¦ÇÑ
             for _si in range(min(_pool_len, len(scenes_data))):
                 _pool_narr = _narr_pool[_si]
                 _cur_len = len(scenes_data[_si].get("narration", ""))
-                _max_inject = max(_cur_len * 2, 70)  # 최소 70자 확보
+                _max_inject = max(_cur_len * 2, 70)  # ÃÖ¼Ò 70ÀÚ È®º¸
                 _inject_txt = _pool_narr[:_max_inject]
                 if len(_inject_txt) > _cur_len:
                     scenes_data[_si]["narration"] = _inject_txt
@@ -8958,54 +8979,54 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
                     if len(_inj2) > len(_c2):
                         scenes_data[_si2]["narration"] = _inj2
             _new_total = sum(len(s.get("narration", "")) for s in scenes_data)
-            logger.info(f"[v15.72] 주입 완료: {_total_narr_chars}자 → {_new_total}자")
+            logger.info(f"[v15.72] ÁÖÀÔ ¿Ï·á: {_total_narr_chars}ÀÚ ¡æ {_new_total}ÀÚ")
 
-        # ── 5. 나레이션 톤 설정 ──────────────────────────
-        _auto_set_status(job_id, "voice_planning", 30, "나레이션 톤 설정 중")
+        # ¦¡¦¡ 5. ³ª·¹ÀÌ¼Ç Åæ ¼³Á¤ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "voice_planning", 30, "³ª·¹ÀÌ¼Ç Åæ ¼³Á¤ Áß")
         voice_plan = await auto_plan_voice(scenes_data, request.tone)
         _save_project_file(project_dir, "voice_plan.json", voice_plan)
 
-        # ── 6. Scene 모델로 변환 ──────────────────────────
+        # ¦¡¦¡ 6. Scene ¸ðµ¨·Î º¯È¯ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         scenes = auto_merge_voice_into_scenes(scenes_data, voice_plan)
 
-        # scenes.json 저장 (기존 파이프라인 호환)
+        # scenes.json ÀúÀå (±âÁ¸ ÆÄÀÌÇÁ¶óÀÎ È£È¯)
         scenes_json = [s.model_dump() for s in scenes]
         _save_project_file(project_dir, "scenes.json", scenes_json)
-        # 기존 jobs/{job_id}/scenes.json 도 저장
+        # ±âÁ¸ jobs/{job_id}/scenes.json µµ ÀúÀå
         job_dir = JOBS_DIR / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
         (job_dir / "scenes.json").write_text(
             _json_auto.dumps(scenes_json, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
-        # ── 6b. BGM 자동 다운로드 ─────────────────────────────
-        _auto_set_status(job_id, "asset_searching", 36, "BGM 자동 다운로드 중")
+        # ¦¡¦¡ 6b. BGM ÀÚµ¿ ´Ù¿î·Îµå ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "asset_searching", 36, "BGM ÀÚµ¿ ´Ù¿î·Îµå Áß")
         bgm_tone = analysis.get("tone", request.tone or "") or "economy"
         _tone_key = {"news":"news","informative":"news","authoritative":"serious","tech":"tech","educational":"economy","uplifting":"uplifting","humorous":"humorous","humor":"humorous","funny":"humorous"}.get(bgm_tone.lower(), "economy")
         _bgm_path = BGM_DIR / f"auto_bgm_{_tone_key}.mp3"
         try:
             _bgm_ok = await auto_download_bgm(_tone_key, _bgm_path, duration_sec=int(request.target_duration_sec or 180))
             if _bgm_ok:
-                logger.info(f"[AUTO] BGM 준비: {_bgm_path.name}")
+                logger.info(f"[AUTO] BGM ÁØºñ: {_bgm_path.name}")
         except Exception as _bgm_err:
-            logger.warning(f"[AUTO] BGM 실패 (무시): {_bgm_err}")
+            logger.warning(f"[AUTO] BGM ½ÇÆÐ (¹«½Ã): {_bgm_err}")
 
-        # ── 7. 영상 자산 검색 ──────────────────────────────
-        _auto_set_status(job_id, "asset_searching", 38, "영상 자산 검색 중")
+        # ¦¡¦¡ 7. ¿µ»ó ÀÚ»ê °Ë»ö ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "asset_searching", 38, "¿µ»ó ÀÚ»ê °Ë»ö Áß")
         try:
             scenes = await search_and_download_assets(job_id, scenes)
         except Exception as e:
-            logger.warning(f"[AUTO] 자산 검색 실패 (fallback 계속): {e}")
+            logger.warning(f"[AUTO] ÀÚ»ê °Ë»ö ½ÇÆÐ (fallback °è¼Ó): {e}")
 
-        # [v15.92] 자산검색 후 scenes.json 재저장 (asset_url 반영)
+        # [v15.92] ÀÚ»ê°Ë»ö ÈÄ scenes.json ÀçÀúÀå (asset_url ¹Ý¿µ)
         _scenes_json_updated = [s.model_dump() for s in scenes]
         _save_project_file(project_dir, "scenes.json", _scenes_json_updated)
         (job_dir / "scenes.json").write_text(
             _json_auto.dumps(_scenes_json_updated, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
-        # ── 8. 자산 매칭 점수 계산 ───────────────────────
-        _auto_set_status(job_id, "asset_matching", 45, "영상-나레이션 매칭 중")
+        # ¦¡¦¡ 8. ÀÚ»ê ¸ÅÄª Á¡¼ö °è»ê ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "asset_matching", 45, "¿µ»ó-³ª·¹ÀÌ¼Ç ¸ÅÄª Áß")
         used_assets: set = set()
         visual_matching = []
         for scene in scenes:
@@ -9018,10 +9039,10 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
                 visual_matching.append({"scene_id": scene.scene_id, "score": score_v,
                                          "asset": scene.asset_url})
                 if score_v < 0.70 and (scene.visual_keywords or scene.keyword):
-                    # backup keyword로 재검색 시도
+                    # backup keyword·Î Àç°Ë»ö ½Ãµµ
                     backup_kw = scenes_data[scenes.index(scene)].get("backup_keywords", []) if scene in scenes else []
                     if backup_kw:
-                        logger.info(f"[AUTO] 씬 '{scene.scene_id}' 낮은 매칭({score_v:.2f}) → backup 재검색")
+                        logger.info(f"[AUTO] ¾À '{scene.scene_id}' ³·Àº ¸ÅÄª({score_v:.2f}) ¡æ backup Àç°Ë»ö")
                         scene.keyword = backup_kw[0]
                         try:
                             rescanned = await search_and_download_assets(job_id, [scene])
@@ -9033,18 +9054,18 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
                     used_assets.add(scene.asset_url)
         _save_project_file(project_dir, "visual_matching.json", visual_matching)
 
-        # ── 9. 나레이션 타임라인 빌드 ──────────────────────
-        _auto_set_status(job_id, "timeline_building", 52, "타임라인 구성 중")
-        # TTS 생성 (ensure_tts_assets)
-        _auto_set_status(job_id, "tts_generating", 52, "TTS 나레이션 생성 중")
-        # 전체 나레이션 텍스트를 각 씬 narration 필드에서 추출
+        # ¦¡¦¡ 9. ³ª·¹ÀÌ¼Ç Å¸ÀÓ¶óÀÎ ºôµå ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "timeline_building", 52, "Å¸ÀÓ¶óÀÎ ±¸¼º Áß")
+        # TTS »ý¼º (ensure_tts_assets)
+        _auto_set_status(job_id, "tts_generating", 52, "TTS ³ª·¹ÀÌ¼Ç »ý¼º Áß")
+        # ÀüÃ¼ ³ª·¹ÀÌ¼Ç ÅØ½ºÆ®¸¦ °¢ ¾À narration ÇÊµå¿¡¼­ ÃßÃâ
         for scene in scenes:
             if not scene.narration:
                 matched_raw = next((s for s in scenes_data if s.get("scene_id") == scene.scene_id), {})
                 scene.narration = matched_raw.get("narration", scene.description or scene.keyword)
 
-        # SSML 전처리: 씬 narration으로 TTS 요청 생성을 위한 full script 조합
-        # (기존 ensure_tts_assets 는 scenes.json의 narration 필드를 합쳐서 TTS 생성)
+        # SSML ÀüÃ³¸®: ¾À narrationÀ¸·Î TTS ¿äÃ» »ý¼ºÀ» À§ÇÑ full script Á¶ÇÕ
+        # (±âÁ¸ ensure_tts_assets ´Â scenes.jsonÀÇ narration ÇÊµå¸¦ ÇÕÃÄ¼­ TTS »ý¼º)
         class _FakeRequest:
             audio_url = None
             subtitle_text = None
@@ -9052,37 +9073,37 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
             add_bgm = True
             bgm_volume = 0.3
 
-        # ElevenLabs TTS 시도 → 실패 시 Edge TTS 폴백
+        # ElevenLabs TTS ½Ãµµ ¡æ ½ÇÆÐ ½Ã Edge TTS Æú¹é
         _el_text = " ".join(s.narration or "" for s in scenes if s.narration)
         _el_mp3 = TMP_DIR / f"{job_id}.mp3"
         _el_ok = False
         if ELEVENLABS_ENABLED and _el_text:
             _el_ok = await generate_tts_elevenlabs(_el_text, _el_mp3)
-            logger.info(f"[AUTO] ElevenLabs={'성공' if _el_ok else '실패→EdgeTTS폴백'}")
+            logger.info(f"[AUTO] ElevenLabs={'¼º°ø' if _el_ok else '½ÇÆÐ¡æEdgeTTSÆú¹é'}")
         if _el_ok:
-            # [v15.92] ElevenLabs 성공 → ensure_tts_assets 스킵 (SameFileError 방지)
+            # [v15.92] ElevenLabs ¼º°ø ¡æ ensure_tts_assets ½ºÅµ (SameFileError ¹æÁö)
             tts_ok = True
             tts_result = {"ok": True, "mp3_path": _el_mp3, "ts_path": None, "error_code": None, "retryable": False}
-            logger.info("[AUTO] ElevenLabs TTS 성공 → EdgeTTS 스킵")
+            logger.info("[AUTO] ElevenLabs TTS ¼º°ø ¡æ EdgeTTS ½ºÅµ")
         else:
             tts_result = await ensure_tts_assets(job_id, scenes, _FakeRequest())
             tts_ok = tts_result.get("ok", False)
             if not tts_ok:
-                logger.warning(f"[AUTO] TTS 실패: {tts_result.get('error_code')} — 계속 진행")
+                logger.warning(f"[AUTO] TTS ½ÇÆÐ: {tts_result.get('error_code')} ? °è¼Ó ÁøÇà")
 
-        _auto_set_status(job_id, "timeline_building", 58, "나레이션 타임라인 빌드 중")
+        _auto_set_status(job_id, "timeline_building", 58, "³ª·¹ÀÌ¼Ç Å¸ÀÓ¶óÀÎ ºôµå Áß")
         ts_path = TMP_DIR / f"{job_id}_timestamps.json"
         ntl_timeline = build_narration_timeline(job_id, scenes, ts_path)
         save_timeline_report(job_id, ntl_timeline, scenes)
         _save_project_file(project_dir, "narration_timeline.json", ntl_timeline)
 
-        # ── 10. 렌더링 ──────────────────────────────────
-        _auto_set_status(job_id, "rendering", 62, "영상 렌더링 중")
+        # ¦¡¦¡ 10. ·»´õ¸µ ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "rendering", 62, "¿µ»ó ·»´õ¸µ Áß")
         _is_shorts_mode = request.video_type == "shorts"
         render_request = VideoCreateRequest(
             job_id=job_id,
             mode=VideoMode.SHORTFORM if _is_shorts_mode else VideoMode.LONGFORM,
-            resolution="1080x1920" if _is_shorts_mode else "1920x1080",  # [v16.7] SHORTFORM 해상도 수정
+            resolution="1080x1920" if _is_shorts_mode else "1920x1080",  # [v16.7] SHORTFORM ÇØ»óµµ ¼öÁ¤
             fps=30,
             add_subtitles=True,
             add_bgm=True,
@@ -9091,16 +9112,16 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
             generate_shorts=(request.video_type in ("shorts", "both")),
             title=script.get("title", request.topic),
             audio_url=str(TMP_DIR / f"{job_id}.mp3") if (TMP_DIR / f"{job_id}.mp3").exists() else None,
-            scenes=[s.model_dump() for s in scenes],  # [v15.92] 자산검색 후 재계산
+            scenes=[s.model_dump() for s in scenes],  # [v15.92] ÀÚ»ê°Ë»ö ÈÄ Àç°è»ê
         )
         render_request_dict = render_request.model_dump()
         _save_project_file(project_dir, "render_request.json", render_request_dict)
 
-        # 기존 process_video_creation 호출
-        _auto_set_status(job_id, "rendering", 65, "영상 합성 중")
+        # ±âÁ¸ process_video_creation È£Ãâ
+        _auto_set_status(job_id, "rendering", 65, "¿µ»ó ÇÕ¼º Áß")
         await process_video_creation(job_id, render_request)
 
-        # 출력 파일 수집
+        # Ãâ·Â ÆÄÀÏ ¼öÁý
         output_files: Dict[str, str] = {}
         lf_path = LONGFORM_DIR / f"{job_id}.mp4"
         if lf_path.exists():
@@ -9109,25 +9130,25 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
         if th_path.exists():
             output_files["thumbnail"] = str(th_path)
 
-        # ── 11. 품질 검사 ──────────────────────────────
-        _auto_set_status(job_id, "quality_checking", 85, "품질 검사 중")
+        # ¦¡¦¡ 11. Ç°Áú °Ë»ç ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "quality_checking", 85, "Ç°Áú °Ë»ç Áß")
         quality = await auto_run_quality_check(job_id, output_files, scenes, ntl_timeline)
         _save_project_file(project_dir, "quality_report.json", quality)
 
-        # ── 12. 메타데이터 생성 ──────────────────────────
-        _auto_set_status(job_id, "thumbnail_generating", 88, "메타데이터 생성 중")
+        # ¦¡¦¡ 12. ¸ÞÅ¸µ¥ÀÌÅÍ »ý¼º ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
+        _auto_set_status(job_id, "thumbnail_generating", 88, "¸ÞÅ¸µ¥ÀÌÅÍ »ý¼º Áß")
         actual_dur = int(get_video_duration(Path(output_files.get("longform", ""))) or request.target_duration_sec)
         yt_meta = await auto_generate_youtube_metadata(
             request.topic, script, request.language, actual_dur, request.upload_privacy
         )
         _save_project_file(project_dir, "upload_metadata.json", yt_meta)
 
-        # ── 12b. 프로 썸네일 재생성 (YouTube 타이틀 적용) ──
+        # ¦¡¦¡ 12b. ÇÁ·Î ½æ³×ÀÏ Àç»ý¼º (YouTube Å¸ÀÌÆ² Àû¿ë) ¦¡¦¡
         yt_title = yt_meta.get("youtube", {}).get("title", request.topic) if isinstance(yt_meta, dict) else request.topic
         pro_thumb_path = THUMBNAILS_DIR / f"{job_id}_thumb.jpg"
         lf_path_for_thumb = Path(output_files.get("longform", ""))
         if lf_path_for_thumb.exists():
-            _auto_set_status(job_id, "thumbnail_generating", 90, "프로 썸네일 생성 중")
+            _auto_set_status(job_id, "thumbnail_generating", 90, "ÇÁ·Î ½æ³×ÀÏ »ý¼º Áß")
             pro_ok = generate_pro_thumbnail(
                 video_path=lf_path_for_thumb,
                 output_path=pro_thumb_path,
@@ -9136,30 +9157,30 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
             )
             if pro_ok and pro_thumb_path.exists():
                 output_files["thumbnail"] = str(pro_thumb_path)
-                logger.info(f"[AUTO] 프로 썸네일 적용: {pro_thumb_path}")
+                logger.info(f"[AUTO] ÇÁ·Î ½æ³×ÀÏ Àû¿ë: {pro_thumb_path}")
             else:
-                logger.warning("[AUTO] 프로 썸네일 실패 — 기존 썸네일 유지")
+                logger.warning("[AUTO] ÇÁ·Î ½æ³×ÀÏ ½ÇÆÐ ? ±âÁ¸ ½æ³×ÀÏ À¯Áö")
 
-        # ── 13. YouTube 업로드 (품질 통과 시) ─────────────
+        # ¦¡¦¡ 13. YouTube ¾÷·Îµå (Ç°Áú Åë°ú ½Ã) ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         youtube_url = None
         upload_status = "upload_skipped"
 
         if request.auto_upload and quality["quality_score"] >= request.quality_threshold:
-            # [v15.96] SEO 메타데이터 자동생성
+            # [v15.96] SEO ¸ÞÅ¸µ¥ÀÌÅÍ ÀÚµ¿»ý¼º
             try:
                 _seo_meta = await auto_generate_seo_metadata(
                     topic=topic, script=_script, scenes=_scenes,
                     tone=tone, language=language
                 )
                 state.mark("seo_metadata", _seo_meta)
-                # SEO 최적화 제목 반영
+                # SEO ÃÖÀûÈ­ Á¦¸ñ ¹Ý¿µ
                 if _seo_meta.get("title"):
                     _script["title"] = _seo_meta["title"]
-                logger.info(f"[v15.96] SEO 메타 완료: {_seo_meta.get('title','?')[:40]}")
+                logger.info(f"[v15.96] SEO ¸ÞÅ¸ ¿Ï·á: {_seo_meta.get('title','?')[:40]}")
             except Exception as _seo_err:
-                logger.warning(f"[v15.96] SEO 메타 실패: {_seo_err}")
+                logger.warning(f"[v15.96] SEO ¸ÞÅ¸ ½ÇÆÐ: {_seo_err}")
 
-            _auto_set_status(job_id, "uploading_private", 92, "YouTube private 업로드 중")
+            _auto_set_status(job_id, "uploading_private", 92, "YouTube private ¾÷·Îµå Áß")
             try:
                 upload_payload = {
                     "job_id": job_id,
@@ -9181,20 +9202,20 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
                         up_data = up_resp.json()
                         youtube_url = up_data.get("youtube_url") or up_data.get("url")
                         upload_status = "upload_completed"
-                        logger.info(f"[AUTO] YouTube 업로드 완료: {youtube_url}")
+                        logger.info(f"[AUTO] YouTube ¾÷·Îµå ¿Ï·á: {youtube_url}")
                     else:
                         upload_status = "upload_failed"
-                        logger.warning(f"[AUTO] 업로드 응답 {up_resp.status_code}: {up_resp.text[:200]}")
+                        logger.warning(f"[AUTO] ¾÷·Îµå ÀÀ´ä {up_resp.status_code}: {up_resp.text[:200]}")
             except Exception as ue:
                 upload_status = "upload_failed"
-                logger.warning(f"[AUTO] YouTube 업로드 실패: {ue}")
+                logger.warning(f"[AUTO] YouTube ¾÷·Îµå ½ÇÆÐ: {ue}")
         elif quality["quality_score"] < request.quality_threshold:
             upload_status = "upload_hold_quality"
-            logger.info(f"[AUTO] 품질 점수 {quality['quality_score']} < {request.quality_threshold} — 업로드 보류")
+            logger.info(f"[AUTO] Ç°Áú Á¡¼ö {quality['quality_score']} < {request.quality_threshold} ? ¾÷·Îµå º¸·ù")
 
-        # ── 완료 ────────────────────────────────────────
+        # ¦¡¦¡ ¿Ï·á ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
         final_status = "completed" if not quality["errors"] else "needs_review"
-        _auto_set_status(job_id, final_status, 100, "완료",
+        _auto_set_status(job_id, final_status, 100, "¿Ï·á",
             extra={
                 "quality_score": quality["quality_score"],
                 "quality_passed": quality["passed"],
@@ -9207,7 +9228,7 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
             }
         )
 
-        # 로그 저장
+        # ·Î±× ÀúÀå
         log_entry = {
             "completed_at": datetime.now().isoformat(),
             "quality_score": quality["quality_score"],
@@ -9215,20 +9236,20 @@ async def run_auto_topic_pipeline(job_id: str, request: "AutoTopicRequest") -> N
             "youtube_url": youtube_url,
         }
         _save_project_file(project_dir, "logs.jsonl", log_entry)
-        logger.info(f"[AUTO] 파이프라인 완료: job={job_id} quality={quality['quality_score']} upload={upload_status}")
+        logger.info(f"[AUTO] ÆÄÀÌÇÁ¶óÀÎ ¿Ï·á: job={job_id} quality={quality['quality_score']} upload={upload_status}")
 
     except Exception as e:
-        logger.exception(f"[AUTO] 파이프라인 실패: {e}")
+        logger.exception(f"[AUTO] ÆÄÀÌÇÁ¶óÀÎ ½ÇÆÐ: {e}")
         step = _AUTO_JOB_STORE.get(job_id, {}).get("status", "unknown")
         _auto_set_status(job_id, "failed", _AUTO_JOB_STORE.get(job_id, {}).get("progress", 0),
-            f"실패: {e}",
+            f"½ÇÆÐ: {e}",
             extra={"error": str(e), "failed_step": step, "retryable": True}
         )
         _save_project_file(project_dir, "error.json",
                            {"error": str(e), "step": step, "timestamp": datetime.now().isoformat()})
 
 
-# ── 7. FastAPI 엔드포인트 ────────────────────────────────────────────────────
+# ¦¡¦¡ 7. FastAPI ¿£µåÆ÷ÀÎÆ® ¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡¦¡
 
 @app.post("/api/auto/topic-job", tags=["Auto"])
 async def create_auto_topic_job(
@@ -9237,8 +9258,8 @@ async def create_auto_topic_job(
     _: str = Depends(verify_api_key),
 ):
     """
-    [v15.66.0] 주제 기반 완전 자동 영상 생성 + YouTube private 업로드.
-    주제·톤·길이만 입력하면 원고→씬→TTS→렌더링→업로드까지 자동 처리.
+    [v15.66.0] ÁÖÁ¦ ±â¹Ý ¿ÏÀü ÀÚµ¿ ¿µ»ó »ý¼º + YouTube private ¾÷·Îµå.
+    ÁÖÁ¦¡¤Åæ¡¤±æÀÌ¸¸ ÀÔ·ÂÇÏ¸é ¿ø°í¡æ¾À¡æTTS¡æ·»´õ¸µ¡æ¾÷·Îµå±îÁö ÀÚµ¿ Ã³¸®.
     """
     import uuid
     job_id = f"auto_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
@@ -9251,7 +9272,7 @@ async def create_auto_topic_job(
         "progress": 0,
         "topic": request.topic,
         "mode": request.mode,
-        "current_message": "대기 중",
+        "current_message": "´ë±â Áß",
         "quality_score": None,
         "output_files": {},
         "youtube_url": None,
@@ -9260,11 +9281,11 @@ async def create_auto_topic_job(
         "updated_at": datetime.now().isoformat(),
     }
 
-    # asyncio.create_task (Python 3.10+ running loop 직접 사용)
+    # asyncio.create_task (Python 3.10+ running loop Á÷Á¢ »ç¿ë)
     import asyncio as _aio
     try:
         _t = _aio.create_task(run_auto_topic_pipeline(job_id, request))
-        _AUTO_TASKS[job_id] = _t  # GC 방지
+        _AUTO_TASKS[job_id] = _t  # GC ¹æÁö
         def _log_done(t, jid=job_id):
             if t.cancelled():
                 logger.error('[AUTO] TASK CANCELLED: ' + jid)
@@ -9284,7 +9305,7 @@ async def create_auto_topic_job(
         status="queued",
         mode=request.mode,
         status_url=f"/api/auto/jobs/{job_id}/status",
-        message=f"자동 생성 파이프라인 시작: {request.topic[:50]}",
+        message=f"ÀÚµ¿ »ý¼º ÆÄÀÌÇÁ¶óÀÎ ½ÃÀÛ: {request.topic[:50]}",
     )
 
 
@@ -9293,7 +9314,7 @@ async def get_auto_job_status(
     job_id: str,
     _: str = Depends(verify_api_key),
 ):
-    """[v15.66.0] 자동 생성 작업 상태 조회"""
+    """[v15.66.0] ÀÚµ¿ »ý¼º ÀÛ¾÷ »óÅÂ Á¶È¸"""
     job = _AUTO_JOB_STORE.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"auto job '{job_id}' not found")
@@ -9325,7 +9346,7 @@ async def get_auto_job_status(
 
 @app.get("/api/auto/jobs", tags=["Auto"])
 async def list_auto_jobs(_: str = Depends(verify_api_key)):
-    """[v15.66.0] 자동 생성 작업 목록"""
+    """[v15.66.0] ÀÚµ¿ »ý¼º ÀÛ¾÷ ¸ñ·Ï"""
     jobs = []
     for jid, job in sorted(_AUTO_JOB_STORE.items(),
                             key=lambda x: x[1].get("created_at", ""), reverse=True):

@@ -13,8 +13,8 @@ import re
 import logging
 from typing import List, Optional
 import httpx
-from ..config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
-from ..models import Scene
+from config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
+from models import Scene
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ import random
 from pathlib import Path
 from typing import Optional
 
-from ..config import (
+from config import (
     VIDEO_PRESET, BGM_DIR, BGM_VOLUME_DURING_VOICE, BGM_VOLUME_DEFAULT
 )
 

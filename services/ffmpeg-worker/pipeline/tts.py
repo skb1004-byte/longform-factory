@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import httpx
-from ..models import Scene
+from models import Scene
 
 logger = logging.getLogger(__name__)
 

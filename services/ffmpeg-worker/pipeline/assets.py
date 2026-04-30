@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Any
 
 import httpx
 
-from ..config import PEXELS_API_KEY, PIXABAY_API_KEY, JOBS_DIR
+from config import PEXELS_API_KEY, PIXABAY_API_KEY, JOBS_DIR
 
 logger = logging.getLogger(__name__)
 

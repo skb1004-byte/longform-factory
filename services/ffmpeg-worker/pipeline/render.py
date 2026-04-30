@@ -13,7 +13,7 @@ import shutil
 from pathlib import Path
 from typing import Optional, List
 
-from ..config import (
+from config import (
     VIDEO_PRESET, VIDEO_CRF, TMP_DIR, OUTPUT_DIR,
     SCENE_HEAD_PAD_SEC, SCENE_TAIL_PAD_SEC, get_resolution
 )

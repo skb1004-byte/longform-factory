@@ -3036,9 +3036,18 @@ async def search_and_download_assets(job_id: str, scenes: List[Scene]) -> List[S
                 continue
             elif _cached_path_j and _cached_path_j in seen_urls:
                 logger.info(f"[J-CACHE-SKIP] \"{expanded_kw}\" HIT but duplicate ? bypass to fresh search")
+            # [v16.24B] Compound query: expand single-word kw with alt_keywords context
+            _alt_kws_ctx = list(getattr(scene, 'alt_keywords', []) or [])
+            if _alt_kws_ctx and len(expanded_kw.split()) == 1:
+                _ctx_word = _alt_kws_ctx[0].split()[0] if _alt_kws_ctx[0].split() else ''
+                _compound_kw = f'{expanded_kw} {_ctx_word}'.strip() if _ctx_word else expanded_kw
+            else:
+                _compound_kw = expanded_kw
+            if _compound_kw != expanded_kw:
+                logger.info(f'[v16.24B] compound query: "{expanded_kw}" -> "{_compound_kw}"')
             pexels_videos, pixabay_videos = await asyncio.gather(
-                get_pexels_videos(expanded_kw),
-                get_pixabay_videos(expanded_kw)
+                get_pexels_videos(_compound_kw),
+                get_pixabay_videos(_compound_kw)
             )  # [PATCH V-fix] Coverr/Mixkit API ¾øÀ½ ¡æ Á¦°Å
             # ºÎÁ¤ Å°¿öµå ÇÊÅÍ¸µ
             pexels_videos = [v for v in pexels_videos if not _is_negative(v, expanded_kw)]
@@ -6851,6 +6860,30 @@ async def process_video_creation(
             except Exception as _ln_err:
                 logger.warning(f"[AI-1] loudnorm ½ÇÆÐ (¹«½Ã): {_ln_err}")
             state.mark("audio_mixed", {"output": str(output_video)})
+
+            # [v16.24] Trim video to TTS audio duration (prevent silent tail)
+            try:
+                if tts_audio and tts_audio.exists():
+                    import subprocess as _subprocess
+                    _tts_dur_r = _subprocess.run(
+                        ['ffprobe', '-v', 'quiet', '-show_entries', 'format=duration',
+                         '-of', 'default=nw=1:nk=1', str(tts_audio)],
+                        capture_output=True, text=True, timeout=15
+                    ).stdout.strip()
+                    if _tts_dur_r and _tts_dur_r not in ('N/A', ''):
+                        _tts_dur = float(_tts_dur_r)
+                        _vid_dur = get_video_duration(output_video) or 0
+                        if _vid_dur > _tts_dur + 3.0:
+                            _trim_t = _tts_dur + 0.5
+                            _trim_out = output_video.with_name(output_video.stem + '_trim.mp4')
+                            _trim_cmd = ['ffmpeg', '-y', '-i', str(output_video),
+                                         '-t', str(_trim_t), '-c', 'copy', str(_trim_out)]
+                            if (await run_ffmpeg_async(_trim_cmd, timeout=120.0)
+                                    and _trim_out.exists() and _trim_out.stat().st_size > 4096):
+                                shutil.move(str(_trim_out), str(output_video))
+                                logger.info(f'[v16.24] TTS trim: {_vid_dur:.1f}s -> {_trim_t:.1f}s')
+            except Exception as _trim_err:
+                logger.warning(f'[v16.24] TTS trim skip: {_trim_err}')
             
             await update_job_status(job_id, JobStatus.PROCESSING, progress=70.0)
             
@@ -6921,12 +6954,12 @@ async def process_video_creation(
                 try:
                     srt_path = job_temp_dir / f"{job_id}_narration.srt"
                     srt_ok = False
+                    subtitle_path = None  # [v16.24] initialize before tts_timestamps block
+                    subtitle_type = None  # [v16.24] prevent NameError on resume
                     # [8] Whisper timestamps°¡ ÀÖÀ¸¸é ÃÖ¿ì¼± (´Ü¾î ´ÜÀ§ Á¤È®µµ + ¼±Çà)
                     if tts_timestamps and tts_timestamps.exists():
                         # [v15.59.0] subtitle_path / subtitle_type ¸í½Ã ºÐ¸®
                         ass_path = srt_path.with_suffix(".ass")
-                        subtitle_path = None
-                        subtitle_type = None
                         ass_ok = create_ass_karaoke_from_whisper(
                             tts_timestamps, ass_path,
                             speed_factor=getattr(request, "subtitle_speed", 0.0)

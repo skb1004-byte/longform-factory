@@ -9,7 +9,7 @@
 # [AJ] MARKER v1
 # [AI-pack2] MARKER v1
 """
-LongForm Factory - FFmpeg Worker v16.1.0 (ÀÚ»ê´Ù¾çÈ­+½ÌÅ©)
+LongForm Factory - FFmpeg Worker v16.21.0 (ÀÚ»ê´Ù¾çÈ­+½ÌÅ©)
 ·ÕÆû/¼ôÆû ÀÚµ¿È­ ¿µ»ó Á¦ÀÛ ¼­ºñ½º
 
 ÁÖ¿ä ±â´É:
@@ -7656,6 +7656,28 @@ async def startup_event():
         logger.info("[STARTUP] job queue worker started")
     except Exception as _qe:
         logger.warning(f"[STARTUP] queue worker start failed: {_qe}")
+    # [v16.23] pw_watcher: PW-Web queue monitor (fallback to Pexels/Pixabay when Playwright not installed)
+    try:
+        import threading as _threading
+        import pathlib as _pathlib
+        def _pw_watcher_loop():
+            import time
+            q = _pathlib.Path("/data/jobs/pw_queue")
+            q.mkdir(exist_ok=True)
+            while True:
+                try:
+                    for _f in q.glob("*.json"):
+                        _fail = _f.with_suffix(".fail")
+                        if not _fail.exists():
+                            _fail.write_text("playwright_worker not running")
+                except Exception:
+                    pass
+                time.sleep(2)
+        _pw_thread = _threading.Thread(target=_pw_watcher_loop, daemon=True, name="pw_watcher")
+        _pw_thread.start()
+        logger.info("[STARTUP] pw_watcher thread started (PW-Web queue fallback)")
+    except Exception as _pwe:
+        logger.warning(f"[STARTUP] pw_watcher start failed: {_pwe}")
     logger.info(f"Pexels API Å°: {'¼³Á¤µÊ' if PEXELS_API_KEY else '¹Ì¼³Á¤'}")
     logger.info(f"Pixabay API Å°: {'¼³Á¤µÊ' if PIXABAY_API_KEY else '¹Ì¼³Á¤'}")
     # Restore incomplete jobs from job_status.json on startup
@@ -8370,20 +8392,37 @@ JSON:
   "title": "Å¬¸¯À¯¹ß Á¦¸ñ (ÆÄ¿ö¿öµå+¼ýÀÚ, 30ÀÚ ÀÌ³»)",
   "title_candidates": ["ÈÄº¸ 1(ÃÖ°íCTR)", "ÈÄº¸ 2", "ÈÄº¸ 3"],
   "title_ctr": [85, 72, 68],
-  "hook": "Ãæ°Ý ¿ÀÇÁ´× (30~50ÀÚ, ¹æ¼Û ¾îÃ¼)",
+  "hook": "[WRITE: 시청자 시선을 사로잡는 30~50자의 충격적 오프닝 나레이션. 반드시 주제와 직접 관련된 실제 내용 작성]",
   "sections": [
     {{
       "section_title": "Á¦¸ñ",
       "section_type": "opening/problem/analysis/expert/stats/turning_point/solution/cta/closing",
-      "narration": "³ª·¹ÀÌ¼Ç (ÃÖ¼Ò {min_section_chars}ÀÚ, ¹æ¼Û ¾îÃ¼, Å¸ ¼½¼Ç°ú Áßº¹ ±ÝÁö, [ÇÏÀÌ¶óÀÌÆ®:] ¸¶Ä¿ Àý´ë ±ÝÁö)",
+      "narration": "[WRITE: 해당 섹션 주제에 맞는 실제 나레이션 내용. 최소 {min_section_chars}자 이상, 방송 어체, 주제와 직접 관련된 구체적 내용 작성]",
       "pattern_interrupt": "¹ÝÀü/Ãæ°Ý Æ÷ÀÎÆ® (¼±ÅÃ)"
     }}
   ],
-  "closing": "°­·ÂÇÑ CTA ¸¶¹«¸® (±¸µ¶/°øÀ¯ + ÇÙ½É ¸Þ½ÃÁö Àç°­Á¶)",
+  "closing": "[WRITE: 시청자에게 구독/공유를 유도하는 강력한 마무리 나레이션. 핵심 메시지 재강조하는 실제 내용 작성]",
   "total_estimated_duration_sec": {target_duration_sec}
 }}"""
     _script_temp = 0.85 if _is_humorous else 0.6  # [v16.8] À¯¸Ó Åæ: Ã¢ÀÇ¼º ³ôÀÓ
     result = await _call_llm_json(prompt, max_tokens=6000, temperature=_script_temp, quality_first=True)  # [v15.71]
+    # [v16.21] LLM 지시문 복사 감지 → 재생성
+    _INSTRUCTION_MARKERS_KO = ['(30~50', '방송 어체', '최소 ', '나레이션 (', '충격 오프닝', 'CTA 마무리', '강력한 CTA', '지시문', 'placeholder', '[WRITE:']
+    def _is_instruction_copy(val: str) -> bool:
+        if not isinstance(val, str): return False
+        return any(m in val for m in _INSTRUCTION_MARKERS_KO)
+    if result:
+        _hook_val = result.get('hook', '')
+        _closing_val = result.get('closing', '')
+        _sec_narrations = [s.get('narration', '') for s in result.get('sections', []) if isinstance(s, dict)]
+        _copy_detected = (
+            _is_instruction_copy(_hook_val) or
+            _is_instruction_copy(_closing_val) or
+            any(_is_instruction_copy(n) for n in _sec_narrations)
+        )
+        if _copy_detected:
+            logger.warning(f"[v16.21] 스크립트 지시문 복사 감지 → 재생성 시도 (hook={_hook_val[:30]}...)")
+            result = await _call_llm_json(prompt, max_tokens=6000, temperature=min(_script_temp + 0.1, 1.0), quality_first=True)
     if not result:
         result = {
             "title": topic,
@@ -8563,6 +8602,7 @@ async def auto_build_scenes(
     sections_text = _json_auto.dumps(script.get("sections", []), ensure_ascii=False)
     hook = script.get("hook", "")
     closing = script.get("closing", "")
+    _build_topic = script.get("title", "") or script.get("topic", "해당 주제")  # [v16.21] topic 추출
 
     prompt = f"""´ÙÀ½ ¿µ»ó ¿ø°í¸¦ 6~12ÃÊ ´ÜÀ§ÀÇ ¾ÀÀ¸·Î ºÐÇÒÇÏ¼¼¿ä.
 
@@ -8576,7 +8616,7 @@ async def auto_build_scenes(
 - ÃÑ ¾À ¼ö: {_min_scenes}~{_max_scenes}°³ (±ÇÀå {_rec_scenes}°³, target_duration={_target_dur}ÃÊ ±âÁØ)
 - B-roll ±³Ã¼: ÃÖ´ë 5ÃÊ (½ÃÃ»À¯ÁöÀ² ÇÙ½É)
 - visual_keywords: ¾À¸¶´Ù ¿ÏÀüÈ÷ ´Ù¸¥ ¿µ¾î Å°¿öµå (¹Ýº¹ ±ÝÁö! ÇÑ±¹¾î/Á¶»ç/´ÜÀ½Àý Àý´ë ±ÝÁö)
-- visual_keywords Çü½Ä: ¿µ¾î ¸í»ç±¸ 2~4´Ü¾î ("semiconductor factory", "AI robot lab")
+- visual_keywords Çü½Ä: ¿µ¾î ¸í»ç±¸ 2~4´Ü¾î ("keyword1 noun phrase", "keyword2 noun phrase")
 - narration: °¢ ¾À¸¶´Ù ¿ÏÀüÈ÷ ´Ù¸¥ °íÀ¯ ³»¿ë, ÀÎÁ¢ ¾À º¹»ç ±ÝÁö [ÃÖ¿ì¼± ? À§¹Ý ½Ã Ç°Áú Áï½Ã ÀúÇÏ]
 - Áßº¹ °¨Áö: ¾À ÀüÃ¼¿¡¼­ µ¿ÀÏ/À¯»ç ¹®ÀåÀÌ 2°³ ÀÌ»óÀÌ¸é ¹Ýµå½Ã ¼öÁ¤ ÈÄ Á¦Ãâ
 - °¢ ¾ÀÀº sections_text¿¡¼­ À¯µµÇÏµÇ ÇÙ½É Á¤º¸¸¸ ÃßÃâ, µ¿ÀÏ ¹®Àå ±×´ë·Î º¹ºÙ ±ÝÁö
@@ -8591,22 +8631,22 @@ async def auto_build_scenes(
 
 ## [v15.69] ´Ü¾î¡¤¹®¸Æ¡¤À½Àý ±â¹Ý ¿µ»ó ¸ÅÇÎ ±ÔÄ¢ (ÇÊ¼ö):
 - visual_keywords ±ÝÁö: "wide shot","close up","side angle","aerial","zoom","panning","tilt","cutaway","overhead","angle","shot","zoom"
-- visual_keywords Çü½Ä: ¹Ýµå½Ã "¸í»ç+¸í»ç" ¡æ "semiconductor factory worker", "CPU chip extreme closeup"
+- visual_keywords Çü½Ä: ¹Ýµå½Ã "¸í»ç+¸í»ç" ¡æ "factory assembling product", "machine extreme closeup"
     - narration: ¹Ýµå½Ã ÇØ´ç ¼½¼Ç sections_textÀÇ narration ¿ø¹® ÀüÃ¼ º¹»ç. Àý´ë Á¦¸ñ/placeholder ±ÝÁö. ÃÖ¼Ò 100ÀÚ ÀÌ»ó\n- narration_en: ³ª·¹ÀÌ¼ÇÀ» 20~30´Ü¾î ¿µ¾î ½Ã°¢ ¹¦»ç·Î º¯È¯ (Kling T2V ÇÁ·ÒÇÁÆ®)
-  ¿¹: "semiconductor chips manufacturing process, engineers inspecting circuit boards, high-tech facility, cinematic 4K"
-- ´Ü¾î ¸ÅÇÎ: ³ª·¹ÀÌ¼Ç ÇÙ½É ¸í»ç¡æ±¸Ã¼Àû ½Ã°¢ Àå¸é (¹ÝµµÃ¼¡æsemiconductor chip, ¼öÃâ±ÔÁ¦¡ætrade sanctions document)
+  ¿¹: "{_build_topic} process in action, professionals at work, high quality, cinematic 4K"
+- ´Ü¾î ¸ÅÇÎ: ³ª·¹ÀÌ¼Ç ÇÙ½É ¸í»ç¡æ±¸Ã¼Àû ½Ã°¢ Àå¸é (¹ÝµµÃ¼¡æ{_build_topic} specific object, ¼öÃâ±ÔÁ¦¡ærelated document signing)
 - À½Àý ±â¹Ý Å¸ÀÌ¹Ö: expected_duration = max(len(narration_text.replace(" ","")) / 4.0, 4.0)
 
 JSON:
 [
   {{
     "scene_id": "scene_001",
-    "narration": "¼½¼Ç narration¿¡¼­ ÇØ´ç ¾À ºÎºÐ¸¸ ÃßÃâ (ÃÖ¼Ò 40ÀÚ, Å¸ ¾À°ú Áßº¹ ±ÝÁö, [ÇÏÀÌ¶óÀÌÆ®:] ¸¶Ä¿ Àý´ë ±ÝÁö)",
+    "narration": "[WRITE: narration text extracted from this scene's section - minimum 40 chars, no duplicate, no highlight marker]",
     "narration_en": "cinematic description 20-30 words for AI video generation",
     "section_type": "hook",
-    "visual_intent": "dramatic opening conveying urgency",
-    "visual_keywords": ["dramatic skyline sunrise", "city aerial dawn"],
-    "backup_keywords": ["urban cityscape morning"],
+    "visual_intent": "describe the visual scene matching the {_build_topic} topic (e.g. relevant location, action, object)",
+    "visual_keywords": ["{_build_topic} related keyword 1", "{_build_topic} related keyword 2"],
+    "backup_keywords": ["{_build_topic} backup keyword"],
     "negative_keywords": ["cartoon", "animation", "low quality"],
     "tone_profile": "hook",
     "preferred_motion": "slow_zoom_in",
@@ -8614,6 +8654,26 @@ JSON:
   }}
 ]"""
     result = await _call_llm_json(prompt, max_tokens=8000, temperature=0.5, quality_first=True)  # [v15.74]
+
+    # [v16.21] 씬 예시값 복사 감지 → 재생성
+    _STALE_KEYWORDS = ['dramatic skyline sunrise', 'city aerial dawn', 'urban cityscape morning',
+                       '마크다운 코드블록', '설명·마크다운', 'JSON 반환', '반드시 오주로', '순수 JSON',
+                       '코드블록', '설명 금지', '반드시 오직', '이상유지율', '[WRITE:',
+                       'keyword1 noun phrase', 'keyword2 noun phrase', 
+                       'describe what this scene']
+    def _has_stale_scene(scenes_data) -> bool:
+        if not isinstance(scenes_data, list): return False
+        for sc in scenes_data:
+            if not isinstance(sc, dict): continue
+            kws = sc.get('visual_keywords', []) + sc.get('backup_keywords', [])
+            for kw in kws:
+                if any(stale in str(kw) for stale in _STALE_KEYWORDS): return True
+            vi = sc.get('visual_intent', '')
+            if 'describe what this scene' in vi or '_related_keyword' in vi: return True
+        return False
+    if isinstance(result, list) and _has_stale_scene(result):
+        logger.warning(f"[v16.21] 씬 예시값 복사 감지 ({len(result)}씬) → 재생성")
+        result = await _call_llm_json(prompt, max_tokens=8000, temperature=0.65, quality_first=True)
 
     # [v15.82] LLM dict ·¡ÆÛ ¾ðÆÑ: {scenes:[...]}, {data:[...]}, {result:[...]}
     if isinstance(result, dict) and not isinstance(result, list):

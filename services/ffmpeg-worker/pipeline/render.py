@@ -81,10 +81,8 @@ def normalize_clip(clip_path: Path, timeout: float = 45.0) -> Path:
     if norm_path.exists():
         return norm_path
     cmd = [
-        "ffmpeg", "-i", str(clip_path),
-        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
-        "-movflags", "+faststart", "-an", "-y", str(norm_path)
-    ]
+        "ffmpeg", "-i", str(clip_path), "-c:v", "libx264", "-preset", "ultrafast",
+        "-crf", "18", "-movflags", "+faststart", "-an", "-y", str(norm_path)]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     if result.returncode == 0:
         logger.debug(f"normalize_clip OK: {clip_path.name}")
@@ -158,7 +156,8 @@ def xfade_batch(clip_paths: list, output: Path, transition: str = "fade") -> boo
         for cp in clip_paths:
             f.write(f"file '{cp}'\n")
     cmd2 = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", str(concat_txt),
-            "-c", "copy", "-y", str(output)]
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+            "-movflags", "+faststart", "-y", str(output)]
     return _run_ffmpeg(cmd2, timeout=timeout)
 
 
@@ -281,9 +280,9 @@ def prepare_clips_for_longform(
             # Trim to exact scene_dur
             scene_final = output_dir / f"scene_{scene_idx}_final.mp4"
             trim_cmd = [
-                "ffmpeg", "-i", str(scene_merged),
-                "-t", str(round(scene_dur, 3)),
-                "-c:v", "copy", "-an", "-y", str(scene_final)
+                "ffmpeg", "-i", str(scene_merged), "-t", str(round(scene_dur, 3)),
+                "-c:v", "libx264", "-preset", VIDEO_PRESET, "-crf", str(VIDEO_CRF),
+                "-movflags", "+faststart", "-an", "-y", str(scene_final)
             ]
             trim_timeout = max(60.0, scene_dur * 5)
             if _run_ffmpeg(trim_cmd, timeout=trim_timeout) and scene_final.exists():

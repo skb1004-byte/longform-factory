@@ -65,6 +65,48 @@ def _run_ffmpeg(cmd: list, timeout: float = 300.0) -> bool:
         return False
 
 
+def _calc_output_duration(
+    tts_path: Optional[Path],
+    video_path: Path
+) -> list:
+    """
+    Calculate -t trim argument for output video.
+
+    Decision order:
+    1. video_dur > tts_dur * 5: demuxer produced bogus timestamps, trust TTS.
+    2. tts_dur < video_dur * 0.3: TTS encoding failure, use video_dur.
+    3. Normal: use tts_dur + 0.5s tail buffer.
+    """
+    if not tts_path or not tts_path.exists():
+        return []
+    tts_dur = _get_duration(tts_path)
+    if not tts_dur or tts_dur <= 0:
+        return []
+    video_dur = _get_duration(video_path)
+    if video_dur and video_dur > 0:
+        if video_dur > tts_dur * 5.0:
+            # Concat demuxer stream-copy produced inflated timestamps — trust TTS
+            effective_dur = tts_dur
+            logger.warning(
+                f"video ({video_dur:.1f}s) >> TTS ({tts_dur:.1f}s) by >5x "
+                f"— demuxer timestamp anomaly, using TTS"
+            )
+        elif tts_dur < video_dur * 0.3:
+            # TTS suspiciously short — likely encoding failure, use video
+            effective_dur = video_dur
+            logger.warning(
+                f"TTS ({tts_dur:.2f}s) << video ({video_dur:.2f}s) "
+                f"— using video duration"
+            )
+        else:
+            effective_dur = tts_dur
+            logger.info(f"TTS trim: {tts_dur:.2f}s + 0.5s")
+    else:
+        effective_dur = tts_dur
+        logger.info(f"TTS trim: {tts_dur:.2f}s + 0.5s")
+    return ["-t", str(round(effective_dur + 0.5, 2))]
+
+
 def mix_audio(
     video_path: Path,
     tts_path: Optional[Path],
@@ -85,16 +127,11 @@ def mix_audio(
     Returns:
         True if successful
     """
-    # Measure TTS duration for trimming
-    tts_trim_args = []
     has_tts = tts_path and tts_path.exists() and tts_path.stat().st_size > 1024
     has_bgm = bgm_path and bgm_path.exists()
 
-    if has_tts:
-        tts_dur = _get_duration(tts_path)
-        if tts_dur and tts_dur > 0:
-            tts_trim_args = ["-t", str(round(tts_dur + 0.5, 2))]
-            logger.info(f"TTS trim: {tts_dur:.2f}s + 0.5s")
+    # Calculate trim: guard against abnormally short TTS
+    tts_trim_args = _calc_output_duration(tts_path if has_tts else None, video_path)
 
     if has_tts and has_bgm:
         # TTS + BGM mix with ducking
@@ -143,6 +180,7 @@ def mix_audio(
         simple_cmd = [
             "ffmpeg", "-i", str(video_path), "-i", str(tts_path),
             "-map", "0:v", "-map", "1:a",
+            *tts_trim_args,
             "-c:v", "copy", "-c:a", "aac", "-ac", "2", "-b:a", "192k",
             "-shortest", "-y", str(output_path)
         ]

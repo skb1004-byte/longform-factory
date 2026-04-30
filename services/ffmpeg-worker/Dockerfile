@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-# FFmpeg 및 필수 라이브러리 설치
+# FFmpeg and required system libraries
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libsm6 libxext6 libfontconfig1 \
@@ -9,22 +9,35 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# 의존성 설치
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 애플리케이션 코드 복사
+# Copy v17 core modules
 COPY app.py .
+COPY pipelines.py .
+COPY config.py .
+COPY models.py .
+COPY state.py .
 
-# 데이터 디렉토리 생성
+# Copy pipeline sub-package
+COPY pipeline/__init__.py pipeline/
+COPY pipeline/script.py pipeline/
+COPY pipeline/assets.py pipeline/
+COPY pipeline/tts.py pipeline/
+COPY pipeline/render.py pipeline/
+COPY pipeline/render_utils.py pipeline/
+COPY pipeline/audio.py pipeline/
+COPY pipeline/subtitle.py pipeline/
+COPY pipeline/thumbnail.py pipeline/
+
+# Create data directories
 RUN mkdir -p /data/jobs /data/tmp /data/output/longform /data/output/shorts /data/output/thumbnails /data/bgm
 
-# 환경 변수 설정
+# Environment
 ENV TZ=Asia/Seoul
 ENV PYTHONUNBUFFERED=1
 
-# 포트 노출
 EXPOSE 8002
 
-# 애플리케이션 시작
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8002", "--workers", "2"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8002", "--workers", "1"]

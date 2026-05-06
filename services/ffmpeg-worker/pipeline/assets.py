@@ -1,19 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Video asset search and download from Pexels/Pixabay."""
+"""Video asset search and download from Pexels/Pixabay, or AI image generation."""
 from __future__ import annotations
 import asyncio
 import logging
-import subprocess
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
 import httpx
 
 from config import PEXELS_API_KEY, PIXABAY_API_KEY, JOBS_DIR
+from pipeline.asset_utils import download_video, _expand_domain_keyword
+from pipeline.ai_image import (
+    build_cartoon_prompt,
+    generate_ai_image_wavespeed,
+    generate_ai_image_dalle,
+    image_to_video,
+)
 
 logger = logging.getLogger(__name__)
 
-# Negative content filter keywords
 NEGATIVE_KEYWORDS = [
     "funeral", "coffin", "death", "corpse", "cemetery", "grave",
     "war", "weapon", "gun", "violence", "blood", "injury",
@@ -21,52 +26,53 @@ NEGATIVE_KEYWORDS = [
     "cigarette", "alcohol", "drug", "nude",
 ]
 
-# Domain keyword expansion map (English only, for Pexels compatibility)
-DOMAIN_MAP: Dict[str, str] = {
-    "exercise": "exercise fitness gym",
-    "workout": "workout fitness training",
-    "running": "running jogging outdoor",
-    "food": "food cooking healthy meal",
-    "technology": "technology computer modern",
-    "business": "business office professional",
-    "nature": "nature landscape outdoor",
-    "city": "city urban skyline buildings",
-    "health": "health medical wellness",
-    "money": "money finance investment",
-    "education": "education school learning",
-    "travel": "travel destination outdoor",
-    "science": "science laboratory research",
-    "AI": "artificial intelligence technology robot",
-}
-
 
 async def search_and_download_assets(
     job_id: str,
-    scenes: List,  # List[Scene]
+    scenes: List,
+    image_mode: str = "stock",
 ) -> List:
-    """Search Pexels/Pixabay and download assets for each scene."""
+    """Download assets for each scene. image_mode: 'stock' | 'ai'."""
     jobs_dir = JOBS_DIR / job_id
     assets_dir = jobs_dir / "assets"
     assets_dir.mkdir(parents=True, exist_ok=True)
 
     for scene in scenes:
-        keyword = scene.keyword or scene.description or "nature landscape"
-        keyword = _expand_domain_keyword(keyword)
-
-        # check if already downloaded
         existing = assets_dir / f"{scene.scene_id}_main.mp4"
         if existing.exists() and existing.stat().st_size > 4096:
             scene.asset_url = str(existing)
             logger.info(f"[assets] reusing {existing.name}")
             continue
 
-        # parallel search
+        if image_mode == "ai":
+            # AI cartoon image → video
+            img_path = assets_dir / f"{scene.scene_id}_main.png"
+            out = assets_dir / f"{scene.scene_id}_main.mp4"
+            prompt = build_cartoon_prompt(scene)
+            ok = await generate_ai_image_wavespeed(prompt, img_path)
+            if not ok:
+                logger.info(f"[assets] WaveSpeed failed → DALL-E fallback ({scene.scene_id})")
+                ok = await generate_ai_image_dalle(prompt, img_path)
+            if ok and img_path.exists():
+                dur = scene.duration_seconds or 5.0
+                if image_to_video(img_path, out, dur):
+                    scene.asset_url = str(out)
+                    logger.info(f"[assets] AI image→video: {scene.scene_id}")
+                else:
+                    logger.warning(f"[assets] image→video failed: {scene.scene_id}")
+            else:
+                logger.warning(f"[assets] AI generation failed: {scene.scene_id}")
+            continue
+
+        # Stock video mode (Pexels + Pixabay)
+        keyword = scene.keyword or scene.description or "nature landscape"
+        keyword = _expand_domain_keyword(keyword)
+
         pexels_r, pixabay_r = await asyncio.gather(
             get_pexels_videos(keyword),
             get_pixabay_videos(keyword),
         )
 
-        # select best
         best = select_best_video(pexels_r, pixabay_r)
         if best:
             out = assets_dir / f"{scene.scene_id}_main.mp4"
@@ -77,7 +83,6 @@ async def search_and_download_assets(
             else:
                 logger.warning(f"[assets] download failed: {scene.scene_id}")
         else:
-            # try expanded keyword
             expanded = _expand_domain_keyword(keyword, fallback=True)
             if expanded != keyword:
                 pexels_r2, pixabay_r2 = await asyncio.gather(
@@ -92,11 +97,9 @@ async def search_and_download_assets(
                         scene.asset_url = str(out)
                         logger.info(f"[assets] expanded keyword success: {expanded}")
                         continue
-            logger.warning(
-                f"[assets] no assets found for: {keyword} (will use fallback clip)"
-            )
+            logger.warning(f"[assets] no assets found: {keyword}")
 
-        # alt asset for variety (different keyword variation)
+        # Alt asset for variety
         alt_kw = " ".join(keyword.split()[:2]) if len(keyword.split()) > 2 else keyword
         alt_pexels = await get_pexels_videos(alt_kw, per_page=3)
         if alt_pexels:
@@ -119,14 +122,12 @@ async def get_pexels_videos(keyword: str, per_page: int = 5) -> List[Dict[str, A
     results = await _get_pexels_raw(keyword, per_page)
     if len(results) >= 3 or len(words) <= 2:
         return results
-    # 3-word fallback
     if len(words) > 3:
         r3 = await _get_pexels_raw(" ".join(words[:3]), per_page)
         if len(r3) > len(results):
             results = r3
     if len(results) >= 3:
         return results
-    # 2-word fallback
     r2 = await _get_pexels_raw(" ".join(words[:2]), per_page)
     return r2 if len(r2) > len(results) else results
 
@@ -179,31 +180,20 @@ def select_best_video(
 ) -> Optional[Dict[str, Any]]:
     """Select best video: prefer HD, reject negative content."""
     candidates = []
-
     for v in pexels_videos:
         url = _extract_pexels_url(v)
-        if not url or url == exclude_url:
+        if not url or url == exclude_url or _is_negative(v):
             continue
-        if _is_negative(v):
-            continue
-        w = v.get("width", 0)
-        h = v.get("height", 0)
-        score = min(w, 1920) + min(h, 1080)
-        candidates.append({"url": url, "score": score, "source": "pexels"})
-
+        w, h = v.get("width", 0), v.get("height", 0)
+        candidates.append({"url": url, "score": min(w, 1920) + min(h, 1080), "source": "pexels"})
     for v in pixabay_videos:
         url = _extract_pixabay_url(v)
-        if not url or url == exclude_url:
-            continue
-        if _is_negative(v):
+        if not url or url == exclude_url or _is_negative(v):
             continue
         videos = v.get("videos", {})
         large = videos.get("large", {}) or videos.get("medium", {})
-        w = large.get("width", 0)
-        h = large.get("height", 0)
-        score = min(w, 1920) + min(h, 1080)
-        candidates.append({"url": url, "score": score, "source": "pixabay"})
-
+        w, h = large.get("width", 0), large.get("height", 0)
+        candidates.append({"url": url, "score": min(w, 1920) + min(h, 1080), "source": "pixabay"})
     if not candidates:
         return None
     candidates.sort(key=lambda x: x["score"], reverse=True)
@@ -211,20 +201,15 @@ def select_best_video(
 
 
 def _extract_pexels_url(v: Dict) -> Optional[str]:
-    """Extract best quality URL from Pexels video object."""
     files = v.get("video_files", [])
-    # prefer HD (1080p)
     hd = [f for f in files if f.get("height", 0) >= 720 and f.get("quality") in ("hd", "sd")]
     if hd:
         hd.sort(key=lambda f: f.get("height", 0), reverse=True)
         return hd[0].get("link")
-    if files:
-        return files[0].get("link")
-    return None
+    return files[0].get("link") if files else None
 
 
 def _extract_pixabay_url(v: Dict) -> Optional[str]:
-    """Extract best quality URL from Pixabay video object."""
     videos = v.get("videos", {})
     for quality in ("large", "medium", "small"):
         url = videos.get(quality, {}).get("url")
@@ -234,65 +219,9 @@ def _extract_pixabay_url(v: Dict) -> Optional[str]:
 
 
 def _is_negative(video: Dict) -> bool:
-    """Check if video contains negative content."""
     text = " ".join([
         str(video.get("user", "")),
         str(video.get("url", "")),
         " ".join(str(t) for t in video.get("tags", [])),
     ]).lower()
     return any(neg in text for neg in NEGATIVE_KEYWORDS)
-
-
-async def download_video(
-    url: str,
-    output_path: Path,
-    max_duration: float = 60.0,
-) -> bool:
-    """Download video with ffmpeg, trimming to max_duration."""
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    if output_path.exists() and output_path.stat().st_size > 4096:
-        return True
-
-    cmd = [
-        "ffmpeg", "-y", "-t", str(max_duration),
-        "-i", url, "-t", str(max_duration),
-        "-c:v", "libx264", "-preset", "ultrafast",
-        "-movflags", "+faststart", "-an",
-        str(output_path)
-    ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120.0)
-        if result.returncode == 0 and output_path.exists() and output_path.stat().st_size > 4096:
-            kb_size = output_path.stat().st_size // 1024
-            logger.info(f"[assets] downloaded {output_path.name} ({kb_size}KB)")
-            return True
-        logger.warning(f"[assets] download failed ({url[:60]}): {result.stderr[-200:]}")
-        return False
-    except subprocess.TimeoutExpired:
-        logger.warning(f"[assets] download timeout: {url[:60]}")
-        return False
-    except Exception as e:
-        logger.error(f"[assets] download error: {e}")
-        return False
-
-
-def _expand_domain_keyword(keyword: str, fallback: bool = False) -> str:
-    """Expand domain-specific keyword to Pexels-friendly phrase.
-
-    Only expands single-word generic keywords. Multi-word keywords (3+ words)
-    are assumed to be user-specified specific queries and are returned as-is.
-    """
-    words = keyword.split()
-
-    # User-specified specific query — preserve exactly
-    if len(words) >= 3:
-        return keyword
-
-    lower = keyword.lower()
-    for key, expansion in DOMAIN_MAP.items():
-        if key.lower() == lower:  # exact match only for short keywords
-            return expansion
-
-    if fallback:
-        return words[0] if words else "nature"
-    return keyword

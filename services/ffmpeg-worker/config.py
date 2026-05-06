@@ -76,6 +76,7 @@ ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL: str = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+WAVESPEED_API_KEY: str = os.getenv("WAVESPEED_API_KEY", "")
 
 
 # ============================================================================

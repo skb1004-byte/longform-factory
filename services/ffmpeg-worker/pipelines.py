@@ -99,7 +99,8 @@ async def run_auto_pipeline(
         # Step 4: Download assets
         await set_status(job_id, JobStatus.DOWNLOADING_ASSETS, 30, "downloading_assets")
         if not state.has("assets_done"):
-            scenes = await search_and_download_assets(job_id, scenes)
+            image_mode = getattr(request, "image_mode", "stock")
+            scenes = await search_and_download_assets(job_id, scenes, image_mode=image_mode)
             state.mark("assets_done")
 
         # Step 5: Render clips (Ken Burns)

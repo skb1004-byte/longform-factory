@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Header, Depends, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, HTMLResponse
 
 from config import (
     TMP_DIR, JOBS_DIR, OUTPUT_DIR, BGM_DIR,
@@ -39,7 +39,7 @@ for _d in [TMP_DIR, JOBS_DIR, LONGFORM_DIR, SHORTS_DIR, THUMBNAILS_DIR, BGM_DIR]
     _d.mkdir(parents=True, exist_ok=True)
 
 # ── App ───────────────────────────────────────────────────────────────────────
-app = FastAPI(title="LongForm Factory Worker", version="17.4.0")
+app = FastAPI(title="LongForm Factory Worker", version="17.7.0")
 
 # ── Global job guard ──────────────────────────────────────────────────────────
 _CURRENT_JOB: Optional[str] = None
@@ -317,12 +317,21 @@ async def stream_video(vtype: str, filename: str, request: Request):
 
 @app.get("/")
 async def root():
-    return {"service": "LongForm Factory Worker", "version": "17.4.0"}
+    return {"service": "LongForm Factory Worker", "version": "17.7.0"}
+
+
+@app.get("/ui", response_class=HTMLResponse)
+async def dashboard():
+    """Dual-mode dashboard: Stock Video + AI Cartoon."""
+    ui_path = Path(__file__).parent / "ui" / "index.html"
+    if not ui_path.exists():
+        raise HTTPException(status_code=404, detail="UI not found")
+    return HTMLResponse(content=ui_path.read_text(encoding="utf-8"))
 
 
 @app.on_event("startup")
 async def startup():
-    logger.info("LongForm Factory Worker v17.4.0 started")
+    logger.info("LongForm Factory Worker v17.7.0 started")
 
 
 if __name__ == "__main__":

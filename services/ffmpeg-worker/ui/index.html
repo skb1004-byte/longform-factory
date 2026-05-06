@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LongForm Factory v17.7.0</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f1117; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+  header { background: #1a1f2e; border-bottom: 1px solid #2d3748; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 1.2rem; font-weight: 700; color: #63b3ed; }
+  header span { font-size: 0.75rem; color: #718096; background: #2d3748; padding: 2px 8px; border-radius: 9999px; }
+  .container { max-width: 900px; margin: 32px auto; padding: 0 24px; }
+  .tabs { display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid #2d3748; }
+  .tab-btn {
+    padding: 12px 28px; cursor: pointer; border: none; background: transparent;
+    color: #718096; font-size: 0.95rem; font-weight: 600; border-bottom: 3px solid transparent;
+    margin-bottom: -2px; transition: all 0.2s;
+  }
+  .tab-btn.active { color: #63b3ed; border-bottom-color: #63b3ed; }
+  .tab-btn:hover:not(.active) { color: #a0aec0; background: #1a1f2e; }
+  .tab-panel { display: none; background: #1a1f2e; border: 1px solid #2d3748; border-top: none; border-radius: 0 0 12px 12px; padding: 28px; }
+  .tab-panel.active { display: block; }
+  .badge-stock { background: #1a365d; color: #63b3ed; padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+  .badge-ai { background: #322659; color: #d6bcfa; padding: 3px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+  .form-group { margin-bottom: 20px; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; color: #a0aec0; margin-bottom: 6px; }
+  input, select, textarea {
+    width: 100%; padding: 10px 14px; background: #0f1117; border: 1px solid #2d3748;
+    color: #e2e8f0; border-radius: 8px; font-size: 0.9rem; outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #63b3ed; }
+  textarea { resize: vertical; min-height: 80px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .checkbox-row { display: flex; align-items: center; gap: 10px; }
+  .checkbox-row input[type=checkbox] { width: auto; }
+  .btn {
+    width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 1rem;
+    font-weight: 700; cursor: pointer; transition: all 0.2s; margin-top: 8px;
+  }
+  .btn-stock { background: #2b6cb0; color: #fff; }
+  .btn-stock:hover { background: #2c5282; }
+  .btn-ai { background: #553c9a; color: #fff; }
+  .btn-ai:hover { background: #44337a; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .status-panel { margin-top: 24px; background: #0f1117; border: 1px solid #2d3748; border-radius: 8px; padding: 16px; display: none; }
+  .status-panel.active { display: block; }
+  .progress-bar { height: 6px; background: #2d3748; border-radius: 9999px; overflow: hidden; margin: 8px 0; }
+  .progress-fill { height: 100%; border-radius: 9999px; transition: width 0.5s; }
+  .fill-stock { background: #63b3ed; }
+  .fill-ai { background: #d6bcfa; }
+  .status-text { font-size: 0.85rem; color: #718096; }
+  .status-badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; }
+  .badge-queued { background: #2d3748; color: #a0aec0; }
+  .badge-processing { background: #2b6cb0; color: #fff; }
+  .badge-completed { background: #276749; color: #9ae6b4; }
+  .badge-failed { background: #742a2a; color: #fc8181; }
+  .output-link { display: none; margin-top: 12px; }
+  .output-link a { color: #63b3ed; text-decoration: none; font-weight: 600; }
+  .note { font-size: 0.78rem; color: #718096; margin-top: 6px; }
+  .ai-note { background: #1a1027; border: 1px solid #553c9a; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.82rem; color: #d6bcfa; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎬 LongForm Factory</h1>
+  <span>v17.7.0</span>
+  <span id="health-badge" style="margin-left:auto">⏳ 연결 확인 중</span>
+</header>
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('stock')">📹 스톡 영상 모드</button>
+    <button class="tab-btn" onclick="switchTab('ai')">🎨 AI 만화 스타일</button>
+  </div>
+
+  <!-- ─── 스톡 영상 탭 ─────────────────────────────────────────── -->
+  <div id="tab-stock" class="tab-panel active">
+    <p style="margin-bottom:20px; color:#718096; font-size:0.85rem">
+      Pexels / Pixabay 스톡 영상을 자동으로 검색·다운로드해 영상을 생성합니다.
+    </p>
+    <form id="form-stock" onsubmit="submitJob(event,'stock')">
+      <div class="form-group">
+        <label>주제 (Topic) *</label>
+        <input type="text" name="topic" required placeholder="예: 2026년 AI 트렌드 전망" />
+      </div>
+      <div class="form-group">
+        <label>스크립트 (선택)</label>
+        <textarea name="script" placeholder="직접 스크립트를 입력하거나 비워두면 AI가 자동 생성합니다."></textarea>
+      </div>
+      <div class="row">
+        <div class="form-group">
+          <label>영상 형식</label>
+          <select name="video_type">
+            <option value="shorts">Shorts (9:16 세로)</option>
+            <option value="longform">Longform (16:9 가로)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>목표 길이 (초)</label>
+          <input type="number" name="duration_sec" value="60" min="20" max="300" />
+        </div>
+      </div>
+      <div class="row3">
+        <div class="form-group">
+          <label>톤</label>
+          <select name="tone">
+            <option value="neutral">중립</option>
+            <option value="casual">캐주얼</option>
+            <option value="formal">공식</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>BGM 볼륨</label>
+          <input type="number" name="bgm_volume" value="0.06" min="0" max="1" step="0.01" />
+        </div>
+        <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end">
+          <div class="checkbox-row">
+            <input type="checkbox" name="add_subtitles" id="sub-stock" checked />
+            <label for="sub-stock" style="margin:0">자막 추가</label>
+          </div>
+          <div class="checkbox-row" style="margin-top:8px">
+            <input type="checkbox" name="add_bgm" id="bgm-stock" checked />
+            <label for="bgm-stock" style="margin:0">BGM 추가</label>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" name="image_mode" value="stock" />
+      <button type="submit" class="btn btn-stock" id="btn-stock">📹 스톡 영상 생성 시작</button>
+    </form>
+    <div class="status-panel" id="status-stock">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span class="status-badge" id="badge-stock">대기</span>
+        <span style="font-size:0.85rem;color:#a0aec0" id="step-stock">-</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill fill-stock" id="bar-stock" style="width:0%"></div></div>
+      <div class="status-text" id="msg-stock">-</div>
+      <div class="output-link" id="link-stock"></div>
+    </div>
+  </div>
+
+  <!-- ─── AI 만화 탭 ────────────────────────────────────────────── -->
+  <div id="tab-ai" class="tab-panel">
+    <div class="ai-note">
+      🎨 <strong>AI 만화/웹툰 스타일</strong> — WaveSpeed FLUX로 장면별 일러스트를 생성합니다.<br>
+      실패 시 자동으로 OpenAI DALL-E 3으로 전환됩니다. 생성 시간이 다소 길 수 있습니다 (씬당 15~30초).
+    </div>
+    <form id="form-ai" onsubmit="submitJob(event,'ai')">
+      <div class="form-group">
+        <label>주제 (Topic) *</label>
+        <input type="text" name="topic" required placeholder="예: 우주여행의 꿈, 로봇과 인간의 공존" />
+      </div>
+      <div class="form-group">
+        <label>스크립트 (선택)</label>
+        <textarea name="script" placeholder="직접 스크립트 입력 or 비워두면 AI 자동 생성 — 만화 스타일에 맞게 감성적으로 작성해 주세요."></textarea>
+      </div>
+      <div class="row">
+        <div class="form-group">
+          <label>영상 형식</label>
+          <select name="video_type">
+            <option value="shorts" selected>Shorts (9:16 세로)</option>
+            <option value="longform">Longform (16:9 가로)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>목표 길이 (초)</label>
+          <input type="number" name="duration_sec" value="30" min="15" max="120" />
+          <p class="note">AI 이미지 생성 시간 때문에 짧게 권장 (30~60초)</p>
+        </div>
+      </div>
+      <div class="row3">
+        <div class="form-group">
+          <label>톤</label>
+          <select name="tone">
+            <option value="casual">캐주얼</option>
+            <option value="neutral">중립</option>
+            <option value="formal">공식</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>BGM 볼륨</label>
+          <input type="number" name="bgm_volume" value="0.06" min="0" max="1" step="0.01" />
+        </div>
+        <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end">
+          <div class="checkbox-row">
+            <input type="checkbox" name="add_subtitles" id="sub-ai" checked />
+            <label for="sub-ai" style="margin:0">자막 추가</label>
+          </div>
+          <div class="checkbox-row" style="margin-top:8px">
+            <input type="checkbox" name="add_bgm" id="bgm-ai" checked />
+            <label for="bgm-ai" style="margin:0">BGM 추가</label>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" name="image_mode" value="ai" />
+      <button type="submit" class="btn btn-ai" id="btn-ai">🎨 만화 스타일 영상 생성</button>
+    </form>
+    <div class="status-panel" id="status-ai">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span class="status-badge" id="badge-ai">대기</span>
+        <span style="font-size:0.85rem;color:#a0aec0" id="step-ai">-</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill fill-ai" id="bar-ai" style="width:0%"></div></div>
+      <div class="status-text" id="msg-ai">-</div>
+      <div class="output-link" id="link-ai"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_KEY = 'longform-2026-secret';
+const BASE = '/api/ffmpeg';  // nginx proxy: /api/ffmpeg/ → lf2_ffmpeg:8002/
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['stock','ai'][i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach((p,i) => {
+    p.classList.toggle('active', ['stock','ai'][i] === name);
+  });
+}
+
+function makeJobId(mode) {
+  const d = new Date();
+  const ts = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+  return `${mode}_${ts}`;
+}
+
+async function submitJob(e, mode) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = document.getElementById(`btn-${mode}`);
+  const statusPanel = document.getElementById(`status-${mode}`);
+  statusPanel.classList.add('active');
+  btn.disabled = true;
+  btn.textContent = '⏳ 생성 중...';
+
+  const fd = new FormData(form);
+  const job_id = makeJobId(mode);
+  const payload = {
+    job_id,
+    topic:        fd.get('topic'),
+    script:       fd.get('script') || null,
+    video_type:   fd.get('video_type'),
+    duration_sec: parseInt(fd.get('duration_sec'), 10),
+    tone:         fd.get('tone'),
+    add_subtitles: fd.get('add_subtitles') === 'on',
+    add_bgm:      fd.get('add_bgm') === 'on',
+    bgm_volume:   parseFloat(fd.get('bgm_volume')),
+    image_mode:   fd.get('image_mode'),
+  };
+
+  updateStatus(mode, '대기', 0, 'queued', `Job ID: ${job_id}`);
+
+  try {
+    const resp = await fetch(`${BASE}/video/auto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-LF-API-Key': API_KEY },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || resp.statusText);
+    }
+    updateStatus(mode, '처리 중', 5, 'queued', '서버 접수 완료 — 폴링 시작');
+    pollStatus(job_id, mode, btn);
+  } catch (err) {
+    updateStatus(mode, '오류', 0, 'failed', `❌ ${err.message}`);
+    btn.disabled = false;
+    btn.textContent = mode === 'ai' ? '🎨 만화 스타일 영상 생성' : '📹 스톡 영상 생성 시작';
+  }
+}
+
+async function pollStatus(job_id, mode, btn) {
+  const pollInterval = setInterval(async () => {
+    try {
+      const resp = await fetch(`${BASE}/video/${job_id}/status`, {
+        headers: { 'X-LF-API-Key': API_KEY },
+      });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const st = data.status || 'unknown';
+      const progress = data.progress || 0;
+      const step = data.step || st;
+      const msg = data.error ? `❌ ${data.error}` : `단계: ${step}`;
+      updateStatus(mode, st, progress, st, msg);
+
+      if (st === 'completed') {
+        clearInterval(pollInterval);
+        const outputs = data.output_files || {};
+        const vtype = Object.keys(outputs)[0];
+        if (vtype) showOutputLink(mode, job_id, outputs[vtype]);
+        btn.disabled = false;
+        btn.textContent = mode === 'ai' ? '🎨 만화 스타일 영상 생성' : '📹 스톡 영상 생성 시작';
+      } else if (st === 'failed') {
+        clearInterval(pollInterval);
+        btn.disabled = false;
+        btn.textContent = mode === 'ai' ? '🎨 만화 스타일 영상 생성' : '📹 스톡 영상 생성 시작';
+      }
+    } catch { /* ignore */ }
+  }, 4000);
+}
+
+function updateStatus(mode, statusText, progress, statusClass, msg) {
+  const classMap = { queued:'badge-queued', processing:'badge-processing', rendering:'badge-processing', completed:'badge-completed', failed:'badge-failed' };
+  const badge = document.getElementById(`badge-${mode}`);
+  badge.textContent = statusText;
+  badge.className = 'status-badge ' + (classMap[statusClass] || 'badge-queued');
+  document.getElementById(`bar-${mode}`).style.width = progress + '%';
+  document.getElementById(`msg-${mode}`).textContent = msg;
+  document.getElementById(`step-${mode}`).textContent = statusClass;
+}
+
+function showOutputLink(mode, job_id, filename) {
+  const el = document.getElementById(`link-${mode}`);
+  const vtype = mode === 'stock' ? 'longform' : 'shorts';
+  el.style.display = 'block';
+  el.innerHTML = `✅ 완료! <a href="/videos/stream/${vtype}/${filename.split('/').pop()}" target="_blank">▶ 영상 재생</a>`;
+}
+
+// Health check
+(async () => {
+  try {
+    const r = await fetch(`${BASE}/health`);
+    const d = await r.json();
+    document.getElementById('health-badge').textContent = d.status === 'ok' ? '🟢 서비스 정상' : '🔴 오류';
+  } catch {
+    document.getElementById('health-badge').textContent = '🔴 연결 실패';
+  }
+})();
+</script>
+</body>
+</html>

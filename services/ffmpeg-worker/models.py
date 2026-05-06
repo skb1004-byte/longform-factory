@@ -94,6 +94,10 @@ class AutoVideoRequest(BaseModel):
     add_subtitles: bool = Field(default=True, description="Enable subtitle generation")
     add_bgm: bool = Field(default=True, description="Add background music")
     bgm_volume: float = Field(default=0.3, description="BGM volume (0.0-1.0)")
+    image_mode: str = Field(
+        default="stock",
+        description="Asset source: 'stock' (Pexels/Pixabay) or 'ai' (WaveSpeed FLUX + DALL-E fallback)",
+    )
 
     class Config:
         json_schema_extra = {

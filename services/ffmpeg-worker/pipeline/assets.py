@@ -277,12 +277,22 @@ async def download_video(
 
 
 def _expand_domain_keyword(keyword: str, fallback: bool = False) -> str:
-    """Expand domain-specific keyword to Pexels-friendly phrase."""
+    """Expand domain-specific keyword to Pexels-friendly phrase.
+
+    Only expands single-word generic keywords. Multi-word keywords (3+ words)
+    are assumed to be user-specified specific queries and are returned as-is.
+    """
+    words = keyword.split()
+
+    # User-specified specific query — preserve exactly
+    if len(words) >= 3:
+        return keyword
+
     lower = keyword.lower()
     for key, expansion in DOMAIN_MAP.items():
-        if key.lower() in lower:
+        if key.lower() == lower:  # exact match only for short keywords
             return expansion
+
     if fallback:
-        words = keyword.split()
         return words[0] if words else "nature"
     return keyword

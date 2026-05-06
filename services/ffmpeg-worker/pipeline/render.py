@@ -130,7 +130,7 @@ def xfade_batch(clip_paths: list, output: Path, transition: str = "fade") -> boo
 
     n = len(clip_paths)
     # Normalize PTS, concat video
-    vparts = "".join(f"[{i}:v:0]setpts=PTS-STARTPTS[v{i}];" for i in range(n))
+    vparts = "".join(f"[{i}:v:0]setpts=PTS-STARTPTS,format=yuv420p,setsar=1:1[v{i}];" for i in range(n))
     vconcat = "".join(f"[v{i}]" for i in range(n))
     fg = f"{vparts}{vconcat}concat=n={n}:v=1:a=0[vout]"
 
@@ -138,7 +138,7 @@ def xfade_batch(clip_paths: list, output: Path, transition: str = "fade") -> boo
         "-filter_complex", fg,
         "-map", "[vout]",
         "-c:v", "libx264", "-preset", VIDEO_PRESET, "-crf", str(VIDEO_CRF),
-        "-movflags", "+faststart", "-y", str(output)
+        "-movflags", "+faststart", "-filter_threads", "1", "-y", str(output)
     ]
     timeout = max(300.0, n * 30)
     if _run_ffmpeg(cmd, timeout=timeout):
@@ -224,9 +224,16 @@ def prepare_clips_for_longform(
 
             fade_out_st = max(sub_dur - 0.3, sub_dur * 0.9)
 
+            # Sweep crop x-position across sub-clips (left→center→right) so that
+            # for landscape (16:9) sources converted to portrait (9:16), different
+            # horizontal regions are captured per sub-clip rather than always
+            # using the default center crop (which can miss off-center subjects).
+            crop_x_ratio = sub_i / max(n_subs - 1, 1) if n_subs > 1 else 0.5
+            crop_x_expr = f"(iw-{W})*{crop_x_ratio:.3f}"
+
             vf = (
                 f"scale={W}:{H}:force_original_aspect_ratio=increase,"
-                f"crop={W}:{H},"
+                f"crop={W}:{H}:{crop_x_expr}:(ih-{H})/2,"
                 f"{kb_filter},"
                 f"fade=t=in:st=0:d={SCENE_HEAD_PAD_SEC:.2f},"
                 f"fade=t=out:st={fade_out_st:.2f}:d={SCENE_TAIL_PAD_SEC:.2f},"

@@ -44,11 +44,17 @@ class Scene(BaseModel):
 
     scene_id: str = Field(..., description="Unique identifier for this scene")
     keyword: str = Field(default="", description="Search keyword for asset discovery")
+    search_query: Optional[str] = Field(default=None, description="Alias for keyword (search_query → keyword)")
     narration: str = Field(default="", description="Voice-over text (TTS source)")
     description: str = Field(default="", description="Scene context for asset matching")
     duration_seconds: float = Field(default=5.0, description="Target scene duration")
     asset_url: Optional[str] = Field(default=None, description="Primary video/image URL")
     alt_asset_url: Optional[str] = Field(default=None, description="Fallback asset URL")
+
+    def model_post_init(self, __context) -> None:
+        # Accept search_query as alias for keyword
+        if self.search_query and not self.keyword:
+            object.__setattr__(self, "keyword", self.search_query)
 
     class Config:
         json_schema_extra = {

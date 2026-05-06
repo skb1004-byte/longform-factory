@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-LongForm Factory - FFmpeg Worker v17.0.0
+LongForm Factory - FFmpeg Worker v17.4.0
 FastAPI router + auth + helpers.
 Pipeline functions are in pipelines.py.
 """
@@ -10,7 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Header, Depends
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Header, Depends, Request
+from fastapi.responses import FileResponse, StreamingResponse
 
 from config import (
     TMP_DIR, JOBS_DIR, OUTPUT_DIR, BGM_DIR,
@@ -38,7 +39,7 @@ for _d in [TMP_DIR, JOBS_DIR, LONGFORM_DIR, SHORTS_DIR, THUMBNAILS_DIR, BGM_DIR]
     _d.mkdir(parents=True, exist_ok=True)
 
 # ── App ───────────────────────────────────────────────────────────────────────
-app = FastAPI(title="LongForm Factory Worker", version="17.0.0")
+app = FastAPI(title="LongForm Factory Worker", version="17.4.0")
 
 # ── Global job guard ──────────────────────────────────────────────────────────
 _CURRENT_JOB: Optional[str] = None
@@ -187,20 +188,141 @@ async def health():
     free_gb = stat.free / (1024 ** 3)
     return {
         "status": "ok" if free_gb > 10 else "disk_warning",
-        "version": "17.0.0",
+        "version": "17.4.0",
         "disk_free_gb": round(free_gb, 1),
         "current_job": _CURRENT_JOB,
     }
 
 
+@app.get("/videos/list")
+async def list_videos():
+    """Return metadata for all generated videos in longform/ and shorts/."""
+    import os
+    result = []
+    for vtype, vdir in [("longform", LONGFORM_DIR), ("shorts", SHORTS_DIR)]:
+        if not vdir.exists():
+            continue
+        for f in sorted(vdir.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
+            if f.suffix.lower() != ".mp4":
+                continue
+            stat = f.stat()
+            result.append({
+                "name": f.name,
+                "type": vtype,
+                "size_mb": round(stat.st_size / 1024 / 1024, 1),
+                "created": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
+                "url": f"/output/{vtype}/{f.name}",
+            })
+    return {"videos": result, "total": len(result)}
+
+
+@app.get("/video/jobs")
+async def list_all_jobs(_: str = Depends(verify_api_key)):
+    """List all job statuses with title from state.json."""
+    skip_dirs = {"pw_queue"}
+    results = []
+    for job_dir in sorted(JOBS_DIR.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
+        if not job_dir.is_dir() or job_dir.name in skip_dirs:
+            continue
+        status_file = job_dir / "status.json"
+        if not status_file.exists():
+            continue
+        try:
+            data = json.loads(status_file.read_text(encoding="utf-8"))
+            title = data.get("job_id", "")
+            scenes_count = 0
+            state_file = job_dir / "state.json"
+            if state_file.exists():
+                try:
+                    state = json.loads(state_file.read_text(encoding="utf-8"))
+                    req = state.get("request", {})
+                    title = req.get("topic") or req.get("title") or title
+                except Exception:
+                    pass
+            scenes_file = job_dir / "scenes.json"
+            if scenes_file.exists():
+                try:
+                    sd = json.loads(scenes_file.read_text(encoding="utf-8"))
+                    if isinstance(sd, list):
+                        scenes_count = len(sd)
+                    elif isinstance(sd, dict):
+                        scenes_count = len(sd.get("scenes", []))
+                except Exception:
+                    pass
+            data["title"] = title
+            data["scenes"] = scenes_count
+            results.append(data)
+        except Exception as e:
+            logger.error(f"[list_all_jobs] {e}")
+    return {"jobs": results[:50], "total": len(results)}
+
+
+@app.get("/video/stream/{vtype}/{filename}")
+async def stream_video(vtype: str, filename: str, request: Request):
+    """Stream a video file with HTTP Range support for browser <video> playback."""
+    if vtype not in ("longform", "shorts", "thumbnails"):
+        raise HTTPException(status_code=400, detail="Invalid video type")
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    vdir_map = {"longform": LONGFORM_DIR, "shorts": SHORTS_DIR, "thumbnails": THUMBNAILS_DIR}
+    fpath = vdir_map[vtype] / filename
+    if not fpath.exists() or not fpath.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_size = fpath.stat().st_size
+    range_header = request.headers.get("Range")
+
+    def file_chunk(start: int, end: int, chunk: int = 1024 * 256):
+        with open(fpath, "rb") as f:
+            f.seek(start)
+            remaining = end - start + 1
+            while remaining > 0:
+                data = f.read(min(chunk, remaining))
+                if not data:
+                    break
+                remaining -= len(data)
+                yield data
+
+    if range_header:
+        # Parse "bytes=start-end"
+        try:
+            byte_range = range_header.replace("bytes=", "").split("-")
+            start = int(byte_range[0])
+            end = int(byte_range[1]) if byte_range[1] else file_size - 1
+        except Exception:
+            raise HTTPException(status_code=416, detail="Invalid Range header")
+        end = min(end, file_size - 1)
+        content_length = end - start + 1
+        return StreamingResponse(
+            file_chunk(start, end),
+            status_code=206,
+            media_type="video/mp4",
+            headers={
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(content_length),
+            },
+        )
+
+    # No Range header — return full file
+    return StreamingResponse(
+        file_chunk(0, file_size - 1),
+        media_type="video/mp4",
+        headers={
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(file_size),
+        },
+    )
+
+
 @app.get("/")
 async def root():
-    return {"service": "LongForm Factory Worker", "version": "17.0.0"}
+    return {"service": "LongForm Factory Worker", "version": "17.4.0"}
 
 
 @app.on_event("startup")
 async def startup():
-    logger.info("LongForm Factory Worker v17.0.0 started")
+    logger.info("LongForm Factory Worker v17.4.0 started")
 
 
 if __name__ == "__main__":

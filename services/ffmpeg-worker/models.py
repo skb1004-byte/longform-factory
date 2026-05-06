@@ -98,6 +98,13 @@ class AutoVideoRequest(BaseModel):
         default="stock",
         description="Asset source: 'stock' (Pexels/Pixabay) or 'ai' (WaveSpeed FLUX + DALL-E fallback)",
     )
+    style: str = Field(
+        default="",
+        description=(
+            "Visual style preset. AI styles: cartoon, cinematic, watercolor, anime, minimal, infographic. "
+            "Stock styles: stock, news. Empty string falls back to image_mode resolution."
+        ),
+    )
 
     class Config:
         json_schema_extra = {

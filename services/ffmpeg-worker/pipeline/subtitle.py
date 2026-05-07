@@ -9,10 +9,22 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 FONTS_DIR = "/usr/share/fonts/opentype/noto"
+FONTS_DIR_TRUETYPE = "/usr/share/fonts/truetype/noto"
+
+# Encoding=1 (Korean), Bold=-1, BorderStyle=3 (불투명 박스), Outline=2, Shadow=1
 ASS_STYLE = (
     "Style: Default,Noto Sans CJK KR,{font_size},&H00FFFF00,&H000000FF,"
-    "&H00000000,&H80000000,-1,0,0,0,100,100,0,0,3,1,1,2,10,10,{margin_v},1"
+    "&H80000000,&H90000000,-1,0,0,0,100,100,0,0,3,2,1,2,10,10,{margin_v},1"
 )
+
+
+def _find_fonts_dir() -> str:
+    """사용 가능한 폰트 디렉토리 반환."""
+    import os
+    for d in [FONTS_DIR, FONTS_DIR_TRUETYPE, "/usr/share/fonts", "/usr/local/share/fonts"]:
+        if os.path.isdir(d):
+            return d
+    return FONTS_DIR
 
 
 def compute_subtitle_style(resolution: str = "1920x1080") -> tuple[int, int]:
@@ -91,12 +103,18 @@ def create_ass_from_timestamps(
         text = seg.get("text", "").strip().replace("\n", " ")
         if not text:
             continue
-        # limit line length to 25 chars
-        if len(text) > 25:
+        # limit line length: split long text into 2 lines
+        # Korean text rarely has spaces, so split at midpoint directly
+        MAX_LINE = 20
+        if len(text) > MAX_LINE:
             mid = len(text) // 2
             sp = text.rfind(" ", 0, mid)
             if sp > 0:
+                # Space found: split at space (for mixed Korean+spaces)
                 text = text[:sp] + "\\N" + text[sp + 1 :]
+            else:
+                # No space (pure Korean): split at midpoint
+                text = text[:mid] + "\\N" + text[mid:]
         lines.append(f"Dialogue: 0,{_t(start)},{_t(end)},Default,,0,0,0,,{text}")
 
     try:
@@ -118,7 +136,7 @@ def burn_subtitles(
     if not ass_path.exists():
         return False
 
-    subtitle_filter = f"ass={ass_path}:fontsdir={FONTS_DIR}"
+    subtitle_filter = f"ass={ass_path}:fontsdir={_find_fonts_dir()}"
     cmd = [
         "ffmpeg",
         "-i",

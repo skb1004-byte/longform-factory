@@ -6,9 +6,20 @@ run_auto_pipeline  : full automated pipeline (script → render → audio → su
 run_render_pipeline: legacy scenes-based pipeline
 """
 from __future__ import annotations
-import json, logging, shutil
+import json, logging, re, shutil
 from pathlib import Path
 from typing import Optional, List
+
+
+def _safe_filename(text: str, max_len: int = 50) -> str:
+    """한국어/특수문자 포함 제목을 안전한 파일명으로 변환."""
+    # 파일명 금지 문자 제거
+    safe = re.sub(r'[\\/:*?"<>|]', '', text.strip())
+    # 공백 → 언더스코어
+    safe = re.sub(r'\s+', '_', safe)
+    # 연속 언더스코어 정리
+    safe = re.sub(r'_+', '_', safe).strip('_')
+    return safe[:max_len] if safe else "video"
 
 from config import (
     TMP_DIR, JOBS_DIR, OUTPUT_DIR,
@@ -148,15 +159,19 @@ async def run_auto_pipeline(
                 shutil.copy2(mixed, final)
             state.mark("subtitle_done")
 
-        # Step 9: Copy to output
-        out_path = out_dir / f"{job_id}.mp4"
+        # Step 9: Copy to output (영상 제목으로 파일명 저장)
+        title_text = request.topic or request.title or job_id
+        safe_title = _safe_filename(title_text)
+        out_filename = f"{safe_title}_{job_id[-8:]}.mp4"
+        out_path = out_dir / out_filename
         shutil.copy2(final, out_path)
         logger.info(f"[{job_id}] Video saved: {out_path} ({out_path.stat().st_size//1048576}MB)")
 
         # Step 10: Thumbnail
         await set_status(job_id, JobStatus.RENDERING, 90, "thumbnail")
-        thumb_path = THUMBNAILS_DIR / f"{job_id}.jpg"
-        generate_thumbnail(out_path, thumb_path, title=request.topic)
+        thumb_filename = f"{safe_title}_{job_id[-8:]}.jpg"
+        thumb_path = THUMBNAILS_DIR / thumb_filename
+        generate_thumbnail(out_path, thumb_path, title=title_text)
 
         await set_status(job_id, JobStatus.COMPLETED, 100, "completed",
                          output_files={"video": str(out_path), "thumbnail": str(thumb_path)})

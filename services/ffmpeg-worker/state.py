@@ -103,6 +103,18 @@ class JobState:
         stages: Dict[str, Any] = self.data.get("stages", {})
         return stage in stages
 
+    def unmark(self, stage: str) -> None:
+        """
+        Remove a completed stage from state (used for forced re-run).
+
+        Args:
+            stage: Stage identifier to clear
+        """
+        stages: Dict[str, Any] = self.data.get("stages", {})
+        if stage in stages:
+            del stages[stage]
+            self.save()
+
     def get_payload(self, stage: str) -> Dict[str, Any]:
         """
         Retrieve metadata payload associated with a completed stage.

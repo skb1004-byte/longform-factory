@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 import httpx
 from models import Scene
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +73,8 @@ async def generate_tts(
                     "text": full_text,
                     "filename": job_id,
                     "engine": "edge",
-                    "edge_voice": "ko-KR-SunHiNeural",
-                    "edge_rate": "+15%",
+                    "edge_voice": config.EDGE_VOICE,
+                    "edge_rate": config.EDGE_RATE,  # BUG#3 fix: was "+15%" hardcoded
                     "preprocess": True,
                 }
             )
@@ -149,15 +150,19 @@ def sync_scene_durations(
     )
     remaining: float = total_dur
 
+    # BUG#1 fix: min 2.0s was forcing total video longer than TTS audio
+    # Use 0.5s minimum + SCENE_TAIL_PAD_SEC margin for last scene
+    MIN_SCENE_DUR: float = 0.5
+
     for i, scene in enumerate(scenes):
         chars: int = max(len(scene.narration or ""), 1)
 
         if i == len(scenes) - 1:
-            # Last scene: use remaining duration
-            dur: float = max(remaining, 2.0)
+            # Last scene: use remaining + small tail pad so audio doesn't clip
+            dur: float = max(remaining + config.SCENE_TAIL_PAD_SEC, MIN_SCENE_DUR)
         else:
             # Proportional allocation by character count
-            dur = max((chars / total_chars) * total_dur, 2.0)
+            dur = max((chars / total_chars) * total_dur, MIN_SCENE_DUR)
             remaining -= dur
 
         scene.duration_seconds = round(dur, 2)

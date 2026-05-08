@@ -92,15 +92,27 @@ async def run_auto_pipeline(
 
         # Step 2: TTS
         await set_status(job_id, JobStatus.TTS_GENERATING, 20, "tts_generating")
-        if not state.has("tts_done"):
+        ts_path = TMP_DIR / f"{job_id}_timestamps.json"
+        mp3_path = TMP_DIR / f"{job_id}.mp3"
+
+        # BUG#2 fix: even if tts_done cached, re-run TTS if tmp files were lost
+        # (e.g. Docker restart clears /data/tmp)
+        _tts_files_missing = (
+            not mp3_path.exists() or mp3_path.stat().st_size < 1024
+            or not ts_path.exists()
+        )
+        if not state.has("tts_done") or _tts_files_missing:
+            if _tts_files_missing and state.has("tts_done"):
+                logger.warning(
+                    f"[{job_id}] tts_done cached but tmp files missing — re-generating TTS"
+                )
+                state.unmark("tts_done")
             tts_result = await generate_tts(job_id, scenes)
             if tts_result["ok"]:
                 state.mark("tts_done", {"mp3": str(tts_result.get("mp3_path", ""))})
             else:
                 logger.warning(f"[{job_id}] TTS failed: {tts_result.get('error')}")
 
-        ts_path = TMP_DIR / f"{job_id}_timestamps.json"
-        mp3_path = TMP_DIR / f"{job_id}.mp3"
         if not ts_path.exists():
             ts_path = None  # type: ignore
 

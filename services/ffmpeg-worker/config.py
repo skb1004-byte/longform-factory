@@ -76,6 +76,12 @@ XAI_API_KEY: str = os.getenv("XAI_API_KEY", "")
 WAVESPEED_API_KEY: str = os.getenv("WAVESPEED_API_KEY", "")
 
 # ============================================================================
+# TTS Settings
+# ============================================================================
+EDGE_RATE: str = os.getenv("EDGE_RATE", "-5%")
+EDGE_VOICE: str = os.getenv("EDGE_VOICE_PRIMARY", "ko-KR-SunHiNeural")
+
+# ============================================================================
 # Asset Download Limits
 # ============================================================================
 MAX_DOWNLOAD_MB: int = int(os.getenv("MAX_DOWNLOAD_MB", "120"))

@@ -136,42 +136,26 @@ async def generate_script_from_topic(
     return _generate_template_script(topic, duration_sec, tone)
 
 
-def _count_paragraphs(script: str) -> int:
-    """Count paragraphs (문단) — the natural scene unit for narration.
+def _count_sentences(script: str) -> int:
+    """Count sentences (문장) — the minimum unit of complete content.
 
-    Korean narration hierarchy: 음운 < 음절 < 형태소 < 단어 < 어절 < 구절 < 문장 < 문단
-    A scene maps to 문단, not 문장.  Splitting by sentence (문장) is too granular
-    and produces repetitive, choppy video clips.
+    문장 (sentence): 완결된 내용을 나타내는 최소의 단위.
+    Each scene = one sentence. This ensures every scene carries a single
+    complete idea without mixing unrelated content.
 
-    Priority order:
-    1. Blank-line paragraphs (\\n\\n) — most explicit paragraph marker
-    2. Single newlines (\\n) — LLM output often uses \\n between ideas
-    3. Fallback when no newlines: group ~3 sentences into one scene
-
-    Returns the count of meaningful paragraphs (≥ 1).
+    Korean LLM output often omits spaces after sentence-ending punctuation,
+    so we normalise first before splitting.
     """
-    # Priority 1: blank-line paragraphs
-    paras = re.split(r'\n\s*\n', script.strip())
-    paras = [p.strip() for p in paras if p.strip()]
-    if len(paras) >= 2:
-        return max(1, len(paras))
-
-    # Priority 2: single newlines
-    paras = [p.strip() for p in script.strip().split('\n') if p.strip()]
-    if len(paras) >= 2:
-        return max(1, len(paras))
-
-    # Priority 3: no newlines — group sentences (~3 per scene)
-    # Insert space after punctuation before Korean/uppercase (no-space LLM output)
+    # Insert space after punctuation before Korean/uppercase (handles no-space output)
     normalized = re.sub(r'([.!?！？。])([가-힣A-Z])', r'\1 \2', script.strip())
-    sents = re.split(r'(?<=[.!?！？。])\s+', normalized)
-    sents = [s for s in sents if len(s.strip()) >= 4 and re.search(r'[가-힣a-zA-Z]', s)]
-    # Group 3 sentences → 1 scene
-    return max(1, (len(sents) + 2) // 3)
-
-
-# Keep old name as alias so callers don't need updating
-_count_sentences = _count_paragraphs
+    # Split on punctuation + whitespace
+    parts = re.split(r'(?<=[.!?！？。])\s+', normalized)
+    # Filter: ≥4 chars AND at least one letter (excludes '17.', '3.14')
+    meaningful = [
+        p for p in parts
+        if len(p.strip()) >= 4 and re.search(r'[가-힣a-zA-Z]', p)
+    ]
+    return max(1, len(meaningful))
 
 
 async def split_script_to_scenes(
@@ -189,7 +173,7 @@ async def split_script_to_scenes(
     """
     base_n_scenes: int = 3 if video_type == "shorts" else 5
     max_n_scenes: int = 10 if video_type == "shorts" else 20
-    para_count = _count_paragraphs(script)
+    para_count = _count_sentences(script)
     total_chars = len(script)
     # Cap n_scenes by char budget: at least 40 chars of narration per scene
     # Prevents requesting 20 scenes from a 200-char script (causes LLM repetition)
@@ -206,7 +190,7 @@ async def split_script_to_scenes(
     )
     logger.info(
         f"[script] split: {total_chars}자 → {n_scenes}씬 "
-        f"(paragraphs={para_count}, base={base_n_scenes}, "
+        f"(sentences={para_count}, base={base_n_scenes}, "
         f"char_cap={max_from_chars}, abs_cap={max_n_scenes}), "
         f"min_chars={min_chars}, max_tokens={scene_max_tokens}"
     )

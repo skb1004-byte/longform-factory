@@ -60,7 +60,7 @@ _SPLIT_PROMPT = """\
 [{{"scene_id":"scene_01","keyword":"nature sunset","narration":"씬 나레이션 텍스트","duration_seconds":0.0}}]
 
 규칙 (엄격히 준수):
-- keyword: 반드시 영어 단어만 사용 (예: "forest river", "city night", "mountain snow") — 한국어 절대 금지
+- keyword: 반드시 영어 단어만 사용 — 한국어 절대 금지. 반드시 주제의 핵심 명사를 포함할 것 (예: 주제가 고양이면 "cat morning", "cat playing", "cat sleeping" 형태로 작성)
 - narration: 스크립트 해당 구간을 그대로 발췌 (요약·압축·생략 절대 금지, 각 씬 최소 {min_chars}자)
 - 스크립트 전체를 {n}등분하여 모든 내용 포함 (내용 누락 금지)
 - duration_seconds: 해당 씬 narration 글자수 / 4.5 로 계산 (예: 300자 → 66.7초)
@@ -642,9 +642,14 @@ def _enrich_keywords(scenes: List[Scene], topic: str) -> List[Scene]:
 
     1. Replace placeholder values (e.g. "영어 1-3단어") with real English terms.
     2. Replace overly generic fallback keywords with topic-derived terms.
+    3. Inject topic subject noun into every keyword if not already present.
+       e.g. topic="고양이" subject="cat", keyword="morning light" → "cat morning light"
+       This ensures stock footage is visually relevant to the video topic.
     """
     generic = {"nature landscape", "city skyline", "people working",
                "technology innovation", "healthy lifestyle", "korean culture"}
+    subject = _extract_topic_subject(topic)
+
     for s in scenes:
         # Step 1: sanitize placeholder / pure-Korean keywords
         s.keyword = _sanitize_keyword(s.keyword, s.narration or "", topic)
@@ -652,33 +657,113 @@ def _enrich_keywords(scenes: List[Scene], topic: str) -> List[Scene]:
         if s.keyword in generic:
             topic_en = _topic_to_keyword(topic, s.keyword)
             s.keyword = topic_en
+        # Step 3: inject subject noun if missing from keyword
+        if subject and subject.lower() not in s.keyword.lower():
+            s.keyword = f"{subject} {s.keyword}"
+            logger.debug(f"[keyword] subject injected: '{subject}' → '{s.keyword}'")
     return scenes
 
 
 def _topic_to_keyword(topic: str, fallback: str) -> str:
     """한국어 주제에서 Pexels 검색용 영어 키워드 생성."""
     mapping = {
+        # Animals
+        "고양이": "cat",
+        "강아지": "dog",
+        "개": "dog",
+        "토끼": "rabbit",
+        "새": "bird",
+        "물고기": "fish",
+        "곰": "bear",
+        "사자": "lion",
+        "호랑이": "tiger",
+        "코끼리": "elephant",
+        "펭귄": "penguin",
+        "여우": "fox",
+        "늑대": "wolf",
+        "말": "horse",
+        "소": "cow",
+        "돼지": "pig",
+        "개구리": "frog",
+        "거북이": "turtle",
+        "뱀": "snake",
+        "앵무새": "parrot",
+        # Food
         "비빔밥": "korean bibimbap food",
         "한식": "korean traditional food",
         "요리": "cooking kitchen",
+        "커피": "coffee",
+        "케이크": "cake dessert",
+        "라면": "ramen noodles",
+        "피자": "pizza",
+        "초콜릿": "chocolate",
+        # Lifestyle / People
         "건강": "healthy lifestyle",
         "운동": "exercise fitness",
+        "요가": "yoga meditation",
+        "명상": "meditation calm",
         "여행": "travel landscape",
+        "캠핑": "camping outdoor",
+        "독서": "reading books",
+        "음악": "music performance",
+        "영화": "cinema movie",
+        "게임": "gaming",
+        "패션": "fashion style",
+        "육아": "parenting child",
+        "결혼": "wedding",
+        # Knowledge / Culture
         "한국": "korea culture",
         "역사": "history ancient",
         "기술": "technology innovation",
-        "음악": "music performance",
-        "영화": "cinema movie",
+        "과학": "science research",
         "교육": "education learning",
         "경제": "economy business",
         "환경": "environment nature",
         "우주": "space cosmos",
+        "철학": "philosophy thinking",
+        "심리": "psychology mind",
+        # Nature
+        "산": "mountain nature",
+        "바다": "ocean sea",
+        "강": "river water",
+        "숲": "forest trees",
+        "꽃": "flowers bloom",
+        "하늘": "sky clouds",
     }
     topic_lower = topic.lower()
     for ko, en in mapping.items():
         if ko in topic_lower:
             return en
     return fallback or "korean culture"
+
+
+def _extract_topic_subject(topic: str) -> str:
+    """Extract a short English subject noun from the topic for keyword injection.
+
+    Returns single word like 'cat', 'dog', 'cooking' that should appear
+    in every scene keyword to ensure visually relevant stock footage is found.
+    Returns empty string if no subject can be extracted.
+    """
+    # Use the same mapping but return just the FIRST word (the main noun)
+    mapping = {
+        "고양이": "cat", "강아지": "dog", "개": "dog", "토끼": "rabbit",
+        "새": "bird", "물고기": "fish", "곰": "bear", "사자": "lion",
+        "호랑이": "tiger", "코끼리": "elephant", "펭귄": "penguin",
+        "여우": "fox", "늑대": "wolf", "말": "horse", "소": "cow",
+        "돼지": "pig", "개구리": "frog", "거북이": "turtle",
+        "뱀": "snake", "앵무새": "parrot",
+        "커피": "coffee", "케이크": "cake", "라면": "ramen",
+        "피자": "pizza", "초콜릿": "chocolate",
+        "요리": "cooking", "운동": "exercise", "요가": "yoga",
+        "음악": "music", "영화": "cinema", "게임": "gaming",
+        "패션": "fashion", "육아": "parenting", "결혼": "wedding",
+        "우주": "space", "꽃": "flowers",
+    }
+    topic_lower = topic.lower()
+    for ko, en in mapping.items():
+        if ko in topic_lower:
+            return en
+    return ""
 
 
 def _generate_template_script(topic: str, duration_sec: int, tone: str) -> str:

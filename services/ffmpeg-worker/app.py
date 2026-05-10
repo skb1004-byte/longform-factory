@@ -91,7 +91,7 @@ def _load_scenes(job_id: str) -> List[Scene]:
     if not scenes_file.exists():
         return []
     try:
-        data = json.loads(scenes_file.read_text(encoding="utf-8"))
+        data = json.loads(scenes_file.read_text(encoding="utf-8-sig"))
         if isinstance(data, dict) and "scenes" in data:
             data = data["scenes"]
         if isinstance(data, list):
@@ -242,7 +242,7 @@ async def list_all_jobs(_: str = Depends(verify_api_key)):
             scenes_file = job_dir / "scenes.json"
             if scenes_file.exists():
                 try:
-                    sd = json.loads(scenes_file.read_text(encoding="utf-8"))
+                    sd = json.loads(scenes_file.read_text(encoding="utf-8-sig"))
                     if isinstance(sd, list):
                         scenes_count = len(sd)
                     elif isinstance(sd, dict):
@@ -313,6 +313,42 @@ async def stream_video(vtype: str, filename: str, request: Request):
             "Content-Length": str(file_size),
         },
     )
+
+
+@app.post("/open-folder/{vtype}")
+async def open_output_folder(vtype: str, _: str = Depends(verify_api_key)):
+    """Open output folder in Windows Explorer (server-side shell command)."""
+    vdir_map = {"longform": LONGFORM_DIR, "shorts": SHORTS_DIR, "thumbnails": THUMBNAILS_DIR}
+    if vtype not in vdir_map:
+        raise HTTPException(status_code=400, detail="Invalid type")
+    folder = vdir_map[vtype]
+    import subprocess as _sp, sys as _sys
+    try:
+        win_path = str(folder).replace("/data/output", "E:\\longform_factory\\v2\\output").replace("/", "\\")
+        if _sys.platform.startswith("linux"):
+            # Try xdg-open or explorer.exe via WSL
+            _sp.Popen(["explorer.exe", win_path], stderr=_sp.DEVNULL)
+        else:
+            _sp.Popen(["explorer", win_path], stderr=_sp.DEVNULL)
+    except Exception as e:
+        logger.warning(f"[open_folder] {e}")
+    return {"folder": str(folder), "win_path": win_path}
+
+
+@app.post("/script/generate")
+async def script_generate(
+    body: dict,
+    _: str = Depends(verify_api_key),
+):
+    """Generate a Korean narration script from a topic using LLM fallback chain."""
+    from pipeline.script import generate_script_from_topic
+    topic = body.get("topic", "")
+    duration_sec = int(body.get("duration_sec", 300))
+    tone = body.get("tone", "professional_documentary")
+    if not topic:
+        raise HTTPException(status_code=400, detail="topic is required")
+    script = await generate_script_from_topic(topic, duration_sec, tone)
+    return {"script": script, "length": len(script), "topic": topic}
 
 
 @app.get("/")

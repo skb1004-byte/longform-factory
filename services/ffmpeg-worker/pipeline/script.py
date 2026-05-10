@@ -137,13 +137,25 @@ async def generate_script_from_topic(
 
 
 def _count_sentences(script: str) -> int:
-    """Count meaningful sentences in script for minimum scene calculation.
+    """Count meaningful sentences in Korean narration scripts.
 
-    Splits on Korean/English sentence-ending punctuation.
-    Filters out fragments shorter than 10 chars (numbers, abbreviations).
+    Two-step approach:
+    1. Insert a space after punctuation before Korean/uppercase letters —
+       Korean LLM output often omits spaces after sentence-ending marks.
+    2. Split on punctuation + whitespace, then filter out non-sentence
+       fragments (pure numbers, very short tokens like '17.' or '3.14').
+
+    Minimum 4 chars AND must contain at least one letter to qualify.
     """
-    parts = re.split(r'(?<=[。.!?])\s+', script.strip())
-    meaningful = [p for p in parts if len(p.strip()) >= 10]
+    # Step 1: normalise — add space after . ! ? before Korean / uppercase
+    normalized = re.sub(r'([.!?！？。])([가-힣A-Z])', r'\1 \2', script.strip())
+    # Step 2: split
+    parts = re.split(r'(?<=[.!?！？。])\s+', normalized)
+    # Step 3: filter fragments — need ≥4 chars and at least one letter
+    meaningful = [
+        p for p in parts
+        if len(p.strip()) >= 4 and re.search(r'[가-힣a-zA-Z]', p)
+    ]
     return max(1, len(meaningful))
 
 

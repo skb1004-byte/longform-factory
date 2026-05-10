@@ -30,8 +30,8 @@ from models import Scene
 
 logger = logging.getLogger(__name__)
 
-# LLM 타임아웃 (초) - 빠른 폴백을 위해 짧게
-LLM_TIMEOUT = 20.0
+# LLM 타임아웃 (초) - 짧은 영상: 20초, 긴 영상: generate_script에서 동적 설정
+LLM_TIMEOUT = 30.0
 
 # 키워드 프리셋 (한국어 관련, 최후 fallback용)
 _KEYWORD_FALLBACK = [
@@ -41,20 +41,21 @@ _KEYWORD_FALLBACK = [
     "family community", "economy business",
 ]
 
-# 씬 분할 프롬프트 (한국어 강제)
+# 씬 분할 프롬프트 (한국어 강제, 나레이션 보존 필수)
 _SPLIT_PROMPT = """\
 다음 스크립트를 정확히 {n}개의 씬으로 분할하세요.
 주제: {topic}
-스크립트:
+스크립트 (전체 {total_chars}자 — 각 씬당 최소 {min_chars}자 이상 나레이션 필수):
 {script}
 
 반드시 JSON 배열만 반환 (마크다운 코드블록 금지):
-[{{"scene_id":"scene_01","keyword":"영어 1-3단어","narration":"씬 나레이션 텍스트","duration_seconds":10.0}}]
+[{{"scene_id":"scene_01","keyword":"영어 1-3단어","narration":"씬 나레이션 텍스트","duration_seconds":0.0}}]
 
-규칙:
+규칙 (엄격히 준수):
 - keyword: 영어 1-3 단어 (Pexels/Pixabay 검색용, 주제와 관련된 단어)
-- narration: 한국어 나레이션 (스크립트에서 정확히 발췌)
-- duration_seconds: 글자수 / 4.5 로 계산
+- narration: 스크립트 해당 구간을 그대로 발췌 (요약·압축·생략 절대 금지, 각 씬 최소 {min_chars}자)
+- 스크립트 전체를 {n}등분하여 모든 내용 포함 (내용 누락 금지)
+- duration_seconds: 해당 씬 narration 글자수 / 4.5 로 계산 (예: 300자 → 66.7초)
 - 정확히 {n}개 씬 반환
 """
 
@@ -65,12 +66,35 @@ def _script_prompt(topic: str, duration_sec: int, tone: str) -> str:
         f"주제: {topic}\n"
         f"톤: {tone}\n"
         f"목표 길이: {duration_sec}초 ({target_chars}자)\n\n"
-        f"위 주제로 한국어 유튜브 나레이션 스크립트를 작성하세요.\n"
-        f"- 자연스러운 한국어 구어체 (반드시 한국어)\n"
-        f"- 약 {target_chars}자 분량 (부족하면 내용 추가)\n"
-        f"- 마크다운 없이 순수 텍스트만\n"
-        f"- 영어 사용 절대 금지 (고유명사 제외)\n"
+        f"위 주제로 한국어 유튜브 나레이션 스크립트를 작성하세요.\n\n"
+        f"[필수 규칙]\n"
+        f"1. 반드시 한국어로만 작성. 중국어·일본어·터키어·베트남어·스페인어 등 한국어 이외의 외국어 단어 절대 사용 금지.\n"
+        f"2. 영어는 고유명사(국가명, 인명, 브랜드)만 허용. 일반 영어 단어 사용 금지.\n"
+        f"3. 정확히 {target_chars}자 이상 작성 (부족하면 내용을 더 상세히 추가).\n"
+        f"4. 마크다운 없이 순수 텍스트만 (제목·번호·불릿 금지).\n"
+        f"5. 자연스러운 한국어 구어체로 방송 나레이션처럼 작성.\n"
+        f"6. 같은 표현 반복 금지. 다양한 어휘로 풍부하게 서술.\n"
+        f"7. 내용을 {duration_sec // 60}분 분량으로 충분히 길게 작성.\n\n"
+        f"[출력 형식]\n"
+        f"한국어 나레이션 텍스트만 출력. 설명·주석·인사말 없이 바로 본문 시작.\n"
     )
+
+
+def _script_max_tokens(duration_sec: int) -> int:
+    """Duration-proportional token budget. Korean ~2 tokens/char, 4.5 chars/sec."""
+    chars_needed = int(duration_sec * 4.5)
+    tokens_needed = int(chars_needed * 2.5)  # Korean token overhead
+    return min(8000, max(1500, tokens_needed))
+
+
+def _scene_max_tokens(script_len: int, n_scenes: int = 5) -> int:
+    """Scene JSON output max_tokens. Must preserve full narration text.
+    Korean JSON: narration_chars * 2.5 tokens + JSON overhead per scene.
+    """
+    # narration = script_len chars + JSON structure overhead (200 chars × n_scenes)
+    total_chars = script_len + n_scenes * 200
+    tokens = int(total_chars * 2.5)
+    return min(6000, max(2000, tokens))
 
 
 # ============================================================================
@@ -84,10 +108,14 @@ async def generate_script_from_topic(
 ) -> str:
     """병렬 레이스로 스크립트 생성. 첫 성공 반환. 전부 실패 시 템플릿 생성."""
     prompt = _script_prompt(topic, duration_sec, tone)
-    min_len = max(50, int(duration_sec * 2))  # 최소 글자수 (duration 기반)
+    min_len = max(200, int(duration_sec * 4.0))  # 최소 글자수 (4자/초 기준)
+    max_tokens = _script_max_tokens(duration_sec)
+    # 긴 스크립트는 생성 시간 더 필요 (최소 30초, 300초 영상 → 60초)
+    race_timeout = max(30.0, min(90.0, duration_sec * 0.2))
+    logger.info(f"[script] target={duration_sec}s min_len={min_len}자 max_tokens={max_tokens} timeout={race_timeout}s")
 
-    tasks = _build_text_tasks(prompt)
-    result = await _parallel_race(tasks, min_len=min_len)
+    tasks = _build_text_tasks(prompt, max_tokens=max_tokens)
+    result = await _parallel_race(tasks, min_len=min_len, timeout=race_timeout)
 
     if result:
         logger.info(f"[script] ✅ script generated ({len(result)}자)")
@@ -105,19 +133,39 @@ async def split_script_to_scenes(
     duration_sec: int = 60,
     tone: str = "neutral",
 ) -> List[Scene]:
-    """스크립트를 씬으로 분할. Sequential fallback chain."""
+    """스크립트를 씬으로 분할. Sequential fallback chain.
+    narration 보존 검증: 원본 스크립트의 40% 미만이면 압축된 것으로 판단 → skip.
+    """
     n_scenes: int = 3 if video_type == "shorts" else 5
-    prompt = _SPLIT_PROMPT.format(n=n_scenes, topic=topic, script=script)
+    total_chars = len(script)
+    # 씬당 최소 글자수: 균등 분할의 50% (LLM 앵커링용)
+    min_chars = max(50, total_chars // n_scenes // 2)
+    # 씬 JSON 출력에 필요한 max_tokens (나레이션 보존 필수)
+    scene_max_tokens = _scene_max_tokens(total_chars, n_scenes)
 
-    for name, coro in _scene_splitter_chain(prompt, n_scenes):
+    prompt = _SPLIT_PROMPT.format(
+        n=n_scenes, topic=topic, script=script,
+        total_chars=total_chars, min_chars=min_chars,
+    )
+    logger.info(f"[script] split: {total_chars}자 → {n_scenes}씬, min_chars={min_chars}, max_tokens={scene_max_tokens}")
+
+    for name, coro in _scene_splitter_chain(prompt, n_scenes, scene_max_tokens):
         result = await coro
-        if result:
-            logger.info(f"[script] ✅ {len(result)} scenes from {name}")
-            # 키워드 보정 (topic 관련으로)
-            result = _enrich_keywords(result, topic)
-            return result
+        if not result:
+            continue
+        total_narration = sum(len(s.narration or "") for s in result)
+        # 나레이션이 원본의 40% 미만 → 압축된 것, 다음 API로
+        if total_narration < total_chars * 0.40 and total_chars > 200:
+            logger.warning(
+                f"[script] {name} narration compressed: {total_narration}자 "
+                f"({total_narration * 100 // max(total_chars, 1)}% of {total_chars}자) → skip"
+            )
+            continue
+        logger.info(f"[script] ✅ {len(result)} scenes from {name} (narration={total_narration}자)")
+        result = _enrich_keywords(result, topic)
+        return result
 
-    logger.warning("[script] all scene APIs failed, using local text split")
+    logger.warning("[script] all scene APIs failed or narration compressed → local split")
     return _split_script_locally(script or topic, topic, n_scenes, duration_sec)
 
 
@@ -128,10 +176,13 @@ async def split_script_to_scenes(
 async def _parallel_race(
     tasks: List[tuple[str, Any]],
     min_len: int = 20,
+    timeout: float = None,
 ) -> Optional[str]:
     """모든 task를 병렬 실행. 조건 만족하는 첫 결과 반환."""
     if not tasks:
         return None
+
+    race_timeout = timeout or (LLM_TIMEOUT + 10)
 
     # (name, coro) 목록에서 태스크 생성
     named_tasks: List[tuple[str, asyncio.Task]] = []
@@ -143,7 +194,7 @@ async def _parallel_race(
     result: Optional[str] = None
 
     # as_completed: 완료 순서대로 처리
-    for coro in asyncio.as_completed(all_tasks, timeout=LLM_TIMEOUT + 10):
+    for coro in asyncio.as_completed(all_tasks, timeout=race_timeout):
         try:
             text = await coro
             if text and len(text) >= min_len:
@@ -178,9 +229,10 @@ async def _parallel_race(
 # Task builders
 # ============================================================================
 
-def _build_text_tasks(prompt: str) -> List[tuple[str, Any]]:
+def _build_text_tasks(prompt: str, max_tokens: int = 1500) -> List[tuple[str, Any]]:
     """스크립트 텍스트 생성 병렬 태스크 목록."""
     tasks = []
+    _sys = "당신은 한국어 전문 유튜브 스크립트 작가입니다. 반드시 한국어로만 답변하세요. 중국어·일본어·터키어·베트남어 등 외국어 단어 절대 사용 금지."
 
     # 1. Groq (빠름, 한국어 양호)
     if GROQ_API_KEY:
@@ -189,15 +241,19 @@ def _build_text_tasks(prompt: str) -> List[tuple[str, Any]]:
             GROQ_API_KEY,
             "llama-3.3-70b-versatile",
             prompt,
-            system="당신은 한국어 전문 유튜브 스크립트 작가입니다. 반드시 한국어로만 답변하세요.",
+            system=_sys,
+            max_tokens=max_tokens,
         )))
-        tasks.append(("Groq-8b", _llm_text_oai(
-            "https://api.groq.com/openai/v1/chat/completions",
-            GROQ_API_KEY,
-            "llama-3.1-8b-instant",
-            prompt,
-            system="당신은 한국어 유튜브 스크립트 작가입니다. 한국어로만 답변하세요.",
-        )))
+        # 8b는 긴 스크립트에 부적합 → 300s 이상이면 제외
+        if max_tokens <= 2000:
+            tasks.append(("Groq-8b", _llm_text_oai(
+                "https://api.groq.com/openai/v1/chat/completions",
+                GROQ_API_KEY,
+                "llama-3.1-8b-instant",
+                prompt,
+                system=_sys,
+                max_tokens=max_tokens,
+            )))
 
     # 2. DeepSeek (한국어 최강)
     if DEEPSEEK_API_KEY:
@@ -206,12 +262,13 @@ def _build_text_tasks(prompt: str) -> List[tuple[str, Any]]:
             DEEPSEEK_API_KEY,
             "deepseek-chat",
             prompt,
-            system="당신은 한국어 유튜브 스크립트 전문가입니다. 반드시 한국어로만 답변하세요.",
+            system=_sys,
+            max_tokens=max_tokens,
         )))
 
     # 3. Gemini
     if GEMINI_API_KEY:
-        tasks.append(("Gemini", _llm_text_gemini(prompt)))
+        tasks.append(("Gemini", _llm_text_gemini(prompt, max_tokens=max_tokens)))
 
     # 4. Cerebras
     if CEREBRAS_API_KEY:
@@ -220,6 +277,8 @@ def _build_text_tasks(prompt: str) -> List[tuple[str, Any]]:
             CEREBRAS_API_KEY,
             CEREBRAS_MODEL,
             prompt,
+            system=_sys,
+            max_tokens=max_tokens,
         )))
 
     # 5. ArliAI
@@ -229,6 +288,8 @@ def _build_text_tasks(prompt: str) -> List[tuple[str, Any]]:
             ARLIAI_API_KEY,
             ARLIAI_MODEL,
             prompt,
+            system=_sys,
+            max_tokens=max_tokens,
         )))
 
     # 6. OpenRouter (무료 모델)
@@ -236,10 +297,12 @@ def _build_text_tasks(prompt: str) -> List[tuple[str, Any]]:
         tasks.append(("OpenRouter-llama", _llm_text_openrouter(
             prompt,
             "meta-llama/llama-3.3-70b-instruct:free",
+            max_tokens=max_tokens,
         )))
         tasks.append(("OpenRouter-deepseek", _llm_text_openrouter(
             prompt,
             "deepseek/deepseek-chat-v3-0324:free",
+            max_tokens=max_tokens,
         )))
 
     # 7. OpenAI (유료, 마지막)
@@ -249,39 +312,41 @@ def _build_text_tasks(prompt: str) -> List[tuple[str, Any]]:
             OPENAI_API_KEY,
             "gpt-4o-mini",
             prompt,
+            system=_sys,
+            max_tokens=max_tokens,
         )))
 
     # 8. Claude (마지막, 크레딧 아낌)
     if ANTHROPIC_API_KEY:
-        tasks.append(("Claude", _llm_text_claude(prompt)))
+        tasks.append(("Claude", _llm_text_claude(prompt, max_tokens=max_tokens)))
 
     return tasks
 
 
-def _scene_splitter_chain(prompt: str, n_scenes: int):
+def _scene_splitter_chain(prompt: str, n_scenes: int, max_tokens: int = 2000):
     """씬 분할용 Sequential generator. JSON 파싱 필요 = sequential이 안전."""
     if GROQ_API_KEY:
-        yield "Groq-70b",   _call_groq_scenes(prompt, n_scenes, "llama-3.3-70b-versatile")
-        yield "Groq-8b",    _call_groq_scenes(prompt, n_scenes, "llama-3.1-8b-instant")
+        yield "Groq-70b",   _call_groq_scenes(prompt, n_scenes, "llama-3.3-70b-versatile", max_tokens)
+        yield "Groq-8b",    _call_groq_scenes(prompt, n_scenes, "llama-3.1-8b-instant", max_tokens)
     if DEEPSEEK_API_KEY:
-        yield "DeepSeek",   _call_oai_scenes("https://api.deepseek.com/v1/chat/completions", DEEPSEEK_API_KEY, "deepseek-chat", prompt, n_scenes)
+        yield "DeepSeek",   _call_oai_scenes("https://api.deepseek.com/v1/chat/completions", DEEPSEEK_API_KEY, "deepseek-chat", prompt, n_scenes, max_tokens=max_tokens)
     if GEMINI_API_KEY:
-        yield "Gemini",     _call_gemini_scenes(prompt, n_scenes)
+        yield "Gemini",     _call_gemini_scenes(prompt, n_scenes, max_tokens)
     if CEREBRAS_API_KEY:
-        yield "Cerebras",   _call_oai_scenes("https://api.cerebras.ai/v1/chat/completions", CEREBRAS_API_KEY, CEREBRAS_MODEL, prompt, n_scenes)
+        yield "Cerebras",   _call_oai_scenes("https://api.cerebras.ai/v1/chat/completions", CEREBRAS_API_KEY, CEREBRAS_MODEL, prompt, n_scenes, max_tokens=max_tokens)
     if ARLIAI_API_KEY:
-        yield "ArliAI",     _call_oai_scenes("https://api.arliai.com/v1/chat/completions", ARLIAI_API_KEY, ARLIAI_MODEL, prompt, n_scenes)
+        yield "ArliAI",     _call_oai_scenes("https://api.arliai.com/v1/chat/completions", ARLIAI_API_KEY, ARLIAI_MODEL, prompt, n_scenes, max_tokens=max_tokens)
     if OPENROUTER_API_KEY:
         yield "OpenRouter", _call_oai_scenes(
             "https://openrouter.ai/api/v1/chat/completions",
             OPENROUTER_API_KEY, "meta-llama/llama-3.3-70b-instruct:free",
-            prompt, n_scenes,
+            prompt, n_scenes, max_tokens=max_tokens,
             extra_headers={"HTTP-Referer": "https://longform.spacek.io", "X-Title": "LongForm Factory"},
         )
     if OPENAI_API_KEY:
-        yield "OpenAI",     _call_oai_scenes("https://api.openai.com/v1/chat/completions", OPENAI_API_KEY, "gpt-4o-mini", prompt, n_scenes)
+        yield "OpenAI",     _call_oai_scenes("https://api.openai.com/v1/chat/completions", OPENAI_API_KEY, "gpt-4o-mini", prompt, n_scenes, max_tokens=max_tokens)
     if ANTHROPIC_API_KEY:
-        yield "Claude",     _call_claude_scenes(prompt, n_scenes)
+        yield "Claude",     _call_claude_scenes(prompt, n_scenes, max_tokens)
 
 
 # ============================================================================
@@ -316,7 +381,7 @@ async def _llm_text_oai(
     return ""
 
 
-async def _llm_text_openrouter(prompt: str, model: str) -> str:
+async def _llm_text_openrouter(prompt: str, model: str, max_tokens: int = 1500) -> str:
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
@@ -325,9 +390,9 @@ async def _llm_text_openrouter(prompt: str, model: str) -> str:
     }
     payload = {
         "model": model,
-        "max_tokens": 1500,
+        "max_tokens": max_tokens,
         "messages": [
-            {"role": "system", "content": "반드시 한국어로만 답변하세요."},
+            {"role": "system", "content": "반드시 한국어로만 답변하세요. 외국어 단어 절대 금지."},
             {"role": "user", "content": prompt},
         ],
     }
@@ -345,11 +410,11 @@ async def _llm_text_openrouter(prompt: str, model: str) -> str:
     return ""
 
 
-async def _llm_text_gemini(prompt: str) -> str:
+async def _llm_text_gemini(prompt: str, max_tokens: int = 1500) -> str:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
     payload = {
-        "contents": [{"parts": [{"text": "반드시 한국어로만 답변하세요.\n\n" + prompt}]}],
-        "generationConfig": {"maxOutputTokens": 1500},
+        "contents": [{"parts": [{"text": "반드시 한국어로만 답변하세요. 외국어 단어 절대 금지.\n\n" + prompt}]}],
+        "generationConfig": {"maxOutputTokens": max_tokens},
     }
     try:
         async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as c:
@@ -362,11 +427,11 @@ async def _llm_text_gemini(prompt: str) -> str:
     return ""
 
 
-async def _llm_text_claude(prompt: str) -> str:
+async def _llm_text_claude(prompt: str, max_tokens: int = 1500) -> str:
     payload = {
         "model": ANTHROPIC_MODEL,
-        "max_tokens": 1500,
-        "system": "당신은 한국어 유튜브 스크립트 전문가입니다. 반드시 한국어로만 답변하세요.",
+        "max_tokens": max_tokens,
+        "system": "당신은 한국어 유튜브 스크립트 전문가입니다. 반드시 한국어로만 답변하세요. 중국어·일본어·터키어·베트남어 등 외국어 단어 절대 사용 금지.",
         "messages": [{"role": "user", "content": prompt}],
     }
     try:
@@ -395,15 +460,16 @@ async def _call_oai_scenes(
     prompt: str,
     n_scenes: int,
     extra_headers: dict = None,
+    max_tokens: int = 2000,
 ) -> Optional[List[Scene]]:
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     if extra_headers:
         headers.update(extra_headers)
     payload = {
         "model": model,
-        "max_tokens": 1500,
+        "max_tokens": max_tokens,
         "messages": [
-            {"role": "system", "content": "반드시 JSON 배열만 반환. 마크다운 코드블록 절대 금지. 한국어 나레이션."},
+            {"role": "system", "content": "반드시 JSON 배열만 반환. 마크다운 코드블록 절대 금지. 한국어 나레이션. 나레이션은 원문 그대로 발췌 (요약 금지)."},
             {"role": "user", "content": prompt},
         ],
     }
@@ -420,18 +486,18 @@ async def _call_oai_scenes(
     return None
 
 
-async def _call_groq_scenes(prompt: str, n_scenes: int, model: str = "llama-3.3-70b-versatile") -> Optional[List[Scene]]:
+async def _call_groq_scenes(prompt: str, n_scenes: int, model: str = "llama-3.3-70b-versatile", max_tokens: int = 2000) -> Optional[List[Scene]]:
     return await _call_oai_scenes(
         "https://api.groq.com/openai/v1/chat/completions",
-        GROQ_API_KEY, model, prompt, n_scenes,
+        GROQ_API_KEY, model, prompt, n_scenes, max_tokens=max_tokens,
     )
 
 
-async def _call_gemini_scenes(prompt: str, n_scenes: int) -> Optional[List[Scene]]:
+async def _call_gemini_scenes(prompt: str, n_scenes: int, max_tokens: int = 2000) -> Optional[List[Scene]]:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
     payload = {
-        "contents": [{"parts": [{"text": "반드시 JSON 배열만 반환. 마크다운 코드블록 절대 금지.\n\n" + prompt}]}],
-        "generationConfig": {"maxOutputTokens": 1500},
+        "contents": [{"parts": [{"text": "반드시 JSON 배열만 반환. 마크다운 코드블록 절대 금지. 나레이션 요약 금지.\n\n" + prompt}]}],
+        "generationConfig": {"maxOutputTokens": max_tokens},
     }
     try:
         async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as c:
@@ -446,11 +512,11 @@ async def _call_gemini_scenes(prompt: str, n_scenes: int) -> Optional[List[Scene
     return None
 
 
-async def _call_claude_scenes(prompt: str, n_scenes: int) -> Optional[List[Scene]]:
+async def _call_claude_scenes(prompt: str, n_scenes: int, max_tokens: int = 2000) -> Optional[List[Scene]]:
     payload = {
         "model": ANTHROPIC_MODEL,
-        "max_tokens": 1500,
-        "system": "반드시 JSON 배열만 반환. 마크다운 코드블록 절대 금지. 한국어 나레이션.",
+        "max_tokens": max_tokens,
+        "system": "반드시 JSON 배열만 반환. 마크다운 코드블록 절대 금지. 한국어 나레이션. 나레이션은 원문 그대로 발췌 (요약·압축 금지).",
         "messages": [{"role": "user", "content": prompt}],
     }
     try:

@@ -9,7 +9,7 @@ Provides structured interfaces for API contracts and internal state serializatio
 from __future__ import annotations
 from enum import Enum
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # ============================================================================
@@ -90,6 +90,15 @@ class AutoVideoRequest(BaseModel):
         description="Output format: 'longform' (16:9) or 'shorts' (9:16)",
     )
     duration_sec: int = Field(default=60, description="Target video duration in seconds")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_duration_seconds(cls, data):
+        """Accept both 'duration_sec' and 'duration_seconds' field names."""
+        if isinstance(data, dict) and "duration_seconds" in data and "duration_sec" not in data:
+            data = dict(data)
+            data["duration_sec"] = data.pop("duration_seconds")
+        return data
     tone: str = Field(default="neutral", description="Narration tone: neutral, formal, casual")
     add_subtitles: bool = Field(default=True, description="Enable subtitle generation")
     add_bgm: bool = Field(default=True, description="Add background music")

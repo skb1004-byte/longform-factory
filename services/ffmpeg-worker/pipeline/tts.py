@@ -66,7 +66,7 @@ async def generate_tts(
     )
 
     try:
-        async with httpx.AsyncClient(timeout=300.0) as client:
+        async with httpx.AsyncClient(timeout=600.0) as client:
             resp = await client.post(
                 TTS_SERVICE_URL,
                 json={

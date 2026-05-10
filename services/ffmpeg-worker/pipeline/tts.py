@@ -74,7 +74,8 @@ async def generate_tts(
                     "filename": job_id,
                     "engine": "edge",
                     "edge_voice": config.EDGE_VOICE,
-                    "edge_rate": config.EDGE_RATE,  # BUG#3 fix: was "+15%" hardcoded
+                    "edge_rate": config.EDGE_RATE,   # BUG#3 fix: was "+15%" hardcoded
+                    "edge_pitch": config.EDGE_PITCH,  # Seoul accent: +5% pitch
                     "preprocess": True,
                 }
             )

@@ -91,6 +91,7 @@ class TTSRequest(BaseModel):
     engine: str = Field(default="edge", description="TTS 엔진: edge(무료) 또는 elevenlabs")
     edge_voice: str = Field(default="ko-KR-SunHiNeural", description="Edge TTS 음성")
     edge_rate: str = Field(default="-5%", description="Edge TTS 속도")
+    edge_pitch: str = Field(default="+5%", description="Edge TTS 음조 (서울 억양 강화: +5%)")
     output_format: str = Field(default="mp3_44100_128", description="출력 포맷")
     filename: Optional[str] = Field(default=None, description="저장 파일명 (확장자 제외)")
     preprocess: bool = Field(default=True, description="[D] 호흡·리듬 자동 주입 (긴 문장 분할 + silence 삽입)")
@@ -835,6 +836,41 @@ _PAUSE_PATTERNS = [
 ]
 
 
+_KO_SPACING_FIXES = {
+    # Food / ingredients
+    "건강식품": "건강 식품", "발효식품": "발효 식품", "전통음식": "전통 음식",
+    "한국음식": "한국 음식", "발효음식": "발효 음식", "건강효능": "건강 효능",
+    "영양소": "영양소",   # 이 경우는 단어 자체가 하나 — 그대로 유지
+    "된장찌개": "된장찌개",  # 음식 이름은 붙여 씀
+    "식이섬유": "식이 섬유", "면역력": "면역력",
+    "비타민c": "비타민 C", "비타민k": "비타민 K",
+    # History / culture
+    "한국역사": "한국 역사", "문화유산": "문화 유산", "문화교류": "문화 교류",
+    "역사이야기": "역사 이야기", "한반도": "한반도",
+    # Tech
+    "AI기술": "AI 기술", "인공지능": "인공 지능", "데이터분석": "데이터 분석",
+    "딥러닝": "딥 러닝", "머신러닝": "머신 러닝",
+    # General compounds that TTS misreads
+    "사회적": "사회적", "정치적": "정치적",  # adjectives — keep as-is
+    "상관관계": "상관 관계", "생산성": "생산성",
+    "고대시대": "고대 시대", "현대시대": "현대 시대",
+    "시간이": "시간이",  # conjugated — keep
+}
+
+_KO_SPACING_RE = None
+
+
+def _normalize_korean_spacing(text: str) -> str:
+    """Common Korean compound word spacing normalization for TTS clarity."""
+    global _KO_SPACING_RE
+    import re as _re
+    if _KO_SPACING_RE is None:
+        # Build combined pattern — longest match first
+        keys = sorted(_KO_SPACING_FIXES.keys(), key=len, reverse=True)
+        _KO_SPACING_RE = _re.compile("|".join(_re.escape(k) for k in keys))
+    return _KO_SPACING_RE.sub(lambda m: _KO_SPACING_FIXES[m.group(0)], text)
+
+
 def preprocess_script(text: str,
                       max_chars: int = None,
                       sent_pause: float = None,
@@ -859,6 +895,9 @@ def preprocess_script(text: str,
 
     if not text or not text.strip():
         return []
+
+    # 0) Korean spacing normalization for TTS clarity
+    text = _normalize_korean_spacing(text)
 
     # 1) 마커 추출 → 텍스트에서 제거하고 위치 기억
     # 간단: 마커를 플레이스홀더 "\x00PAUSE:0.3\x00" 로 치환
@@ -1418,6 +1457,7 @@ async def tts_convert(request: TTSRequest, background_tasks: BackgroundTasks):
                     chunks,
                     voice=getattr(request, "edge_voice", "ko-KR-SunHiNeural"),
                     rate=getattr(request, "edge_rate", "-5%"),
+                    pitch=getattr(request, "edge_pitch", "+5%"),
                 )
                 alignment = None
             else:
@@ -1425,6 +1465,7 @@ async def tts_convert(request: TTSRequest, background_tasks: BackgroundTasks):
                     text=request.text,
                     voice=getattr(request, "edge_voice", "ko-KR-SunHiNeural"),
                     rate=getattr(request, "edge_rate", "-5%"),
+                    pitch=getattr(request, "edge_pitch", "+5%"),
                 )
                 alignment = None
         else:
@@ -1717,10 +1758,16 @@ def _build_script_prompt(req: ScriptGenerateRequest, extracted_text: str = "") -
    - 주제 전환: (0.6초)
    - 결론 직전: (0.8초)
 3. 쉼표 대신 마침표. "매우 중요하며," → "매우 중요합니다."
-4. 복합명사는 띄어쓰기 유지 ("진공 챔버", "열 시험", "우주 환경" 등).
+4. 띄어쓰기 완벽 준수 — TTS가 정확히 읽도록 (매우 중요):
+   - 모든 복합명사 반드시 띄어 씀: "진공 챔버", "열 시험", "우주 환경", "발효 식품",
+     "건강 효능", "전통 음식", "한국 역사", "문화 유산", "AI 기술", "데이터 분석"
+   - 조사 앞은 붙여 씀: "음식이" "역사를" "효능은"
+   - 부사는 띄어 씀: "매우 중요", "정말 맛있", "아주 훌륭"
+   - 틀린 예: "건강식품", "발효식품", "전통음식" → 올바른 예: "건강 식품", "발효 식품", "전통 음식"
 5. 숫자·수치는 별도 문장으로. "3단계를 통과합니다. (0.4초) 하나, 둘, 셋."
 6. 마크다운·제목·해설 없이 스크립트 본문만 출력한다.
 7. 서두·맺음말 군더더기 금지. 바로 본론부터.
+8. 각 문장은 자연스러운 호흡 단위로 끊는다. 숨쉬기 어려운 긴 문장 금지.
 
 예시 스타일:
 오늘은 위성 테스트에 대해 이야기합니다.

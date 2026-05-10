@@ -80,6 +80,7 @@ WAVESPEED_API_KEY: str = os.getenv("WAVESPEED_API_KEY", "")
 # ============================================================================
 EDGE_RATE: str = os.getenv("EDGE_RATE", "-5%")
 EDGE_VOICE: str = os.getenv("EDGE_VOICE_PRIMARY", "ko-KR-SunHiNeural")
+EDGE_PITCH: str = os.getenv("EDGE_PITCH", "+5%")  # Seoul accent: slight pitch up
 
 # ============================================================================
 # Asset Download Limits

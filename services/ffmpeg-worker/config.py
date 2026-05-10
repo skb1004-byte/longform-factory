@@ -75,6 +75,12 @@ XAI_API_KEY: str = os.getenv("XAI_API_KEY", "")
 
 WAVESPEED_API_KEY: str = os.getenv("WAVESPEED_API_KEY", "")
 
+# AI Video Generation
+KLING_ACCESS_KEY: str = os.getenv("KLING_ACCESS_KEY", "")
+KLING_SECRET_KEY: str = os.getenv("KLING_SECRET_KEY", "")
+KLING_MODE: str = os.getenv("KLING_MODE", "std")        # "std" | "pro"
+KLING_ENABLED: bool = os.getenv("KLING_ENABLED", "true").lower() == "true"
+
 # ============================================================================
 # TTS Settings
 # ============================================================================

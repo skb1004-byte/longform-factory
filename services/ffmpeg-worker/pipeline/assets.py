@@ -14,7 +14,7 @@ from pipeline.ai_image import (
     build_cartoon_prompt,           # backward compat export
     generate_ai_image_wavespeed,
     generate_ai_image_dalle,
-    image_to_video,
+    image_to_video_ai,
 )
 from pipeline.stock_search import (   # split to keep assets.py ≤300 lines
     get_pexels_videos,
@@ -155,7 +155,8 @@ async def _fetch_ai_asset(scene, assets_dir: Path, style: str, preset: dict, cha
                 break
 
         if ok and img_path.exists() and img_path.stat().st_size > 1024:
-            if image_to_video(img_path, out, dur):
+            if await image_to_video_ai(img_path, out, dur, style=style,
+                                       scene_keyword=scene.keyword or ""):
                 collected_urls.append(str(out))
                 logger.info(f"[assets]   sub{sub_i} → {out.name} OK")
             else:

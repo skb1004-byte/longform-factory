@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""AI image generation: WaveSpeed FLUX (primary) + DALL-E 3 (fallback)."""
+"""AI image generation: WaveSpeed FLUX (primary) + DALL-E 3 (fallback).
+
+Also provides image_to_video_ai(): Kling AI video (primary) → FFmpeg Ken Burns (fallback).
+Prompt building logic is in pipeline/prompt_builder.py.
+"""
 from __future__ import annotations
 import asyncio
 import logging
@@ -8,8 +12,7 @@ from pathlib import Path
 
 import httpx
 
-from config import WAVESPEED_API_KEY, OPENAI_API_KEY
-from pipeline.style_presets import get_preset
+from config import WAVESPEED_API_KEY, OPENAI_API_KEY, KLING_ENABLED
 
 logger = logging.getLogger(__name__)
 
@@ -21,188 +24,8 @@ _DEFAULT_NEGATIVE = (
     "violent, nsfw, low quality, deformed"
 )
 
-# Scene context enrichment: keyword/narration fragment → descriptive subject hint
-# Supports both English keywords and Korean narration terms
-_CONTEXT_MAP = {
-    # --- English topic keywords ---
-    "labor":      "workers in orange uniforms facing authority figures in suits",
-    "union":      "union workers protesting, raised fists, solidarity banner",
-    "economy":    "economic charts, coins, currency symbols, business setting",
-    "finance":    "stock market graphs, financial district, money flow",
-    "politics":   "government building, officials at podium, policy documents",
-    "law":        "courtroom, gavel, legal books, justice scales",
-    "technology": "futuristic devices, glowing screens, innovation lab",
-    "business":   "modern office meeting room, executives, corporate environment",
-    "people":     "diverse group of people, community gathering, crowd",
-    "nature":     "beautiful landscape, lush green scenery, outdoors",
-    "city":       "urban cityscape, skyscrapers, busy street scene",
-    "success":    "trophy, celebration, triumphant characters, achievement",
-    "crisis":     "character looking worried, storm clouds, tense atmosphere",
-    "solution":   "lightbulb moment, problem solved, happy characters",
-    "health":     "medical setting, doctor, healthcare, wellness",
-    "food":       "delicious meal, restaurant, kitchen, cooking",
-    "education":  "classroom, students learning, books, school building",
-    "travel":     "airplane, passport, world map, adventure",
-    "family":     "happy family, home interior, warmth, togetherness",
-    "sport":      "athletes competing, stadium, victory, training",
-    "art":        "artist painting, gallery, colorful canvas, creative studio",
-    "music":      "musician playing, concert stage, musical notes, instruments",
-    "science":    "laboratory, researcher, microscope, scientific equipment",
-    "history":    "ancient artifacts, historical monument, vintage setting",
-    "culture":    "traditional ceremony, cultural festival, heritage items",
-    # --- Korean food & ingredients ---
-    "간장":       "soy sauce bottle, dark brown liquid, Korean condiment jar, fermented sauce",
-    "된장":       "doenjang miso paste, fermented soybean, traditional Korean jar",
-    "고추장":     "gochujang red pepper paste jar, spicy Korean condiment",
-    "고추":       "Korean red chili pepper, spicy ingredient, vibrant red color",
-    "마늘":       "garlic cloves, Korean cooking ingredient, kitchen counter",
-    "생강":       "ginger root, Korean spice, fresh ingredient on cutting board",
-    "대파":       "green onion, scallion, Korean vegetable, fresh herb",
-    "양파":       "onion sliced, Korean cooking, fresh vegetable",
-    "배추":       "napa cabbage, Korean vegetable, leafy greens",
-    "단무지":     "daikon radish, Korean white radish, pickled vegetable",
-    "무채":       "shredded radish, Korean side dish, white vegetable",
-    "김치":       "kimchi jar, fermented cabbage, Korean traditional food, red color",
-    "나물":       "Korean namul seasoned greens, vegetable side dish, bowl",
-    "비빔밥":     "bibimbap Korean rice bowl, colorful toppings, stone pot",
-    "불고기":     "bulgogi grilled marinated beef, Korean BBQ, sizzling grill",
-    "삼겹살":     "samgyeopsal pork belly slices, Korean BBQ grill, smoke",
-    "갈비":       "Korean galbi ribs, grilled meat, BBQ restaurant",
-    "국밥":       "Korean gukbap soup with rice, steaming bowl, comfort food",
-    "된장찌개":   "doenjang jjigae soybean paste stew, Korean tofu soup, clay pot",
-    "김치찌개":   "kimchi jjigae stew, bubbling red soup, Korean comfort food",
-    "순두부":     "sundubu soft tofu, silky texture, Korean soup bowl",
-    "삼계탕":     "samgyetang ginseng chicken soup, medicinal Korean dish",
-    "떡":         "rice cake tteok, Korean traditional dessert, colorful",
-    "떡볶이":     "tteokbokki spicy rice cakes, street food, red sauce",
-    "순대":       "sundae Korean blood sausage, street food, steam",
-    "잡채":       "japchae glass noodles, Korean stir fry, colorful vegetables",
-    "냉면":       "naengmyeon cold noodles, chilled bowl, Korean summer dish",
-    "육개장":     "yukgaejang spicy beef soup, Korean stew, hearty meal",
-    "해장국":     "haejanguk hangover soup, Korean broth, morning meal",
-    "보쌈":       "bossam pork wraps, Korean lettuce wrap, fermented kimchi",
-    "족발":       "jokbal braised pork trotters, Korean dish, soy sauce glaze",
-    "치킨":       "Korean fried chicken, crispy golden, sauce coating",
-    "라면":       "ramen instant noodle, Korean spicy broth, boiling pot",
-    "김밥":       "gimbap seaweed rice roll, Korean picnic food, colorful filling",
-    "샌드위치":   "sandwich, bread, fresh ingredients, meal",
-    "빵":         "bread loaf, Korean bakery, fresh baked goods",
-    "케이크":     "cake slice, celebration, sweet dessert, colorful frosting",
-    "커피":       "coffee cup, Korean cafe, aroma, latte art",
-    "차":         "tea cup, Korean traditional tea, steam, warmth",
-    "막걸리":     "makgeolli rice wine, white milky Korean drink, bowl cup",
-    "소주":       "soju glass, Korean spirit, clear bottle, drinking",
-    "맥주":       "beer glass, Korean pub, refreshing drink",
-    "양념":       "Korean seasoning, spices, marinade, flavor blend",
-    "반찬":       "Korean banchan side dishes, small bowls, table spread",
-    "발효":       "fermentation jars, traditional Korean storage, clay pots",
-    "식재료":     "Korean cooking ingredients, fresh produce, kitchen",
-    "요리":       "Korean cooking, kitchen preparation, chef, ingredients",
-    "음식":       "Korean food spread, delicious meal, table setting",
-    "시장":       "Korean traditional market, street food stalls, bustling",
-    "주방":       "kitchen, cooking space, Korean home meal prep",
-    # --- Korean general topics ---
-    "회사":       "office building, business meeting, corporate Korea",
-    "직장":       "workplace, Korean office, employees working",
-    "돈":         "money, Korean won bills, financial, economy",
-    "집":         "Korean home interior, cozy house, family living",
-    "학교":       "Korean school building, students, classroom learning",
-    "병원":       "Korean hospital, doctor and patient, medical care",
-    "여행":       "travel destination, Korean tourism, sightseeing",
-    "자연":       "Korean nature scenery, mountains, lush green landscape",
-    "역사":       "Korean historical site, traditional architecture, heritage",
-    "문화":       "Korean cultural festival, hanbok, traditional ceremony",
-    "음악":       "Korean music performance, K-pop stage, concert",
-    "미술":       "Korean art gallery, artwork, creative painting, exhibition",
-    "스포츠":     "Korean sports, athletes competing, stadium crowd",
-    "건강":       "health wellness, Korean medical, exercise, fitness",
-    "환경":       "Korean environment, nature conservation, green energy",
-    "기술":       "Korean technology, high-tech devices, innovation",
-    "경제":       "Korean economy, financial district Seoul, business charts",
-    "사회":       "Korean society, community people, social gathering",
-    "정치":       "Korean government building, policy, official meeting",
-}
-
-
-def _scan_context_hints(text: str) -> list[str]:
-    """Scan text for all matching context hints (Korean and English).
-
-    Short keys (1-2 chars) require word-boundary match to avoid false positives
-    (e.g. '무' matching inside '무대', '파' matching inside '파악').
-    Long keys (3+ chars) use substring match.
-
-    Returns a list of unique hints (up to 2) for richer prompts.
-    """
-    if not text:
-        return []
-    import re
-    text_lower = text.lower()
-    found: list[str] = []
-    seen: set[str] = set()
-    for key, hint in _CONTEXT_MAP.items():
-        if len(key) == 1:
-            # Single char: require word boundary (prevents false positives like 무→무대)
-            pattern = r'(?<![가-힣a-zA-Z])' + re.escape(key) + r'(?![가-힣a-zA-Z])'
-            matched = bool(re.search(pattern, text_lower))
-        else:
-            # 2+ chars: simple substring match (Korean 2-char words are specific enough)
-            matched = key in text_lower
-        if matched and hint not in seen:
-            found.append(hint)
-            seen.add(hint)
-            if len(found) >= 2:
-                break
-    return found
-
-
-def build_prompt(scene, style: str = "cartoon") -> str:
-    """Build AI image prompt for the given style preset.
-
-    Strategy (v17.7.4 — narration-visual matching):
-    1. Check keyword against _CONTEXT_MAP for English enrichment
-    2. Check narration against _CONTEXT_MAP for Korean ingredient/topic hints
-    3. Combine keyword + narration hints for a specific, accurate prompt
-    4. Fallback to narration[:60] when keyword is empty
-    """
-    preset = get_preset(style)
-    prefix = preset.get("prompt_prefix", "")
-
-    keyword = (scene.keyword or "").strip().lower()
-    narration = (scene.narration or "").strip()
-
-    # Collect hints from keyword (English) and narration (Korean/English)
-    keyword_hints = _scan_context_hints(keyword)
-    narration_hints = _scan_context_hints(narration)
-
-    # Merge: keyword hints first, then unique narration hints
-    all_hints: list[str] = []
-    seen_hints: set[str] = set()
-    for h in keyword_hints + narration_hints:
-        if h not in seen_hints:
-            all_hints.append(h)
-            seen_hints.add(h)
-
-    if keyword:
-        # Build subject from keyword + all enrichment hints
-        parts = [keyword] + all_hints[:2]
-        subject = ", ".join(parts)
-    elif narration:
-        # No keyword: prefer English hints over raw Korean narration text
-        if all_hints:
-            # Use English hints as primary subject (FLUX handles English better)
-            subject = ", ".join(all_hints[:2])
-        else:
-            # No hints found: use narration excerpt (may contain Korean, FLUX best-effort)
-            subject = narration[:60].strip()
-    else:
-        subject = "abstract concept illustration"
-
-    return f"{prefix}, {subject}" if prefix else subject
-
-
-def build_cartoon_prompt(scene) -> str:
-    """Backward-compatible alias for build_prompt(scene, 'cartoon')."""
-    return build_prompt(scene, "cartoon")
+# Re-export prompt builders for backward compatibility
+from pipeline.prompt_builder import build_prompt, build_cartoon_prompt  # noqa: E402, F401
 
 
 async def generate_ai_image_wavespeed(
@@ -321,8 +144,44 @@ async def _download_image(url: str, output_path: Path) -> bool:
         return False
 
 
+async def image_to_video_ai(
+    image_path: Path,
+    output_path: Path,
+    duration: float,
+    style: str = "cartoon",
+    scene_keyword: str = "",
+) -> bool:
+    """Convert static image to video: Kling AI (primary) → FFmpeg Ken Burns (fallback).
+
+    Kling generates real AI motion (parallax, organic movement, camera dynamics)
+    for dramatically better visual quality than static zoom effects.
+    Falls back to FFmpeg Ken Burns on any Kling failure.
+    """
+    if output_path.exists() and output_path.stat().st_size > 4096:
+        return True
+
+    if KLING_ENABLED:
+        try:
+            from pipeline.kling_video import kling_image_to_video
+            ok = await kling_image_to_video(
+                image_path=image_path,
+                output_path=output_path,
+                duration=duration,
+                style=style,
+                scene_keyword=scene_keyword,
+            )
+            if ok:
+                logger.info(f"[ai_image] Kling AI video OK: {output_path.name}")
+                return True
+            logger.info("[ai_image] Kling failed → Ken Burns fallback")
+        except Exception as e:
+            logger.warning(f"[ai_image] Kling exception: {e} → Ken Burns fallback")
+
+    return image_to_video(image_path, output_path, duration)
+
+
 def image_to_video(image_path: Path, output_path: Path, duration: float) -> bool:
-    """Convert static image to looping video with Ken Burns zoom effect."""
+    """Convert static image to looping video with Ken Burns zoom effect (FFmpeg)."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if output_path.exists() and output_path.stat().st_size > 4096:
         return True
@@ -350,10 +209,10 @@ def image_to_video(image_path: Path, output_path: Path, duration: float) -> bool
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120.0)
         ok = result.returncode == 0 and output_path.exists() and output_path.stat().st_size > 4096
         if ok:
-            logger.info(f"[ai_image] image→video OK: {output_path.name}")
+            logger.info(f"[ai_image] Ken Burns OK: {output_path.name}")
         else:
-            logger.warning(f"[ai_image] image→video failed: {result.stderr[-200:]}")
+            logger.warning(f"[ai_image] Ken Burns failed: {result.stderr[-200:]}")
         return ok
     except Exception as e:
-        logger.error(f"[ai_image] image→video error: {e}")
+        logger.error(f"[ai_image] Ken Burns error: {e}")
         return False

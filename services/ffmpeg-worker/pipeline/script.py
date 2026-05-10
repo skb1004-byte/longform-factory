@@ -128,6 +128,17 @@ async def generate_script_from_topic(
     return _generate_template_script(topic, duration_sec, tone)
 
 
+def _count_sentences(script: str) -> int:
+    """Count meaningful sentences in script for minimum scene calculation.
+
+    Splits on Korean/English sentence-ending punctuation.
+    Filters out fragments shorter than 10 chars (numbers, abbreviations).
+    """
+    parts = re.split(r'(?<=[。.!?])\s+', script.strip())
+    meaningful = [p for p in parts if len(p.strip()) >= 10]
+    return max(1, len(meaningful))
+
+
 async def split_script_to_scenes(
     script: str,
     topic: str,
@@ -137,8 +148,14 @@ async def split_script_to_scenes(
 ) -> List[Scene]:
     """스크립트를 씬으로 분할. Sequential fallback chain.
     narration 보존 검증: 원본 스크립트의 40% 미만이면 압축된 것으로 판단 → skip.
+
+    n_scenes is driven by sentence count: each sentence gets at least 1 scene.
+    Capped at 10 (shorts) or 20 (longform) to prevent asset overload.
     """
-    n_scenes: int = 3 if video_type == "shorts" else 5
+    base_n_scenes: int = 3 if video_type == "shorts" else 5
+    max_n_scenes: int = 10 if video_type == "shorts" else 20
+    sentence_count = _count_sentences(script)
+    n_scenes: int = min(max(sentence_count, base_n_scenes), max_n_scenes)
     total_chars = len(script)
     # 씬당 최소 글자수: 균등 분할의 50% (LLM 앵커링용)
     min_chars = max(50, total_chars // n_scenes // 2)
@@ -149,7 +166,11 @@ async def split_script_to_scenes(
         n=n_scenes, topic=topic, script=script,
         total_chars=total_chars, min_chars=min_chars,
     )
-    logger.info(f"[script] split: {total_chars}자 → {n_scenes}씬, min_chars={min_chars}, max_tokens={scene_max_tokens}")
+    logger.info(
+        f"[script] split: {total_chars}자 → {n_scenes}씬 "
+        f"(sentences={sentence_count}, base={base_n_scenes}, cap={max_n_scenes}), "
+        f"min_chars={min_chars}, max_tokens={scene_max_tokens}"
+    )
 
     for name, coro in _scene_splitter_chain(prompt, n_scenes, scene_max_tokens):
         result = await coro

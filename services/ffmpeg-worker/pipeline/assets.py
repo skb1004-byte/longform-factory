@@ -156,7 +156,8 @@ async def _fetch_ai_asset(scene, assets_dir: Path, style: str, preset: dict, cha
 
         if ok and img_path.exists() and img_path.stat().st_size > 1024:
             if await image_to_video_ai(img_path, out, dur, style=style,
-                                       scene_keyword=scene.keyword or ""):
+                                       scene_keyword=scene.keyword or "",
+                                       scene_narration=scene.narration or ""):
                 collected_urls.append(str(out))
                 logger.info(f"[assets]   sub{sub_i} → {out.name} OK")
             else:

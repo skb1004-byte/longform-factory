@@ -150,16 +150,40 @@ async def image_to_video_ai(
     duration: float,
     style: str = "cartoon",
     scene_keyword: str = "",
+    scene_narration: str = "",
 ) -> bool:
-    """Convert static image to video: Kling AI (primary) → FFmpeg Ken Burns (fallback).
+    """Convert static image to video with style-aware AI motion.
 
-    Kling generates real AI motion (parallax, organic movement, camera dynamics)
-    for dramatically better visual quality than static zoom effects.
-    Falls back to FFmpeg Ken Burns on any Kling failure.
+    Chain (best → fallback):
+      1. WaveSpeed WAN 2.2 i2v  — same API key as FLUX, ultra-fast, style+content aware motion
+      2. Kling AI image2video   — JWT-based, moderate speed, good quality backup
+      3. FFmpeg Ken Burns       — always available, zero-dependency fallback
+
+    Style-aware: cartoon/cinematic/watercolor/anime/minimal/infographic each get
+    distinct motion prompts, further enriched by scene keyword/narration content.
     """
     if output_path.exists() and output_path.stat().st_size > 4096:
         return True
 
+    # ── Level 1: WaveSpeed WAN 2.2 (primary — same key as FLUX) ─────────────
+    try:
+        from pipeline.wavespeed_video import wavespeed_image_to_video
+        ok = await wavespeed_image_to_video(
+            image_path=image_path,
+            output_path=output_path,
+            duration=duration,
+            style=style,
+            scene_keyword=scene_keyword,
+            scene_narration=scene_narration,
+        )
+        if ok:
+            logger.info(f"[ai_image] WAN 2.2 video OK: {output_path.name}")
+            return True
+        logger.info("[ai_image] WAN 2.2 failed → Kling fallback")
+    except Exception as e:
+        logger.warning(f"[ai_image] WAN 2.2 exception: {e} → Kling fallback")
+
+    # ── Level 2: Kling AI (secondary — JWT auth) ──────────────────────────
     if KLING_ENABLED:
         try:
             from pipeline.kling_video import kling_image_to_video
@@ -171,12 +195,13 @@ async def image_to_video_ai(
                 scene_keyword=scene_keyword,
             )
             if ok:
-                logger.info(f"[ai_image] Kling AI video OK: {output_path.name}")
+                logger.info(f"[ai_image] Kling video OK: {output_path.name}")
                 return True
             logger.info("[ai_image] Kling failed → Ken Burns fallback")
         except Exception as e:
             logger.warning(f"[ai_image] Kling exception: {e} → Ken Burns fallback")
 
+    # ── Level 3: FFmpeg Ken Burns (always works) ──────────────────────────
     return image_to_video(image_path, output_path, duration)
 
 

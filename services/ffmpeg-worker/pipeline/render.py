@@ -252,12 +252,17 @@ def prepare_clips_for_longform(
                 seek_offset = (src_dur - 0.5) * sub_i / max(n_subs - 1, 1)
                 seek_start = max(0.0, min(seek_offset, src_dur - 0.5))
 
+            # Select source: use per-sub-clip image if available, else fallback to main asset
+            asset_list = getattr(scene, "asset_urls", None) or []
+            src_asset = (asset_list[sub_i % len(asset_list)]
+                         if asset_list else scene.asset_url)
+
             cmd = ["ffmpeg"]
             if needs_loop:
                 cmd += ["-stream_loop", "-1"]
             cmd += [
                 "-ss", str(seek_start),
-                "-i", scene.asset_url,
+                "-i", src_asset,
                 "-t", str(sub_dur),
                 "-vf", vf,
                 "-c:v", "libx264", "-preset", VIDEO_PRESET, "-crf", str(VIDEO_CRF),

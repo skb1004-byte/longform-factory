@@ -49,6 +49,7 @@ class Scene(BaseModel):
     description: str = Field(default="", description="Scene context for asset matching")
     duration_seconds: float = Field(default=5.0, description="Target scene duration")
     asset_url: Optional[str] = Field(default=None, description="Primary video/image URL")
+    asset_urls: List[str] = Field(default_factory=list, description="Multiple asset URLs for sub-clip variety (multi-image quality mode)")
     alt_asset_url: Optional[str] = Field(default=None, description="Fallback asset URL")
 
     def model_post_init(self, __context) -> None:

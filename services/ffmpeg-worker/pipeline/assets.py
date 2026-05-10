@@ -6,9 +6,7 @@ import logging
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-import httpx
-
-from config import PEXELS_API_KEY, PIXABAY_API_KEY, JOBS_DIR
+from config import JOBS_DIR
 from pipeline.asset_utils import download_video, _expand_domain_keyword
 from pipeline.style_presets import resolve_style, get_preset, AI_STYLES
 from pipeline.ai_image import (
@@ -18,16 +16,26 @@ from pipeline.ai_image import (
     generate_ai_image_dalle,
     image_to_video,
 )
+from pipeline.stock_search import (   # split to keep assets.py ≤300 lines
+    get_pexels_videos,
+    get_pixabay_videos,
+    select_best_video,
+    NEGATIVE_KEYWORDS,
+)
 
 logger = logging.getLogger(__name__)
 
-NEGATIVE_KEYWORDS = [
-    "funeral", "coffin", "death", "corpse", "cemetery", "grave",
-    "war", "weapon", "gun", "violence", "blood", "injury",
-    "arrest", "handcuff", "prison", "protest", "riot",
-    "cigarette", "alcohol", "drug", "nude",
-]
+# Number of distinct AI images to generate per scene (multi-image quality mode).
+# Each sub-clip in the Ken Burns loop gets its own unique image → no visual repetition.
+N_SUB_IMAGES = 4
 
+# Composition/angle hints injected per sub-image to maximise visual variety.
+_SUB_VIEW_HINTS = [
+    "wide establishing shot, expansive full scene view",
+    "close-up macro detail, intimate foreground focus",
+    "medium shot, balanced mid-range composition",
+    "dynamic cinematic angle, dramatic perspective framing",
+]
 
 async def search_and_download_assets(
     job_id: str,
@@ -58,8 +66,19 @@ async def search_and_download_assets(
     assets_dir.mkdir(parents=True, exist_ok=True)
 
     for scene in scenes:
+        # Multi-image reuse check (AI mode): all N sub-images must already exist
+        if is_ai:
+            sub_paths = [assets_dir / f"{scene.scene_id}_sub{i}.mp4" for i in range(N_SUB_IMAGES)]
+            valid_subs = [p for p in sub_paths if p.exists() and p.stat().st_size > 4096]
+            if len(valid_subs) == N_SUB_IMAGES:
+                scene.asset_urls = [str(p) for p in valid_subs]
+                scene.asset_url = scene.asset_urls[0]
+                logger.info(f"[assets] reusing {N_SUB_IMAGES} sub-images: {scene.scene_id}")
+                continue
+
+        # Legacy single-asset reuse (stock mode or partial AI cache)
         existing = assets_dir / f"{scene.scene_id}_main.mp4"
-        if existing.exists() and existing.stat().st_size > 4096:
+        if not is_ai and existing.exists() and existing.stat().st_size > 4096:
             scene.asset_url = str(existing)
             logger.info(f"[assets] reusing {existing.name}")
             continue
@@ -77,52 +96,87 @@ async def search_and_download_assets(
 # ──────────────────────────────────────────────────────────────────────────────
 
 async def _fetch_ai_asset(scene, assets_dir: Path, style: str, preset: dict, chain: list) -> None:
-    """Try each source in fallback chain until one succeeds."""
-    img_path = assets_dir / f"{scene.scene_id}_main.png"
-    out = assets_dir / f"{scene.scene_id}_main.mp4"
-    prompt = build_prompt(scene, style)
+    """Generate N_SUB_IMAGES distinct AI images per scene for maximum visual variety.
+
+    Each sub-image uses the same base prompt but a unique composition/angle hint
+    (wide / close-up / medium / dynamic) so every Ken Burns sub-clip shows a
+    genuinely different illustration — eliminating the same-image repetition bug.
+
+    Falls back to stock footage when all AI sources fail for a given sub-image.
+    """
     neg = preset.get("negative_prompt", "")
     size = preset.get("size_portrait", "768x1344")
     dur = max(scene.duration_seconds or 5.0, 3.0)
+    base_prompt = build_prompt(scene, style)
 
-    logger.info(f"[assets] AI prompt ({scene.scene_id}): {prompt[:80]}")
+    logger.info(f"[assets] AI multi-image start ({scene.scene_id}, n={N_SUB_IMAGES}): {base_prompt[:70]}")
 
-    ok = False
-    for source in chain:
-        if ok:
-            break
+    collected_urls: list[str] = []
 
-        if source == "wavespeed":
-            ok = await generate_ai_image_wavespeed(prompt, img_path, size=size, negative_prompt=neg)
-            if not ok:
-                # One 429 retry with backoff
-                logger.info(f"[assets] WaveSpeed retry in 5s ({scene.scene_id})")
-                await asyncio.sleep(5)
-                ok = await generate_ai_image_wavespeed(prompt, img_path, size=size, negative_prompt=neg)
+    for sub_i in range(N_SUB_IMAGES):
+        view_hint = _SUB_VIEW_HINTS[sub_i % len(_SUB_VIEW_HINTS)]
+        sub_prompt = f"{base_prompt}, {view_hint}"
 
-        elif source == "dalle":
-            dalle_size = "1024x1792"  # portrait
-            ok = await generate_ai_image_dalle(prompt, img_path, size=dalle_size)
+        img_path = assets_dir / f"{scene.scene_id}_sub{sub_i}.png"
+        out = assets_dir / f"{scene.scene_id}_sub{sub_i}.mp4"
 
-        elif source in ("pexels", "pixabay"):
-            # Stock fallback when all AI sources fail
-            logger.info(f"[assets] AI failed → stock fallback ({scene.scene_id})")
-            await _fetch_stock_asset(scene, assets_dir, [source])
-            # Inter-scene delay still needed
-            await asyncio.sleep(3)
-            return
+        # Skip if this sub-image video already exists and is valid
+        if out.exists() and out.stat().st_size > 4096:
+            logger.info(f"[assets]   sub{sub_i} cached: {out.name}")
+            collected_urls.append(str(out))
+            continue
 
-    if ok and img_path.exists():
-        if image_to_video(img_path, out, dur):
-            scene.asset_url = str(out)
-            logger.info(f"[assets] AI image→video: {scene.scene_id} style={style}")
-        else:
-            logger.warning(f"[assets] image→video failed: {scene.scene_id}")
+        logger.info(f"[assets]   sub{sub_i} prompt: {sub_prompt[:80]}")
+
+        ok = False
+        for source in chain:
+            if ok:
+                break
+
+            if source == "wavespeed":
+                ok = await generate_ai_image_wavespeed(sub_prompt, img_path, size=size, negative_prompt=neg)
+                if not ok:
+                    logger.info(f"[assets]   WaveSpeed retry in 5s (sub{sub_i})")
+                    await asyncio.sleep(5)
+                    ok = await generate_ai_image_wavespeed(sub_prompt, img_path, size=size, negative_prompt=neg)
+
+            elif source == "dalle":
+                dalle_size = "1024x1792"
+                ok = await generate_ai_image_dalle(sub_prompt, img_path, size=dalle_size)
+
+            elif source in ("pexels", "pixabay"):
+                # AI entirely failed for this sub-image → stock fallback
+                logger.info(f"[assets]   sub{sub_i} AI failed → stock fallback")
+                tmp_scene_copy = type(scene)(**scene.model_dump())
+                await _fetch_stock_asset(tmp_scene_copy, assets_dir, [source])
+                if tmp_scene_copy.asset_url:
+                    collected_urls.append(tmp_scene_copy.asset_url)
+                ok = True  # mark done so we break the chain loop
+                break
+
+        if ok and img_path.exists() and img_path.stat().st_size > 1024:
+            if image_to_video(img_path, out, dur):
+                collected_urls.append(str(out))
+                logger.info(f"[assets]   sub{sub_i} → {out.name} OK")
+            else:
+                logger.warning(f"[assets]   sub{sub_i} image→video failed")
+        elif not ok:
+            logger.warning(f"[assets]   sub{sub_i} all sources failed")
+
+        # Rate-limit guard between API calls (WaveSpeed: ~3 req/s)
+        await asyncio.sleep(3)
+
+    if collected_urls:
+        scene.asset_urls = collected_urls
+        scene.asset_url = collected_urls[0]   # backward compat
+        logger.info(f"[assets] {scene.scene_id}: {len(collected_urls)}/{N_SUB_IMAGES} sub-images ready")
     else:
-        logger.warning(f"[assets] all AI sources failed: {scene.scene_id}")
+        # Complete failure: try stock fallback for the whole scene
+        logger.warning(f"[assets] {scene.scene_id}: all sub-images failed → stock fallback")
+        await _fetch_stock_asset(scene, assets_dir, ["pexels", "pixabay"])
 
-    # Rate-limit guard between scenes
-    await asyncio.sleep(3)
+    # Final inter-scene delay
+    await asyncio.sleep(2)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -177,114 +231,3 @@ async def _fetch_stock_asset(scene, assets_dir: Path, chain: list) -> None:
                     scene.alt_asset_url = str(alt_out)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Pexels / Pixabay search helpers
-# ──────────────────────────────────────────────────────────────────────────────
-
-async def get_pexels_videos(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
-    """Search Pexels with automatic keyword shortening fallback."""
-    if not keyword:
-        return []
-    words = keyword.split()
-    results = await _get_pexels_raw(keyword, per_page)
-    if len(results) >= 3 or len(words) <= 2:
-        return results
-    if len(words) > 3:
-        r3 = await _get_pexels_raw(" ".join(words[:3]), per_page)
-        if len(r3) > len(results):
-            results = r3
-    if len(results) >= 3:
-        return results
-    r2 = await _get_pexels_raw(" ".join(words[:2]), per_page)
-    return r2 if len(r2) > len(results) else results
-
-
-async def _get_pexels_raw(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
-    if not PEXELS_API_KEY:
-        return []
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(
-                "https://api.pexels.com/videos/search",
-                headers={"Authorization": PEXELS_API_KEY},
-                params={"query": keyword, "per_page": per_page, "orientation": "landscape"},
-            )
-            resp.raise_for_status()
-            videos = resp.json().get("videos", [])
-            logger.debug(f"[pexels] '{keyword}': {len(videos)} results")
-            return videos
-    except Exception as e:
-        logger.warning(f"[pexels] error ({keyword}): {e}")
-        return []
-
-
-async def get_pixabay_videos(keyword: str, per_page: int = 5) -> List[Dict[str, Any]]:
-    if not PIXABAY_API_KEY:
-        return []
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(
-                "https://pixabay.com/api/videos/",
-                params={"key": PIXABAY_API_KEY, "q": keyword, "per_page": per_page, "min_width": 640},
-            )
-            resp.raise_for_status()
-            videos = resp.json().get("hits", [])
-            logger.debug(f"[pixabay] '{keyword}': {len(videos)} results")
-            return videos
-    except Exception as e:
-        logger.warning(f"[pixabay] error ({keyword}): {e}")
-        return []
-
-
-def select_best_video(
-    pexels_videos: List[Dict],
-    pixabay_videos: List[Dict],
-    exclude_url: Optional[str] = None,
-) -> Optional[Dict[str, Any]]:
-    """Select highest-resolution non-negative video."""
-    candidates = []
-    for v in pexels_videos:
-        url = _extract_pexels_url(v)
-        if not url or url == exclude_url or _is_negative(v):
-            continue
-        w, h = v.get("width", 0), v.get("height", 0)
-        candidates.append({"url": url, "score": min(w, 1920) + min(h, 1080), "source": "pexels"})
-    for v in pixabay_videos:
-        url = _extract_pixabay_url(v)
-        if not url or url == exclude_url or _is_negative(v):
-            continue
-        videos = v.get("videos", {})
-        large = videos.get("large", {}) or videos.get("medium", {})
-        w, h = large.get("width", 0), large.get("height", 0)
-        candidates.append({"url": url, "score": min(w, 1920) + min(h, 1080), "source": "pixabay"})
-    if not candidates:
-        return None
-    candidates.sort(key=lambda x: x["score"], reverse=True)
-    return candidates[0]
-
-
-def _extract_pexels_url(v: Dict) -> Optional[str]:
-    files = v.get("video_files", [])
-    hd = [f for f in files if f.get("height", 0) >= 720 and f.get("quality") in ("hd", "sd")]
-    if hd:
-        hd.sort(key=lambda f: f.get("height", 0), reverse=True)
-        return hd[0].get("link")
-    return files[0].get("link") if files else None
-
-
-def _extract_pixabay_url(v: Dict) -> Optional[str]:
-    videos = v.get("videos", {})
-    for quality in ("large", "medium", "small"):
-        url = videos.get(quality, {}).get("url")
-        if url:
-            return url
-    return None
-
-
-def _is_negative(video: Dict) -> bool:
-    text = " ".join([
-        str(video.get("user", "")),
-        str(video.get("url", "")),
-        " ".join(str(t) for t in video.get("tags", [])),
-    ]).lower()
-    return any(neg in text for neg in NEGATIVE_KEYWORDS)

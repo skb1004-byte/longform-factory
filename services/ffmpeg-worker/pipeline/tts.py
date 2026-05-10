@@ -114,7 +114,28 @@ async def generate_tts(
                 shutil.copy2(ts_file, ts_path)
             return {"ok": True, "mp3_path": mp3_path, "ts_path": ts_path}
         else:
-            logger.warning("[tts] timestamps missing - ASS subtitles won't be generated")
+            # BUG#9 fix: TTS service always returns duration_seconds even without Whisper.
+            # When no timestamps file, create a minimal one from duration_seconds so that
+            # sync_scene_durations can still distribute audio length proportionally.
+            # Without this, scenes keep their original durations (e.g. 180s) while audio
+            # is only 30s → mismatch between video length and narration length.
+            actual_duration = float(data.get("duration_seconds") or 0)
+            if actual_duration > 0:
+                minimal_ts = {
+                    "source": "duration_only",
+                    "duration": round(actual_duration, 3),
+                    "segments": [],
+                    "alignment": {"character_end_times_seconds": [round(actual_duration, 3)]},
+                }
+                ts_path.write_text(
+                    json.dumps(minimal_ts, ensure_ascii=False), encoding="utf-8"
+                )
+                logger.info(
+                    f"[tts] no whisper timestamps — duration_only fallback: {actual_duration:.1f}s"
+                    " (subtitles skipped, scene durations synced)"
+                )
+                return {"ok": True, "mp3_path": mp3_path, "ts_path": ts_path}
+            logger.warning("[tts] timestamps missing and duration unknown — scene durations unsynced")
             return {"ok": True, "mp3_path": mp3_path, "ts_path": None}
 
     except Exception as e:

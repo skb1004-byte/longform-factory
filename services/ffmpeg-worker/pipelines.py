@@ -140,21 +140,32 @@ async def run_auto_pipeline(
                         clips.append(fb)
             state.mark("clips_done", {"count": len(clips)})
         else:
-            clips = sorted(job_tmp.glob("clip_*.mp4"))
+            # Resume: use scene_*_final.mp4 (output of prepare_clips_for_longform)
+            # clip_*.mp4 are per-scene sub-clips (30+ files) — NOT the correct resume target
+            clips = sorted(job_tmp.glob("scene_*_final.mp4"))
+            if not clips:
+                # Fallback to sub-clips if scene_final files are missing
+                clips = sorted(job_tmp.glob("clip_*.mp4"))
 
         if not clips:
             raise RuntimeError("No video clips generated")
 
         # Step 6: Concat
         raw_concat = job_tmp / "raw_concat.mp4"
-        if not state.has("concat_done"):
+        if not state.has("concat_done") or not raw_concat.exists():
+            if state.has("concat_done") and not raw_concat.exists():
+                logger.warning(f"[{job_id}] concat_done cached but raw_concat.mp4 missing — re-concat")
+                state.unmark("concat_done")
             if not xfade_batch(clips, raw_concat):
                 raise RuntimeError("Video concat failed")
             state.mark("concat_done")
 
         # Step 7: Mix audio
         mixed = job_tmp / "mixed.mp4"
-        if not state.has("audio_done"):
+        if not state.has("audio_done") or not mixed.exists():
+            if state.has("audio_done") and not mixed.exists():
+                logger.warning(f"[{job_id}] audio_done cached but mixed.mp4 missing — re-mix")
+                state.unmark("audio_done")
             bgm = get_random_bgm() if request.add_bgm else None
             ok = mix_audio(raw_concat, mp3_path if mp3_path.exists() else None,
                            bgm, request.bgm_volume, mixed)
@@ -163,13 +174,30 @@ async def run_auto_pipeline(
             state.mark("audio_done")
 
         # Step 8: Subtitles
+        # BUG#8 fix: three conditions force subtitle re-run:
+        #   1. subtitle_done not in state (never ran)
+        #   2. final.mp4 is missing despite state saying done (container restart lost /data/tmp)
+        #   3. previous run had no timestamps (had_ass=False) but timestamps are now available
         final = job_tmp / "final.mp4"
-        if not state.has("subtitle_done"):
-            if request.add_subtitles and ts_path and ts_path.exists():
+        _ts_available = bool(ts_path and ts_path.exists() and request.add_subtitles)
+        _prev_sub_payload = state.get_payload("subtitle_done")
+        _prev_had_ass = _prev_sub_payload.get("had_ass") if _prev_sub_payload else None
+        _needs_subtitle = (
+            not state.has("subtitle_done")                   # never ran
+            or not final.exists()                            # file was lost (container restart)
+            or (_prev_had_ass is False and _ts_available)    # ran without ASS; timestamps now available
+        )
+        if _needs_subtitle:
+            if _prev_had_ass is None and state.has("subtitle_done"):
+                logger.warning(f"[{job_id}] subtitle_done cached but final.mp4 missing — re-run subtitles")
+            elif _prev_had_ass is False and _ts_available:
+                logger.info(f"[{job_id}] subtitle was skipped (no timestamps); re-applying with new timestamps")
+            if _ts_available:
                 add_subtitles_to_video(mixed, ts_path, final, resolution)
+                state.mark("subtitle_done", {"had_ass": True})
             else:
                 shutil.copy2(mixed, final)
-            state.mark("subtitle_done")
+                state.mark("subtitle_done", {"had_ass": False})
 
         # Step 9: Copy to output (영상 제목으로 파일명 저장)
         title_text = request.topic or request.title or job_id

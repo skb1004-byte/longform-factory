@@ -41,6 +41,14 @@ _KEYWORD_FALLBACK = [
     "family community", "economy business",
 ]
 
+# Regex to detect LLM placeholder keywords (e.g. "영어 1-3단어", "한글 2단어")
+# LLMs sometimes copy the instruction text verbatim as the keyword value.
+_PLACEHOLDER_KW = re.compile(
+    r'(?:영어|한글)\s*\d*[-~]?\d*\s*단어'
+    r'|^[가-힣\s]+$',  # pure Korean string (no English) — invalid as Pexels search term
+    re.IGNORECASE,
+)
+
 # 씬 분할 프롬프트 (한국어 강제, 나레이션 보존 필수)
 _SPLIT_PROMPT = """\
 다음 스크립트를 정확히 {n}개의 씬으로 분할하세요.
@@ -49,10 +57,10 @@ _SPLIT_PROMPT = """\
 {script}
 
 반드시 JSON 배열만 반환 (마크다운 코드블록 금지):
-[{{"scene_id":"scene_01","keyword":"영어 1-3단어","narration":"씬 나레이션 텍스트","duration_seconds":0.0}}]
+[{{"scene_id":"scene_01","keyword":"nature sunset","narration":"씬 나레이션 텍스트","duration_seconds":0.0}}]
 
 규칙 (엄격히 준수):
-- keyword: 영어 1-3 단어 (Pexels/Pixabay 검색용, 주제와 관련된 단어)
+- keyword: 반드시 영어 단어만 사용 (예: "forest river", "city night", "mountain snow") — 한국어 절대 금지
 - narration: 스크립트 해당 구간을 그대로 발췌 (요약·압축·생략 절대 금지, 각 씬 최소 {min_chars}자)
 - 스크립트 전체를 {n}등분하여 모든 내용 포함 (내용 누락 금지)
 - duration_seconds: 해당 씬 narration 글자수 / 4.5 로 계산 (예: 300자 → 66.7초)
@@ -155,8 +163,11 @@ async def split_script_to_scenes(
     base_n_scenes: int = 3 if video_type == "shorts" else 5
     max_n_scenes: int = 10 if video_type == "shorts" else 20
     sentence_count = _count_sentences(script)
-    n_scenes: int = min(max(sentence_count, base_n_scenes), max_n_scenes)
     total_chars = len(script)
+    # Cap n_scenes by char budget: at least 40 chars of narration per scene
+    # Prevents requesting 20 scenes from a 200-char script (causes LLM repetition)
+    max_from_chars = max(base_n_scenes, total_chars // 40)
+    n_scenes: int = min(max(sentence_count, base_n_scenes), max_from_chars, max_n_scenes)
     # 씬당 최소 글자수: 균등 분할의 50% (LLM 앵커링용)
     min_chars = max(50, total_chars // n_scenes // 2)
     # 씬 JSON 출력에 필요한 max_tokens (나레이션 보존 필수)
@@ -168,7 +179,8 @@ async def split_script_to_scenes(
     )
     logger.info(
         f"[script] split: {total_chars}자 → {n_scenes}씬 "
-        f"(sentences={sentence_count}, base={base_n_scenes}, cap={max_n_scenes}), "
+        f"(sentences={sentence_count}, base={base_n_scenes}, "
+        f"char_cap={max_from_chars}, abs_cap={max_n_scenes}), "
         f"min_chars={min_chars}, max_tokens={scene_max_tokens}"
     )
 
@@ -594,13 +606,39 @@ def _parse_scenes_json(raw: str, n_scenes: int) -> Optional[List[Scene]]:
     return None
 
 
+def _sanitize_keyword(keyword: str, narration: str, topic: str) -> str:
+    """Replace LLM placeholder keywords with real English search terms.
+
+    LLMs sometimes copy the instruction text ("영어 1-3단어", "한글 N단어")
+    verbatim as the keyword value, causing Pexels to download the same
+    useless footage for every scene.  This function detects and replaces
+    those placeholder strings with topic-derived English keywords.
+    """
+    kw = (keyword or "").strip()
+    if not kw or _PLACEHOLDER_KW.search(kw):
+        # Derive keyword from narration text (first 50 chars) or topic
+        source = narration[:50] if narration else topic
+        replacement = _topic_to_keyword(source, _topic_to_keyword(topic, "korean culture"))
+        logger.warning(
+            f"[keyword] placeholder detected '{kw}' → '{replacement}'"
+        )
+        return replacement
+    return kw
+
+
 def _enrich_keywords(scenes: List[Scene], topic: str) -> List[Scene]:
-    """키워드가 너무 generic하면 주제 기반으로 보정."""
+    """Sanitize and enrich scene keywords after LLM result parsing.
+
+    1. Replace placeholder values (e.g. "영어 1-3단어") with real English terms.
+    2. Replace overly generic fallback keywords with topic-derived terms.
+    """
     generic = {"nature landscape", "city skyline", "people working",
-               "technology innovation", "healthy lifestyle"}
+               "technology innovation", "healthy lifestyle", "korean culture"}
     for s in scenes:
-        if s.keyword in generic or not s.keyword:
-            # 주제에서 영어 키워드 파생
+        # Step 1: sanitize placeholder / pure-Korean keywords
+        s.keyword = _sanitize_keyword(s.keyword, s.narration or "", topic)
+        # Step 2: enrich generic fallbacks
+        if s.keyword in generic:
             topic_en = _topic_to_keyword(topic, s.keyword)
             s.keyword = topic_en
     return scenes

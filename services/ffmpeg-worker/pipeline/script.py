@@ -156,11 +156,11 @@ async def split_script_to_scenes(
         if not result:
             continue
         total_narration = sum(len(s.narration or "") for s in result)
-        # 나레이션이 원본의 40% 미만 → 압축된 것, 다음 API로
-        if total_narration < total_chars * 0.40 and total_chars > 200:
+        # Reject if narration is below 60% of source: LLM summarized instead of excerpting
+        if total_narration < total_chars * 0.60 and total_chars > 200:
             logger.warning(
                 f"[script] {name} narration compressed: {total_narration}자 "
-                f"({total_narration * 100 // max(total_chars, 1)}% of {total_chars}자) → skip"
+                f"({total_narration * 100 // max(total_chars, 1)}% of {total_chars}자) < 60% → skip"
             )
             continue
         logger.info(f"[script] ✅ {len(result)} scenes from {name} (narration={total_narration}자)")
@@ -612,37 +612,54 @@ def _topic_to_keyword(topic: str, fallback: str) -> str:
 
 
 def _generate_template_script(topic: str, duration_sec: int, tone: str) -> str:
-    """모든 API 실패 시 템플릿 기반 한국어 스크립트 생성."""
+    """Generate template-based Korean narration script when all LLM APIs fail.
+
+    Target: duration_sec * 7.0 chars (measured TTS rate: ~7.0 chars/sec at -5% rate)
+    """
+    # Rich multi-paragraph base templates per tone
     templates = {
-        "friendly": f"""안녕하세요! 오늘은 '{topic}'에 대해 알아보겠습니다.
-{topic}은 우리 일상에서 매우 중요한 주제입니다.
-먼저 {topic}의 기본 개념부터 살펴보겠습니다.
-{topic}을 제대로 이해하면 많은 도움이 됩니다.
-자세한 내용을 하나씩 알아볼까요?
-{topic}의 핵심 포인트를 정리해 드리겠습니다.
-이 내용을 잘 기억하시면 앞으로 큰 도움이 될 것입니다.
-오늘 영상이 도움이 되셨다면 좋아요와 구독 부탁드립니다!""",
-        "professional": f"""'{topic}'에 대한 전문적인 분석을 시작하겠습니다.
-{topic}은 현대 사회에서 중요한 위치를 차지하고 있습니다.
-전문가들의 견해에 따르면, {topic}의 핵심 요소는 다음과 같습니다.
-첫째, {topic}의 기본 원리를 이해하는 것이 중요합니다.
-둘째, 실제 사례를 통해 {topic}을 파악할 수 있습니다.
-셋째, {topic}의 미래 전망은 매우 긍정적입니다.
-이상으로 {topic}에 대한 분석을 마치겠습니다.""",
-        "neutral": f"""오늘 주제는 '{topic}'입니다.
-{topic}에 대해 알아보겠습니다.
-{topic}은 다양한 측면에서 살펴볼 수 있습니다.
-첫 번째로 {topic}의 기본 개념을 설명드리겠습니다.
-두 번째로 {topic}의 주요 특징을 살펴보겠습니다.
-세 번째로 {topic}의 실용적인 활용 방법을 알아보겠습니다.
-마지막으로 {topic}에 대한 정리를 해보겠습니다.
-이 영상이 도움이 되셨으면 합니다.""",
+        "friendly": f"""안녕하세요! 오늘은 '{topic}'에 대해 함께 알아보겠습니다.
+{topic}은 우리 일상에서 매우 중요한 역할을 하고 있습니다. 많은 사람들이 {topic}에 관심을 가지고 있지만, 정작 그 본질을 깊이 이해하는 경우는 드물죠.
+오늘은 {topic}의 기본 개념부터 시작해서, 핵심 원리, 실제 사례, 그리고 앞으로의 전망까지 단계적으로 살펴보겠습니다.
+먼저 {topic}이 왜 중요한지부터 짚어볼게요. {topic}은 단순히 이론적인 개념이 아니라, 우리의 실생활과 밀접하게 연결되어 있습니다. 일상에서 {topic}을 올바르게 이해하고 활용하면 삶의 질이 크게 향상될 수 있습니다.
+다음으로 {topic}의 역사적 배경을 살펴보겠습니다. {topic}은 오랜 시간에 걸쳐 발전해 왔으며, 각 시대마다 새로운 의미와 가치를 부여받았습니다. 과거의 사례를 통해 현재를 이해하고, 미래를 준비할 수 있습니다.
+{topic}의 핵심 특징을 정리하면, 첫째로 접근성이 뛰어나다는 점입니다. 누구나 쉽게 시작할 수 있고, 전문 지식 없이도 기본적인 이해가 가능합니다. 둘째로 응용 범위가 매우 넓습니다. 다양한 분야에서 {topic}의 원리를 적용할 수 있습니다. 셋째로 지속적인 발전이 이루어지고 있다는 점입니다.
+실제 사례를 통해 {topic}을 이해해 봅시다. 전문가들은 {topic}을 활용하여 놀라운 성과를 거두고 있습니다. 이러한 성공 사례들은 우리에게 많은 영감을 줍니다.
+{topic}을 처음 접하는 분들을 위한 조언도 드리겠습니다. 처음부터 완벽할 필요는 없습니다. 작은 것부터 차근차근 시작하는 것이 중요합니다. {topic}에 대한 기초 지식을 쌓고, 꾸준히 연습하다 보면 어느새 전문가 수준에 도달할 수 있습니다.
+오늘 영상이 도움이 되셨다면 좋아요와 구독 부탁드립니다! 앞으로도 유익한 내용으로 찾아뵙겠습니다.""",
+        "professional": f"""'{topic}'에 대한 심층 분석을 시작하겠습니다.
+{topic}은 현대 사회에서 핵심적인 위치를 차지하고 있으며, 다양한 분야에 걸쳐 광범위한 영향을 미치고 있습니다.
+전문가들의 연구에 따르면, {topic}의 핵심 구성 요소는 크게 세 가지로 분류할 수 있습니다. 첫째는 기반 이론, 둘째는 실용적 응용, 셋째는 지속 가능한 발전 방향입니다.
+{topic}의 기본 원리를 분석하면, 체계적인 접근 방식의 중요성을 확인할 수 있습니다. 이론과 실제를 균형 있게 통합하는 것이 성공적인 {topic} 활용의 핵심입니다.
+실제 사례 분석을 통해 {topic}이 어떻게 현실 세계에 적용되는지 살펴보겠습니다. 국내외 선진 사례들은 {topic}의 무한한 가능성을 보여줍니다.
+{topic}과 관련된 최신 트렌드를 살펴보면, 디지털화와 글로벌화의 흐름 속에서 {topic}의 중요성이 더욱 부각되고 있음을 알 수 있습니다. 이러한 변화에 능동적으로 대응하는 것이 필요합니다.
+향후 {topic}의 발전 방향은 더욱 혁신적이 될 것으로 전망됩니다. 기술 발전과 사회적 요구의 변화에 따라 {topic}은 새로운 패러다임으로 진화할 것입니다.
+결론적으로, {topic}에 대한 이해와 전략적 활용은 현대 사회에서 경쟁력을 확보하는 데 필수적입니다. 지속적인 학습과 실천을 통해 {topic}의 역량을 강화하시기 바랍니다.""",
+        "neutral": f"""오늘은 '{topic}'에 대해 알아보겠습니다.
+{topic}은 다양한 측면에서 살펴볼 수 있는 흥미로운 주제입니다. 오늘 영상에서는 기초부터 심화 내용까지 체계적으로 설명해 드리겠습니다.
+첫 번째로 {topic}의 기본 개념을 살펴보겠습니다. {topic}이란 무엇인지, 왜 중요한지, 어떤 상황에서 활용되는지에 대해 명확하게 정의해 보겠습니다.
+두 번째로 {topic}의 주요 특징과 구성 요소를 분석하겠습니다. 각 요소가 어떤 역할을 하는지, 서로 어떻게 연결되어 있는지 파악하면 전체적인 이해가 훨씬 쉬워집니다.
+세 번째로 {topic}의 실제 적용 사례를 살펴보겠습니다. 이론과 실제의 연결 고리를 이해하는 것이 실용적인 지식 습득에 매우 중요합니다.
+네 번째로 {topic}을 효과적으로 활용하기 위한 실용적인 팁을 공유하겠습니다. 누구나 쉽게 따라할 수 있는 방법론과 단계별 접근법을 소개합니다.
+다섯 번째로 {topic}에서 자주 발생하는 오해와 실수를 짚어보겠습니다. 이를 미리 알고 대비하면 시행착오를 크게 줄일 수 있습니다.
+마지막으로 {topic}의 미래 전망에 대해 논의하겠습니다. 앞으로 {topic}이 어떻게 발전하고, 우리 삶에 어떤 영향을 미칠지 전문가 의견을 바탕으로 전망해 보겠습니다.
+오늘 영상이 {topic}을 이해하는 데 도움이 되셨길 바랍니다.""",
     }
     base = templates.get(tone, templates["neutral"])
-    # duration에 맞게 반복 확장
-    target = int(duration_sec * 4.5)
+    # Expand to match duration: 7.0 chars/sec (measured TTS rate on ko-KR-SunHiNeural at -5%)
+    target = int(duration_sec * 7.0)
+    expansion_phrases = [
+        f"{topic}은 끊임없이 변화하고 발전하는 분야입니다. 새로운 연구와 사례가 축적될수록 {topic}에 대한 이해가 더욱 깊어지고 있습니다.",
+        f"실제로 {topic}을 경험한 많은 사람들은 처음에는 어렵게 느껴지지만, 기초를 충분히 익히고 나면 훨씬 수월해진다고 말합니다.",
+        f"{topic}과 관련된 최신 연구 결과에 따르면, 꾸준한 실천과 반복 학습이 가장 효과적인 방법으로 꼽히고 있습니다.",
+        f"전문가들은 {topic}의 핵심을 이해하기 위해 다각도에서 접근하는 것을 권장합니다. 단순히 표면적인 지식에 그치지 않고 깊이 있는 탐구가 필요합니다.",
+        f"{topic}을 더 잘 이해하기 위해서는 관련 분야에 대한 폭넓은 지식도 함께 쌓는 것이 좋습니다. 다양한 관점에서 바라볼 때 더 풍부한 인사이트를 얻을 수 있습니다.",
+        f"많은 이들이 {topic}에 대해 궁금해하는 질문 중 하나는 어디서부터 시작해야 하는가입니다. 답은 간단합니다. 바로 지금, 여기서부터 시작하면 됩니다.",
+    ]
+    idx = 0
     while len(base) < target:
-        base += f"\n{topic}에 대해 더 알아볼 내용이 있습니다. {topic}은 계속해서 발전하고 있으며, 앞으로도 중요한 주제가 될 것입니다."
+        base += f"\n{expansion_phrases[idx % len(expansion_phrases)]}"
+        idx += 1
     return base
 
 
@@ -652,22 +669,31 @@ def _split_script_locally(
     n_scenes: int,
     duration_sec: int,
 ) -> List[Scene]:
-    """로컬 텍스트 분할 (API 전부 실패 시)."""
-    raw_sentences = re.split(r'(?<=[.!?。~\n])\s*', script.strip())
-    sentences = [s.strip() for s in raw_sentences if s.strip() and len(s.strip()) > 3]
+    """Split script into scenes by character count (not sentence count).
 
-    # 스크립트가 너무 짧으면 주제로 확장
-    if len(sentences) < n_scenes:
+    Char-count split ensures each scene gets ~equal narration length,
+    which maps correctly to TTS audio duration.
+    """
+    # Ensure script is long enough: target 7.0 chars/sec
+    target_chars = int(duration_sec * 7.0)
+    if len(script) < target_chars * 0.5:
         template = _generate_template_script(topic, duration_sec, "neutral")
-        raw_sentences = re.split(r'(?<=[.!?\n])\s*', template.strip())
-        sentences = [s.strip() for s in raw_sentences if s.strip()]
+        script = template
 
-    per_scene = max(1, len(sentences) // n_scenes)
+    # Split by characters: divide total chars into n_scenes equal chunks
+    total = len(script)
+    chunk_size = max(1, total // n_scenes)
     scene_texts: List[str] = []
+
     for i in range(n_scenes):
-        start = i * per_scene
-        end = start + per_scene if i < n_scenes - 1 else len(sentences)
-        chunk = " ".join(sentences[start:end]).strip()
+        start = i * chunk_size
+        end = start + chunk_size if i < n_scenes - 1 else total
+        chunk = script[start:end].strip()
+        # Avoid cutting mid-word: extend to next space if possible
+        if end < total and not script[end - 1].isspace():
+            next_space = script.find(' ', end)
+            if 0 < next_space < end + 50:
+                chunk = script[start:next_space].strip()
         scene_texts.append(chunk or topic)
 
     # 주제 관련 키워드

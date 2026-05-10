@@ -91,7 +91,7 @@ class TTSRequest(BaseModel):
     engine: str = Field(default="edge", description="TTS 엔진: edge(무료) 또는 elevenlabs")
     edge_voice: str = Field(default="ko-KR-SunHiNeural", description="Edge TTS 음성")
     edge_rate: str = Field(default="-5%", description="Edge TTS 속도")
-    edge_pitch: str = Field(default="+5%", description="Edge TTS 음조 (서울 억양 강화: +5%)")
+    edge_pitch: str = Field(default="+0Hz", description="Edge TTS pitch (Hz unit required, e.g. +0Hz, +5Hz — % is invalid)")
     output_format: str = Field(default="mp3_44100_128", description="출력 포맷")
     filename: Optional[str] = Field(default=None, description="저장 파일명 (확장자 제외)")
     preprocess: bool = Field(default=True, description="[D] 호흡·리듬 자동 주입 (긴 문장 분할 + silence 삽입)")
@@ -1457,7 +1457,7 @@ async def tts_convert(request: TTSRequest, background_tasks: BackgroundTasks):
                     chunks,
                     voice=getattr(request, "edge_voice", "ko-KR-SunHiNeural"),
                     rate=getattr(request, "edge_rate", "-5%"),
-                    pitch=getattr(request, "edge_pitch", "+5%"),
+                    pitch=getattr(request, "edge_pitch", "+0Hz"),
                 )
                 alignment = None
             else:
@@ -1465,7 +1465,7 @@ async def tts_convert(request: TTSRequest, background_tasks: BackgroundTasks):
                     text=request.text,
                     voice=getattr(request, "edge_voice", "ko-KR-SunHiNeural"),
                     rate=getattr(request, "edge_rate", "-5%"),
-                    pitch=getattr(request, "edge_pitch", "+5%"),
+                    pitch=getattr(request, "edge_pitch", "+0Hz"),
                 )
                 alignment = None
         else:

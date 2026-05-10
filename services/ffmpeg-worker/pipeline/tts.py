@@ -47,22 +47,34 @@ async def generate_tts(
             )
             return {"ok": True, "mp3_path": mp3_path, "ts_path": ts_path}
 
-    # Collect narration text
+    # Collect narration text — do NOT deduplicate: dropping repeated scenes loses audio duration
+    # Max TTS text: derived from total scene duration (7.0 chars/sec target rate).
+    # Cerebras may expand template narration 2-3x; cap to keep video near requested duration.
+    # Hard floor: 2100 chars (300s × 7.0), hard ceiling: 8000 chars (~1143s) for safety.
+    total_scene_dur: float = sum(
+        (s.duration_seconds or 5.0) for s in scenes
+    )
+    MAX_TTS_CHARS: int = max(2100, min(8000, int(total_scene_dur * 7.0)))
     narration_parts: List[str] = []
-    seen: set = set()
 
     for s in scenes:
         text: str = (s.narration or s.description or s.keyword or "").strip()
-        if text and text not in seen:
+        if text:
             narration_parts.append(text)
-            seen.add(text)
 
     if not narration_parts:
         return {"ok": False, "error": "no narration text"}
 
     full_text: str = " ".join(narration_parts)
+    if len(full_text) > MAX_TTS_CHARS:
+        logger.warning(
+            f"[tts] truncating TTS text: {len(full_text)} → {MAX_TTS_CHARS} chars"
+            f" (target={total_scene_dur:.0f}s × 7.0 chars/sec)"
+        )
+        full_text = full_text[:MAX_TTS_CHARS]
     logger.info(
         f"[tts] generating TTS: {len(full_text)} chars, {len(narration_parts)} scenes"
+        f" (limit={MAX_TTS_CHARS} for {total_scene_dur:.0f}s)"
     )
 
     try:

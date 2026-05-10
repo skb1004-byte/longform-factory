@@ -61,7 +61,9 @@ _SPLIT_PROMPT = """\
 
 # 스크립트 생성 프롬프트
 def _script_prompt(topic: str, duration_sec: int, tone: str) -> str:
-    target_chars = int(duration_sec * 4.5)
+    # Korean TTS actual rate: ~7-8 chars/sec (measured 7.6 chars/sec on ko-KR-SunHiNeural -5%)
+    # Use 7.0 chars/sec as target to ensure ~300s of audio for 300s video requests
+    target_chars = int(duration_sec * 7.0)
     return (
         f"주제: {topic}\n"
         f"톤: {tone}\n"
@@ -81,8 +83,8 @@ def _script_prompt(topic: str, duration_sec: int, tone: str) -> str:
 
 
 def _script_max_tokens(duration_sec: int) -> int:
-    """Duration-proportional token budget. Korean ~2 tokens/char, 4.5 chars/sec."""
-    chars_needed = int(duration_sec * 4.5)
+    """Duration-proportional token budget. Korean ~2 tokens/char, 7.0 chars/sec."""
+    chars_needed = int(duration_sec * 7.0)
     tokens_needed = int(chars_needed * 2.5)  # Korean token overhead
     return min(8000, max(1500, tokens_needed))
 
@@ -108,7 +110,7 @@ async def generate_script_from_topic(
 ) -> str:
     """병렬 레이스로 스크립트 생성. 첫 성공 반환. 전부 실패 시 템플릿 생성."""
     prompt = _script_prompt(topic, duration_sec, tone)
-    min_len = max(200, int(duration_sec * 4.0))  # 최소 글자수 (4자/초 기준)
+    min_len = max(200, int(duration_sec * 6.0))  # 최소 글자수 (실측 7.0자/초 기준, 안전마진)
     max_tokens = _script_max_tokens(duration_sec)
     # 긴 스크립트는 생성 시간 더 필요 (최소 30초, 300초 영상 → 60초)
     race_timeout = max(30.0, min(90.0, duration_sec * 0.2))
@@ -560,7 +562,10 @@ def _parse_scenes_json(raw: str, n_scenes: int) -> Optional[List[Scene]]:
             s.setdefault("scene_id", f"scene_{i+1:02d}")
             s.setdefault("narration", s.get("text", s.get("content", "")))
             s.setdefault("keyword", "korean culture")
-            s.setdefault("duration_seconds", max(round(len(s.get("narration", "")) / 4.5, 1), 3.0))
+            # Always recalculate duration from narration length — never trust LLM math
+            # LLMs consistently produce wrong values (e.g. 217s for 243-char narration)
+            narration_text = s.get("narration", "")
+            s["duration_seconds"] = max(round(len(narration_text) / 4.5, 1), 3.0)
             valid.append(Scene(**s))
         return valid if valid else None
     except Exception as e:

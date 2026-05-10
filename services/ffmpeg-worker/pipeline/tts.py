@@ -137,12 +137,21 @@ def sync_scene_durations(
         return scenes
 
     segments: list = data.get("segments") or []
-    if not segments:
-        return scenes
 
-    # Calculate total TTS duration from segments
-    total_dur: float = max((s.get("end", 0) for s in segments), default=0)
+    # Calculate total TTS duration: prefer segments, fallback to top-level duration field.
+    # Edge TTS may return segments=[] with alignment data only — still usable.
+    if segments:
+        total_dur: float = max((s.get("end", 0) for s in segments), default=0)
+    else:
+        # Fallback: use top-level duration field (from alignment or whisper)
+        total_dur = float(data.get("duration") or 0)
+        if total_dur <= 0:
+            # Second fallback: alignment character end times
+            char_ends = (data.get("alignment") or {}).get("character_end_times_seconds") or []
+            total_dur = float(char_ends[-1]) if char_ends else 0
+
     if total_dur <= 0:
+        logger.warning("[tts] no usable duration in timestamps — skipping sync")
         return scenes
 
     # Distribute duration by narration character count
@@ -186,6 +195,13 @@ def _is_valid_timestamps(ts_path: Path) -> bool:
     """
     try:
         data: dict = json.loads(ts_path.read_text(encoding="utf-8"))
-        return bool(data.get("segments"))
+        # Valid if has segments OR top-level duration > 0
+        if data.get("segments"):
+            return True
+        dur = float(data.get("duration") or 0)
+        if dur > 0:
+            return True
+        char_ends = (data.get("alignment") or {}).get("character_end_times_seconds") or []
+        return bool(char_ends)
     except Exception:
         return False

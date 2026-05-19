@@ -120,9 +120,13 @@ def create_ass_from_timestamps(
     ts_path: Path,
     output_path: Path,
     resolution: str = "1920x1080",
-    lead_sec: float = 0.15,
+    lead_sec: float = 0.05,
 ) -> bool:
-    """Generate ASS from Whisper timestamps.json with short-segment merging."""
+    """Generate ASS from Whisper timestamps.json.
+
+    lead_sec: shift all timestamps earlier by this many seconds (perception pre-roll).
+    Kept small (0.05s) to preserve audio-subtitle sync.
+    """
     if not ts_path or not ts_path.exists():
         return False
     try:
@@ -135,9 +139,8 @@ def create_ass_from_timestamps(
     if not segments:
         logger.warning("[subtitle] no segments in timestamps")
         return False
-
-    # Merge flicker-prone short segments
-    segments = _merge_short_segments(segments, min_dur=0.5)
+    # NOTE: _merge_short_segments() intentionally NOT called here.
+    # Merging causes next-segment text to appear before that phrase is spoken.
 
     font_size, margin_v = compute_subtitle_style(resolution)
     w, h = (int(x) for x in resolution.lower().split("x"))

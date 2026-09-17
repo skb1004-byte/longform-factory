@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LongForm Factory</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        'lf-dark': '#0A0E1A',
+        'lf-panel': '#111827',
+        'lf-border': '#1F2937',
+        'lf-cyan': '#00D4FF',
+        'lf-purple': '#7B2FBE',
+        'lf-gold': '#FFD700',
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { background: #0A0E1A; font-family: 'Segoe UI', system-ui, sans-serif; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #111827; }
+  ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+  .tab-btn.active { border-color: #00D4FF; color: #00D4FF; }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; padding: 2px 8px; border-radius: 9999px;
+    font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .progress-bar {
+    height: 4px; background: #1F2937; border-radius: 2px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, #00D4FF, #7B2FBE);
+    border-radius: 2px; transition: width 0.5s ease;
+  }
+  input, select, textarea {
+    background: #111827 !important;
+    border: 1px solid #1F2937 !important;
+    color: #F9FAFB !important;
+    border-radius: 8px;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: #00D4FF !important;
+    box-shadow: 0 0 0 2px rgba(0,212,255,0.1);
+  }
+  select option { background: #111827; }
+  .job-card:hover { border-color: #374151; }
+  .video-card:hover { border-color: #00D4FF; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { animation: spin 1s linear infinite; }
+  @keyframes pulse-dot { 0%,100% { opacity:1 } 50% { opacity:0.3 } }
+  .pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+</style>
+</head>
+<body class="text-gray-100 min-h-screen">
+
+<!-- Header -->
+<header class="border-b border-lf-border bg-lf-panel sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-lf-cyan to-lf-purple flex items-center justify-center text-xs font-bold text-white">LF</div>
+      <div>
+        <span class="font-semibold text-white">LongForm Factory</span>
+        <span class="text-gray-500 text-xs ml-2">MVP v1.0</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <div id="health-badge" class="status-badge bg-gray-800 text-gray-400">
+        <span class="w-2 h-2 rounded-full bg-gray-500"></span>
+        <span>연결 중...</span>
+      </div>
+      <div id="current-job-badge" class="hidden status-badge bg-blue-900/50 text-blue-300">
+        <span class="w-2 h-2 rounded-full bg-blue-400 pulse-dot"></span>
+        <span id="current-job-text">작업 중</span>
+      </div>
+      <button onclick="refreshAll()" class="text-gray-400 hover:text-white transition-colors p-1 rounded" title="새로고침">
+        <svg id="refresh-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </button>
+      <div class="text-xs text-gray-500">
+        <span id="api-host">172.20.143.158:8080/api/ffmpeg</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Main -->
+<div class="max-w-6xl mx-auto px-6 py-6">
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-4 gap-4 mb-6" id="stats-row">
+    <div class="bg-lf-panel border border-lf-border rounded-xl p-4">
+      <p class="text-xs text-gray-500 mb-1">완성 영상</p>
+      <p class="text-2xl font-semibold text-white" id="stat-videos">—</p>
+    </div>
+    <div class="bg-lf-panel border border-lf-border rounded-xl p-4">
+      <p class="text-xs text-gray-500 mb-1">전체 잡</p>
+      <p class="text-2xl font-semibold text-white" id="stat-jobs">—</p>
+    </div>
+    <div class="bg-lf-panel border border-lf-border rounded-xl p-4">
+      <p class="text-xs text-gray-500 mb-1">디스크 여유</p>
+      <p class="text-2xl font-semibold" id="stat-disk">—</p>
+    </div>
+    <div class="bg-lf-panel border border-lf-border rounded-xl p-4">
+      <p class="text-xs text-gray-500 mb-1">버전</p>
+      <p class="text-2xl font-semibold text-lf-cyan" id="stat-version">—</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-1 mb-6 border-b border-lf-border">
+    <button onclick="switchTab('create')" class="tab-btn active px-5 py-3 text-sm border-b-2 border-transparent font-medium transition-all" data-tab="create">영상 생성</button>
+    <button onclick="switchTab('jobs')" class="tab-btn px-5 py-3 text-sm border-b-2 border-transparent text-gray-400 font-medium transition-all" data-tab="jobs">잡 현황</button>
+    <button onclick="switchTab('library')" class="tab-btn px-5 py-3 text-sm border-b-2 border-transparent text-gray-400 font-medium transition-all" data-tab="library">영상 라이브러리</button>
+  </div>
+
+  <!-- ═══ TAB: CREATE ═══ -->
+  <div id="tab-create" class="tab-content">
+    <div class="grid grid-cols-5 gap-6">
+
+      <!-- Left: Form -->
+      <div class="col-span-3">
+        <div class="bg-lf-panel border border-lf-border rounded-xl p-6">
+          <h2 class="text-base font-semibold text-white mb-5">새 영상 생성</h2>
+
+          <!-- Topic -->
+          <div class="mb-5">
+            <label class="block text-xs text-gray-400 mb-2 font-medium">주제 / 토픽 *</label>
+            <textarea id="inp-topic" rows="3" placeholder="예: 한국의 우주 개발 역사와 미래 전망" class="w-full px-4 py-3 text-sm resize-none"></textarea>
+          </div>
+
+          <!-- Script (optional) -->
+          <div class="mb-5">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs text-gray-400 font-medium">스크립트 (선택)</label>
+              <button onclick="toggleScript()" class="text-xs text-lf-cyan hover:underline" id="script-toggle-btn">+ 스크립트 직접 입력</button>
+            </div>
+            <div id="script-section" class="hidden">
+              <textarea id="inp-script" rows="6" placeholder="전체 나레이션 스크립트를 여기에 붙여넣으세요. 비워두면 AI가 자동 생성합니다." class="w-full px-4 py-3 text-sm resize-none"></textarea>
+            </div>
+          </div>
+
+          <!-- Settings Grid -->
+          <div class="grid grid-cols-2 gap-4 mb-5">
+            <div>
+              <label class="block text-xs text-gray-400 mb-2 font-medium">영상 유형</label>
+              <select id="inp-type" class="w-full px-3 py-2.5 text-sm">
+                <option value="longform">롱폼 (16:9)</option>
+                <option value="shorts">쇼츠 (9:16)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-2 font-medium">목표 길이 (초)</label>
+              <input type="number" id="inp-duration" value="60" min="30" max="300" class="w-full px-3 py-2.5 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-2 font-medium">톤</label>
+              <select id="inp-tone" class="w-full px-3 py-2.5 text-sm">
+                <option value="neutral">중립</option>
+                <option value="formal">공식적</option>
+                <option value="casual">친근한</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-2 font-medium">비주얼 스타일</label>
+              <select id="inp-style" class="w-full px-3 py-2.5 text-sm">
+                <option value="">스톡 영상 (기본)</option>
+                <option value="cinematic">시네마틱</option>
+                <option value="cartoon">카툰</option>
+                <option value="anime">애니메</option>
+                <option value="watercolor">수채화</option>
+                <option value="minimal">미니멀</option>
+                <option value="infographic">인포그래픽</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Toggles -->
+          <div class="flex gap-6 mb-6">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="inp-subtitles" checked class="w-4 h-4 accent-cyan-400">
+              <span class="text-sm text-gray-300">자막 자동 생성</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="inp-bgm" checked class="w-4 h-4 accent-cyan-400">
+              <span class="text-sm text-gray-300">배경음악 추가</span>
+            </label>
+          </div>
+
+          <!-- Submit -->
+          <button onclick="submitJob()" id="submit-btn"
+            class="w-full py-3 bg-lf-cyan text-lf-dark font-semibold text-sm rounded-lg hover:bg-cyan-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            영상 생성 시작
+          </button>
+          <div id="submit-error" class="hidden mt-3 text-xs text-red-400 bg-red-900/20 rounded-lg px-4 py-2"></div>
+        </div>
+      </div>
+
+      <!-- Right: Active Job Monitor -->
+      <div class="col-span-2">
+        <div class="bg-lf-panel border border-lf-border rounded-xl p-6 mb-4">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-white">현재 진행 중인 잡</h3>
+            <button onclick="loadJobs()" class="text-xs text-gray-400 hover:text-white">새로고침</button>
+          </div>
+          <div id="active-job-panel">
+            <p class="text-sm text-gray-500 text-center py-4">진행 중인 잡 없음</p>
+          </div>
+        </div>
+
+        <!-- Quick tips -->
+        <div class="bg-lf-panel border border-lf-border rounded-xl p-5">
+          <h3 class="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">사용 팁</h3>
+          <ul class="space-y-2 text-xs text-gray-400">
+            <li class="flex gap-2"><span class="text-lf-cyan">→</span> 롱폼: 60-180초 권장</li>
+            <li class="flex gap-2"><span class="text-lf-cyan">→</span> 쇼츠: 30-60초 권장</li>
+            <li class="flex gap-2"><span class="text-lf-cyan">→</span> 한 번에 하나의 잡만 처리 가능</li>
+            <li class="flex gap-2"><span class="text-lf-cyan">→</span> AI 스타일은 생성 시간이 더 오래 걸림</li>
+            <li class="flex gap-2"><span class="text-lf-cyan">→</span> 스크립트 입력 시 AI 생성 단계 스킵</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: JOBS ═══ -->
+  <div id="tab-jobs" class="tab-content hidden">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-semibold text-white">잡 현황 <span class="text-gray-500 text-sm font-normal" id="jobs-count"></span></h2>
+      <button onclick="loadJobs()" class="text-xs text-gray-400 hover:text-white bg-lf-border px-3 py-1.5 rounded-lg transition-colors">새로고침</button>
+    </div>
+    <div id="jobs-list" class="space-y-3">
+      <div class="text-center py-12 text-gray-500">로딩 중...</div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: LIBRARY ═══ -->
+  <div id="tab-library" class="tab-content hidden">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-semibold text-white">영상 라이브러리 <span class="text-gray-500 text-sm font-normal" id="lib-count"></span></h2>
+      <div class="flex gap-2">
+        <button onclick="filterVideos('all')" id="filter-all" class="text-xs px-3 py-1.5 rounded-lg bg-lf-cyan text-lf-dark font-medium">전체</button>
+        <button onclick="filterVideos('longform')" id="filter-longform" class="text-xs px-3 py-1.5 rounded-lg bg-lf-border text-gray-400 hover:text-white transition-colors">롱폼</button>
+        <button onclick="filterVideos('shorts')" id="filter-shorts" class="text-xs px-3 py-1.5 rounded-lg bg-lf-border text-gray-400 hover:text-white transition-colors">쇼츠</button>
+        <button onclick="loadVideos()" class="text-xs text-gray-400 hover:text-white bg-lf-border px-3 py-1.5 rounded-lg transition-colors">새로고침</button>
+      </div>
+    </div>
+    <div id="video-grid" class="grid grid-cols-3 gap-4">
+      <div class="col-span-3 text-center py-12 text-gray-500">로딩 중...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Video Preview Modal -->
+<div id="video-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" onclick="closeVideoModal(event)">
+  <div class="bg-lf-panel border border-lf-border rounded-2xl p-6 max-w-3xl w-full" onclick="event.stopPropagation()">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <h3 class="font-semibold text-white" id="modal-title">영상 미리보기</h3>
+        <p class="text-xs text-gray-400 mt-0.5" id="modal-meta"></p>
+      </div>
+      <button onclick="closeVideoModal()" class="text-gray-400 hover:text-white ml-4">✕</button>
+    </div>
+    <video id="modal-video" controls class="w-full rounded-lg bg-black" style="max-height: 400px;"></video>
+    <div class="flex gap-3 mt-4">
+      <a id="modal-download" href="#" download class="flex-1 text-center py-2 text-sm bg-lf-border hover:bg-gray-700 rounded-lg transition-colors">다운로드</a>
+      <button onclick="uploadToYoutube()" id="modal-upload-btn" class="flex-1 py-2 text-sm bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-medium">YouTube 업로드</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ CONFIG ═══
+const NGINX_BASE = 'http://172.20.143.158:8080';
+const FFMPEG_BASE = `${NGINX_BASE}/api/ffmpeg`;  // nginx proxy prefix
+const UPLOAD_BASE = `${NGINX_BASE}/api/upload`;
+const API_KEY = 'longform-2026-secret';
+let allVideos = [];
+let currentVideoFilter = 'all';
+let pollInterval = null;
+let currentModalVideo = null;
+
+const headers = {
+  'Content-Type': 'application/json',
+  'X-LF-API-Key': API_KEY,
+};
+
+// ═══ API HELPERS ═══
+async function apiFetch(path, options = {}) {
+  const res = await fetch(`${FFMPEG_BASE}${path}`, {
+    headers,
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ═══ INIT ═══
+async function init() {
+  await Promise.all([checkHealth(), loadJobs(), loadVideos()]);
+  startPolling();
+}
+
+// ═══ HEALTH ═══
+async function checkHealth() {
+  try {
+    const data = await apiFetch('/health');
+    const badge = document.getElementById('health-badge');
+    const diskEl = document.getElementById('stat-disk');
+    const verEl = document.getElementById('stat-version');
+
+    const isOk = data.status === 'ok';
+    badge.className = `status-badge ${isOk ? 'bg-green-900/50 text-green-300' : 'bg-yellow-900/50 text-yellow-300'}`;
+    badge.innerHTML = `
+      <span class="w-2 h-2 rounded-full ${isOk ? 'bg-green-400' : 'bg-yellow-400'}"></span>
+      <span>${isOk ? '정상' : '디스크 경고'}</span>
+    `;
+
+    diskEl.textContent = `${data.disk_free_gb}GB`;
+    diskEl.className = `text-2xl font-semibold ${data.disk_free_gb > 20 ? 'text-green-400' : 'text-yellow-400'}`;
+    verEl.textContent = `v${data.version}`;
+
+    const jobBadge = document.getElementById('current-job-badge');
+    if (data.current_job) {
+      jobBadge.classList.remove('hidden');
+      document.getElementById('current-job-text').textContent = data.current_job.substring(0, 20);
+    } else {
+      jobBadge.classList.add('hidden');
+    }
+  } catch (e) {
+    const badge = document.getElementById('health-badge');
+    badge.className = 'status-badge bg-red-900/50 text-red-300';
+    badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span><span>연결 실패</span>';
+  }
+}
+
+// ═══ SUBMIT JOB ═══
+async function submitJob() {
+  const topic = document.getElementById('inp-topic').value.trim();
+  if (!topic) {
+    showError('주제를 입력해주세요.');
+    return;
+  }
+
+  const jobId = `job_${Date.now()}`;
+  const payload = {
+    job_id: jobId,
+    topic,
+    script: document.getElementById('inp-script').value.trim() || null,
+    video_type: document.getElementById('inp-type').value,
+    duration_sec: parseInt(document.getElementById('inp-duration').value) || 60,
+    tone: document.getElementById('inp-tone').value,
+    style: document.getElementById('inp-style').value,
+    add_subtitles: document.getElementById('inp-subtitles').checked,
+    add_bgm: document.getElementById('inp-bgm').checked,
+    bgm_volume: 0.3,
+  };
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = '제출 중...';
+  hideError();
+
+  try {
+    await apiFetch('/video/auto', { method: 'POST', body: JSON.stringify(payload) });
+    btn.textContent = '✓ 잡 제출됨';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = '영상 생성 시작';
+    }, 3000);
+    switchTab('jobs');
+    await loadJobs();
+    startPolling();
+  } catch (e) {
+    showError(e.message);
+    btn.disabled = false;
+    btn.textContent = '영상 생성 시작';
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('submit-error');
+  el.textContent = `오류: ${msg}`;
+  el.classList.remove('hidden');
+}
+
+function hideError() {
+  document.getElementById('submit-error').classList.add('hidden');
+}
+
+// ═══ JOBS ═══
+async function loadJobs() {
+  try {
+    const data = await apiFetch('/video/jobs');
+    const jobs = data.jobs || [];
+    document.getElementById('jobs-count').textContent = (data.total ? `(${data.total}개)` : '');
+
+    document.getElementById('stat-jobs').textContent = data.total || 0;
+    renderJobs(jobs);
+    updateActiveJobPanel(jobs);
+  } catch (e) {
+    document.getElementById('jobs-list').innerHTML =
+      `<div class="text-center py-8 text-red-400 text-sm">잡 목록 로드 실패: ${e.message}</div>`;
+  }
+}
+
+function renderJobs(jobs) {
+  const el = document.getElementById('jobs-list');
+  if (!jobs.length) {
+    el.innerHTML = '<div class="text-center py-12 text-gray-500">잡이 없습니다.</div>';
+    return;
+  }
+
+  el.innerHTML = jobs.map(j => {
+    const status = j.status;
+    const color = statusColor(status);
+    const progress = j.progress || 0;
+    const isActive = ['queued', 'tts_generating', 'downloading_assets', 'processing', 'rendering'].includes(status);
+
+    return `
+    <div class="job-card bg-lf-panel border border-lf-border rounded-xl p-4 transition-all">
+      <div class="flex items-start justify-between mb-2">
+        <div class="flex-1 min-w-0 mr-3">
+          <p class="text-sm font-medium text-white truncate">${j.title || j.job_id}</p>
+          <p class="text-xs text-gray-500 mt-0.5">${j.job_id} · ${j.updated_at ? j.updated_at.substring(0,16).replace('T',' ') : ''}</p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="status-badge ${color.bg} ${color.text}">${statusKo(status)}</span>
+          ${isActive ? `<span class="text-xs text-gray-400">${progress}%</span>` : ''}
+        </div>
+      </div>
+      ${isActive ? `
+        <div class="progress-bar mt-2">
+          <div class="progress-fill" style="width: ${progress}%"></div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1.5">${j.step || ''}</p>
+      ` : ''}
+      ${j.error ? `<p class="text-xs text-red-400 mt-2 bg-red-900/20 rounded px-2 py-1">오류: ${j.error}</p>` : ''}
+      ${status === 'completed' && j.output_files ? `
+        <div class="flex gap-2 mt-3">
+          ${Object.entries(j.output_files).filter(([type]) => type !== 'thumbnail').map(([type, path]) => {
+            const parts = path.split('/');
+            const folder = parts[parts.length - 2]; // 'shorts' or 'longform'
+            const fname = parts[parts.length - 1];
+            const label = folder === 'shorts' ? '쇼츠' : '롱폼';
+            return `<button onclick="previewVideo('${folder}', '${fname}', '${(j.title || j.job_id).replace(/'/g,"\\'")}', '${path}')"
+              class="text-xs px-3 py-1.5 bg-lf-cyan/20 text-lf-cyan border border-lf-cyan/30 rounded-lg hover:bg-lf-cyan/30 transition-colors">
+              ${label} 미리보기
+            </button>`;
+          }).join('')}
+        </div>
+      ` : ''}
+      ${status === 'failed' ? `
+        <button onclick="resumeJob('${j.job_id}')" class="mt-2 text-xs px-3 py-1.5 bg-yellow-900/30 text-yellow-400 border border-yellow-800/50 rounded-lg hover:bg-yellow-900/50 transition-colors">
+          재시도
+        </button>
+      ` : ''}
+    </div>
+    `;
+  }).join('');
+}
+
+function updateActiveJobPanel(jobs) {
+  const active = jobs.find(j => ['queued','tts_generating','downloading_assets','processing','rendering'].includes(j.status));
+  const el = document.getElementById('active-job-panel');
+  if (!active) {
+    el.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">진행 중인 잡 없음</p>';
+    return;
+  }
+  const progress = active.progress || 0;
+  el.innerHTML = `
+    <div>
+      <p class="text-xs text-gray-400 mb-1 truncate">${active.title || active.job_id}</p>
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs text-lf-cyan">${statusKo(active.status)}</span>
+        <span class="text-xs text-gray-400">${progress}%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: ${progress}%"></div>
+      </div>
+      <p class="text-xs text-gray-500 mt-2">${active.step || '처리 중...'}</p>
+    </div>
+  `;
+}
+
+// ═══ RESUME JOB ═══
+async function resumeJob(jobId) {
+  try {
+    await apiFetch(`/video/${jobId}/resume`, { method: 'POST' });
+    await loadJobs();
+  } catch (e) {
+    alert(`재시도 실패: ${e.message}`);
+  }
+}
+
+// ═══ VIDEOS ═══
+async function loadVideos() {
+  try {
+    const data = await apiFetch('/videos/list');
+    allVideos = data.videos || [];
+    document.getElementById('stat-videos').textContent = allVideos.length;
+    document.getElementById('lib-count').textContent = allVideos.length ? `(${allVideos.length}개)` : '';
+    renderVideos();
+  } catch (e) {
+    document.getElementById('video-grid').innerHTML =
+      `<div class="col-span-3 text-center py-8 text-red-400 text-sm">영상 목록 로드 실패: ${e.message}</div>`;
+  }
+}
+
+function filterVideos(filter) {
+  currentVideoFilter = filter;
+  ['all','longform','shorts'].forEach(f => {
+    const btn = document.getElementById(`filter-${f}`);
+    if (f === filter) {
+      btn.className = 'text-xs px-3 py-1.5 rounded-lg bg-lf-cyan text-lf-dark font-medium';
+    } else {
+      btn.className = 'text-xs px-3 py-1.5 rounded-lg bg-lf-border text-gray-400 hover:text-white transition-colors';
+    }
+  });
+  renderVideos();
+}
+
+function renderVideos() {
+  const el = document.getElementById('video-grid');
+  const filtered = currentVideoFilter === 'all' ? allVideos : allVideos.filter(v => v.type === currentVideoFilter);
+
+  if (!filtered.length) {
+    el.innerHTML = '<div class="col-span-3 text-center py-12 text-gray-500">영상이 없습니다.</div>';
+    return;
+  }
+
+  el.innerHTML = filtered.map(v => `
+    <div class="video-card bg-lf-panel border border-lf-border rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.01]"
+         onclick="previewVideo('${v.type}', '${v.name}', '${v.name}', '/data/output/${v.type}/${v.name}')">
+      <div class="aspect-video bg-gray-900 flex items-center justify-center relative group">
+        <div class="absolute inset-0 bg-gradient-to-br from-lf-dark to-gray-900"></div>
+        <div class="relative text-center">
+          <div class="w-10 h-10 rounded-full bg-lf-cyan/20 border border-lf-cyan/40 flex items-center justify-center mx-auto mb-2 group-hover:bg-lf-cyan/30 transition-colors">
+            <svg class="w-4 h-4 text-lf-cyan" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
+            </svg>
+          </div>
+          <span class="text-xs text-lf-cyan">재생</span>
+        </div>
+        <div class="absolute top-2 right-2">
+          <span class="status-badge text-xs ${v.type === 'shorts' ? 'bg-purple-900/70 text-purple-300' : 'bg-blue-900/70 text-blue-300'}">
+            ${v.type === 'shorts' ? '쇼츠' : '롱폼'}
+          </span>
+        </div>
+      </div>
+      <div class="p-3">
+        <p class="text-xs font-medium text-white truncate">${v.name}</p>
+        <p class="text-xs text-gray-500 mt-0.5">${v.size_mb}MB · ${v.created}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══ VIDEO MODAL ═══
+function previewVideo(vtype, filename, title, fullPath) {
+  currentModalVideo = { vtype, filename, fullPath };
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-meta').textContent = `${vtype} · ${filename}`;
+  // URL-encode filename to handle Korean/special chars
+  const encodedFile = encodeURIComponent(filename);
+  const videoUrl = `${FFMPEG_BASE}/video/stream/${vtype}/${encodedFile}`;
+  const vid = document.getElementById('modal-video');
+  vid.src = videoUrl;
+  document.getElementById('modal-download').href = videoUrl;
+  document.getElementById('modal-download').download = filename;
+  document.getElementById('video-modal').classList.remove('hidden');
+  vid.play().catch(() => {});
+}
+
+function closeVideoModal(e) {
+  if (e && e.target !== document.getElementById('video-modal')) return;
+  document.getElementById('modal-video').pause();
+  document.getElementById('modal-video').src = '';
+  document.getElementById('video-modal').classList.add('hidden');
+  currentModalVideo = null;
+}
+
+async function uploadToYoutube() {
+  if (!currentModalVideo) return;
+  const btn = document.getElementById('modal-upload-btn');
+  btn.disabled = true;
+  btn.textContent = '업로드 중...';
+  try {
+    const res = await fetch(`${UPLOAD_BASE}/upload/youtube`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        file_path: currentModalVideo.fullPath || `/data/output/${currentModalVideo.vtype}/${currentModalVideo.filename}`,
+        title: currentModalVideo.filename.replace('.mp4', ''),
+        privacy: 'private',
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      btn.textContent = '✓ 업로드 완료';
+      btn.className = 'flex-1 py-2 text-sm bg-green-700 rounded-lg font-medium';
+      if (data.url) window.open(data.url, '_blank');
+    } else {
+      throw new Error(`HTTP ${res.status}`);
+    }
+  } catch (e) {
+    btn.textContent = '업로드 실패';
+    btn.className = 'flex-1 py-2 text-sm bg-red-900 rounded-lg font-medium';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = 'YouTube 업로드';
+      btn.className = 'flex-1 py-2 text-sm bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-medium';
+    }, 3000);
+  }
+}
+
+// ═══ POLLING ═══
+function startPolling() {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    await Promise.all([checkHealth(), loadJobs()]);
+  }, 8000);
+}
+
+// ═══ TAB SWITCHING ═══
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+    btn.classList.add('text-gray-400');
+    btn.classList.remove('text-white');
+  });
+  document.getElementById(`tab-${name}`).classList.remove('hidden');
+  const activeBtn = document.querySelector(`[data-tab="${name}"]`);
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+    activeBtn.classList.remove('text-gray-400');
+  }
+  if (name === 'jobs') loadJobs();
+  if (name === 'library') loadVideos();
+}
+
+// ═══ MISC ═══
+function toggleScript() {
+  const sec = document.getElementById('script-section');
+  const btn = document.getElementById('script-toggle-btn');
+  if (sec.classList.contains('hidden')) {
+    sec.classList.remove('hidden');
+    btn.textContent = '- 스크립트 입력 닫기';
+  } else {
+    sec.classList.add('hidden');
+    btn.textContent = '+ 스크립트 직접 입력';
+  }
+}
+
+async function refreshAll() {
+  const icon = document.getElementById('refresh-icon');
+  icon.classList.add('spinner');
+  await Promise.all([checkHealth(), loadJobs(), loadVideos()]);
+  icon.classList.remove('spinner');
+}
+
+function statusColor(status) {
+  const map = {
+    pending:            { bg: 'bg-gray-800', text: 'text-gray-400' },
+    queued:             { bg: 'bg-blue-900/50', text: 'text-blue-300' },
+    tts_generating:     { bg: 'bg-purple-900/50', text: 'text-purple-300' },
+    downloading_assets: { bg: 'bg-yellow-900/50', text: 'text-yellow-300' },
+    processing:         { bg: 'bg-orange-900/50', text: 'text-orange-300' },
+    rendering:          { bg: 'bg-cyan-900/50', text: 'text-cyan-300' },
+    completed:          { bg: 'bg-green-900/50', text: 'text-green-300' },
+    failed:             { bg: 'bg-red-900/50', text: 'text-red-300' },
+    cancelled:          { bg: 'bg-gray-800', text: 'text-gray-400' },
+  };
+  return map[status] || { bg: 'bg-gray-800', text: 'text-gray-400' };
+}
+
+function statusKo(status) {
+  const map = {
+    pending: '대기', queued: '큐 대기', tts_generating: 'TTS 생성',
+    downloading_assets: '자산 다운', processing: '처리 중',
+    rendering: '렌더링', completed: '완료', failed: '실패', cancelled: '취소',
+  };
+  return map[status] || status;
+}
+
+// ═══ BOOT ═══
+init();
+</script>
+</body>
+</html>

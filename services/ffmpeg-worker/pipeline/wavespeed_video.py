@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import re
 from pathlib import Path
 
 import httpx
@@ -41,6 +42,19 @@ _STYLE_MOTION: dict[str, str] = {
 }
 
 # Content-type motion enrichments (layered on top of style prompt)
+def _motion_key_hit(key: str, text: str) -> bool:
+    """모션 힌트 키가 '낱말로' 등장하는지.
+
+    이 파일에서 세 번째로 같은 실수를 반복하지 않으려고 분리했다.
+    부분일치로 두면 'electri(city)' 가 도시 거리 모션을,
+    'personal' 이 인물 모션을 불러온다. 한글 키는 조사가 붙으므로
+    부분일치를 그대로 두되, 영문 키만 낱말 경계를 요구한다.
+    """
+    if re.fullmatch(r"[a-z0-9 \-]+", key):
+        return re.search(r"(?<![a-z0-9])" + re.escape(key) + r"(?![a-z0-9])", text) is not None
+    return key in text
+
+
 _CONTENT_MOTION: dict[str, str] = {
     "food":   "steam rising, appetizing warmth, inviting close detail motion",
     "nature": "breeze through foliage, rippling water, organic natural energy",
@@ -64,8 +78,8 @@ def _build_motion_prompt(style: str, keyword: str = "", narration: str = "") -> 
     # Scan keyword and narration for content-type enrichment
     combined = f"{keyword} {narration}".lower()
     enrichments: list[str] = []
-    for key, motion_hint in _CONTENT_MOTION.items():
-        if key in combined and motion_hint not in enrichments:
+    for key, motion_hint in sorted(_CONTENT_MOTION.items(), key=lambda kv: -len(kv[0])):
+        if _motion_key_hit(key, combined) and motion_hint not in enrichments:
             enrichments.append(motion_hint)
             if len(enrichments) >= 2:
                 break

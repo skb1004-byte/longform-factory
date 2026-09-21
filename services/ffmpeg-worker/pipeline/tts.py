@@ -7,6 +7,7 @@ scene durations based on actual TTS audio length via timestamp analysis.
 """
 
 from __future__ import annotations
+from pipeline import cancel
 import json
 import shutil
 import logging
@@ -24,7 +25,9 @@ TMP_DIR: Path = Path("/data/tmp")
 
 async def generate_tts(
     job_id: str,
-    scenes: List[Scene]
+    scenes: List[Scene],
+    voice: str = "sunhi",
+    speed: float = 1.0,
 ) -> Dict[str, Any]:
     """
     Call lf2_tts service to generate TTS audio and timestamps.
@@ -32,10 +35,13 @@ async def generate_tts(
     Args:
         job_id: Unique job identifier
         scenes: List of Scene objects with narration text
+        voice: UI 음성 키 (sunhi/hyunsu/jimin) — config.resolve_voice()로 실제 Edge 음성 ID 변환
+        speed: 나레이션 속도 배율 (0.8~1.5) — config.rate_pct_for_speed()로 Edge rate 문자열 변환
 
     Returns:
         Dict with keys: 'ok' (bool), 'mp3_path', 'ts_path', 'error' (if failed)
     """
+    cancel.check_active("generate_tts")
     mp3_path: Path = TMP_DIR / f"{job_id}.mp3"
     ts_path: Path = TMP_DIR / f"{job_id}_timestamps.json"
 
@@ -72,9 +78,12 @@ async def generate_tts(
             f" (target={total_scene_dur:.0f}s × 7.0 chars/sec)"
         )
         full_text = full_text[:MAX_TTS_CHARS]
+
+    edge_voice = config.resolve_voice(voice)
+    edge_rate = config.rate_pct_for_speed(speed)
     logger.info(
         f"[tts] generating TTS: {len(full_text)} chars, {len(narration_parts)} scenes"
-        f" (limit={MAX_TTS_CHARS} for {total_scene_dur:.0f}s)"
+        f" (limit={MAX_TTS_CHARS} for {total_scene_dur:.0f}s, voice={voice}→{edge_voice}, rate={edge_rate})"
     )
 
     try:
@@ -85,8 +94,8 @@ async def generate_tts(
                     "text": full_text,
                     "filename": job_id,
                     "engine": "edge",
-                    "edge_voice": config.EDGE_VOICE,
-                    "edge_rate": config.EDGE_RATE,   # BUG#3 fix: was "+15%" hardcoded
+                    "edge_voice": edge_voice,
+                    "edge_rate": edge_rate,
                     "edge_pitch": config.EDGE_PITCH,  # Seoul accent: +5% pitch
                     "preprocess": True,
                 }

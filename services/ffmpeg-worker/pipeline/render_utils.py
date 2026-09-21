@@ -23,13 +23,18 @@ async def prepare_clips(
     W: int = 1920,
     H: int = 1080,
 ) -> List[Path]:
-    """Async wrapper around render.prepare_clips_for_longform."""
+    """Async wrapper around render.prepare_clips_for_longform.
+
+    W/H는 그대로 prepare_clips_for_longform에 전달된다 (해상도 티어를 실제
+    렌더링까지 반영하기 위함 — 이전에는 여기서 버려지고 video_type만으로
+    다시 계산해 항상 1080p로 렌더링되는 버그가 있었다).
+    """
     from pipeline.render import prepare_clips_for_longform
     loop = asyncio.get_event_loop()
     video_type = "shorts" if H > W else "longform"
     return await loop.run_in_executor(
         None,
-        lambda: prepare_clips_for_longform(scenes, video_type, output_dir),
+        lambda: prepare_clips_for_longform(scenes, video_type, output_dir, W=W, H=H),
     )
 
 

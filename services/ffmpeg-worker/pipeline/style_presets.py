@@ -25,10 +25,10 @@ STYLE_PRESETS: Dict[str, Dict[str, Any]] = {
         ),
         "negative_prompt": (
             "realistic photo, 3d render, photography, watermark, text, logo, "
-            "blurry, dark, violent, nsfw, low quality, deformed, ugly"
+            "blurry, dark, violent, nsfw, low quality, deformed, ugly, collage, split screen, multiple panels, picture frame, gallery wall, poster on wall, montage, grid of images, screen within screen, duplicated subject, cropped subject"
         ),
         "primary_source": "wavespeed",
-        "fallback_chain": ["wavespeed", "dalle", "pexels"],
+        "fallback_chain": ["local_sdxl", "wavespeed", "dalle", "pexels"],
         "size_portrait": "768x1344",
         "size_landscape": "1344x768",
     },
@@ -42,9 +42,12 @@ STYLE_PRESETS: Dict[str, Dict[str, Any]] = {
         ),
         "negative_prompt": (
             "cartoon, anime, illustration, painting, watermark, text, "
-            "low quality, blurry, oversaturated, nsfw, deformed"
+            "low quality, blurry, oversaturated, nsfw, deformed, collage, split screen, multiple panels, picture frame, gallery wall, poster on wall, montage, grid of images, screen within screen, duplicated subject, cropped subject"
         ),
-        "primary_source": "wavespeed",
+        "primary_source": "local_sdxl",   # wavespeed 는 401(키 무효)로 죽어 있다.
+        # primary 로 두면 씬마다 먼저 시도했다 실패하고 로컬로 내려와,
+        # 소재 수집이 9분 넘게 걸렸다(실측). 로컬 GPU 가 무료·즉시이므로
+        # 그쪽을 먼저 쓰고, wavespeed 는 키가 복구되면 폴백으로 살아난다.
         "fallback_chain": ["wavespeed", "pexels"],
         "size_portrait": "768x1344",
         "size_landscape": "1344x768",
@@ -59,10 +62,10 @@ STYLE_PRESETS: Dict[str, Dict[str, Any]] = {
         ),
         "negative_prompt": (
             "realistic photo, 3d render, harsh lines, watermark, text, "
-            "dark, violent, nsfw, low quality"
+            "dark, violent, nsfw, low quality, collage, split screen, multiple panels, picture frame, gallery wall, poster on wall, montage, grid of images, screen within screen, duplicated subject, cropped subject"
         ),
         "primary_source": "wavespeed",
-        "fallback_chain": ["wavespeed", "dalle", "pexels"],
+        "fallback_chain": ["local_sdxl", "wavespeed", "dalle", "pexels"],
         "size_portrait": "768x1344",
         "size_landscape": "1344x768",
     },
@@ -76,10 +79,10 @@ STYLE_PRESETS: Dict[str, Dict[str, Any]] = {
         ),
         "negative_prompt": (
             "realistic, western cartoon, 3d render, watermark, text, "
-            "nsfw, low quality, blurry, deformed"
+            "nsfw, low quality, blurry, deformed, collage, split screen, multiple panels, picture frame, gallery wall, poster on wall, montage, grid of images, screen within screen, duplicated subject, cropped subject"
         ),
         "primary_source": "wavespeed",
-        "fallback_chain": ["wavespeed", "dalle", "pexels"],
+        "fallback_chain": ["local_sdxl", "wavespeed", "dalle", "pexels"],
         "size_portrait": "768x1344",
         "size_landscape": "1344x768",
     },
@@ -93,10 +96,10 @@ STYLE_PRESETS: Dict[str, Dict[str, Any]] = {
         ),
         "negative_prompt": (
             "realistic, photo, complex, cluttered, watermark, text, "
-            "dark, nsfw, low quality, busy background, gradients"
+            "dark, nsfw, low quality, busy background, gradients, collage, split screen, multiple panels, picture frame, gallery wall, poster on wall, montage, grid of images, screen within screen, duplicated subject, cropped subject"
         ),
         "primary_source": "wavespeed",
-        "fallback_chain": ["wavespeed", "dalle", "pexels"],
+        "fallback_chain": ["local_sdxl", "wavespeed", "dalle", "pexels"],
         "size_portrait": "768x1344",
         "size_landscape": "1344x768",
     },
@@ -110,10 +113,10 @@ STYLE_PRESETS: Dict[str, Dict[str, Any]] = {
         ),
         "negative_prompt": (
             "realistic photo, 3d render, watermark, text, logo, "
-            "blurry, nsfw, low quality, dark"
+            "blurry, nsfw, low quality, dark, collage, split screen, multiple panels, picture frame, gallery wall, poster on wall, montage, grid of images, screen within screen, duplicated subject, cropped subject"
         ),
         "primary_source": "wavespeed",
-        "fallback_chain": ["wavespeed", "dalle", "pexels"],
+        "fallback_chain": ["local_sdxl", "wavespeed", "dalle", "pexels"],
         "size_portrait": "768x1344",
         "size_landscape": "1344x768",
     },
@@ -170,3 +173,50 @@ def get_preset(style: str) -> Dict[str, Any]:
 def list_styles() -> Dict[str, str]:
     """Return {style_key: display_name} for all presets."""
     return {k: v["name"] for k, v in STYLE_PRESETS.items()}
+
+
+# 이미지 스타일에 맞는 나레이션 문체.
+#
+# 화면과 말투가 따로 놀면 시청자가 위화감을 느낀다. 카툰 그림에 다큐 내레이션이
+# 깔리거나, 수채화 화면에 속사포 문장이 얹히는 식이다.
+# 장르(교육/쇼츠/뉴스)가 '무엇을 말할지'를 정한다면, 이미지 스타일은
+# '어떻게 말할지'를 정한다. 둘은 겹치지 않으므로 함께 쓴다.
+IMAGE_STYLE_VOICE = {
+    "cinematic": (
+        "장면이 눈앞에 그려지도록 묘사한다. 빛, 질감, 공기의 결을 문장에 담고 "
+        "감정이 쌓이도록 호흡을 길게 가져간다. 과장된 감탄사는 쓰지 않는다."
+    ),
+    "cartoon": (
+        "가볍고 친근한 구어체로 쓴다. 문장을 짧게 끊고, 말 거는 듯한 어투를 쓴다. "
+        "'~거든요', '~더라고요' 같은 일상 표현을 허용한다. 딱딱한 한자어는 피한다."
+    ),
+    "watercolor": (
+        "잔잔하고 서정적으로 쓴다. 단정하기보다 여운을 남기고, 문장 사이에 "
+        "여백을 둔다. 수치 나열보다 인상과 분위기를 앞세운다."
+    ),
+    "anime": (
+        "활기차고 속도감 있게 쓴다. 짧은 문장을 연달아 붙이고, 장면이 전환되는 "
+        "느낌을 준다. 감탄과 반전을 한두 번 허용한다."
+    ),
+    "minimal": (
+        "군더더기를 모두 덜어낸다. 한 문장에 한 가지만 담고, 수식어를 최소로 쓴다. "
+        "설명하지 말고 사실만 남긴다."
+    ),
+    "infographic": (
+        "숫자와 비교로 설명한다. '몇 개', '몇 배', '언제부터' 같은 구체값을 넣고, "
+        "순서를 매겨 단계별로 풀어낸다. 감정 표현은 쓰지 않는다."
+    ),
+    "stock": (
+        "사실 위주로 담백하게 쓴다. 보도문에 가깝게 주어와 서술어를 분명히 하고, "
+        "추측은 추측이라고 밝힌다."
+    ),
+    "news": (
+        "보도체로 쓴다. 언제·어디서·누가·무엇을 앞에 두고, 출처가 있는 내용과 "
+        "해석을 구분한다. 감정적 수식은 쓰지 않는다."
+    ),
+}
+
+
+def image_style_voice(style: str) -> str:
+    """이미지 스타일에 맞는 나레이션 문체 지시. 없으면 빈 문자열."""
+    return IMAGE_STYLE_VOICE.get((style or "").strip().lower(), "")

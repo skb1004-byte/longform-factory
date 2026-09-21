@@ -2,6 +2,8 @@
 """Shared asset download and keyword expansion utilities."""
 from __future__ import annotations
 import logging
+
+from pipeline import cancel
 import subprocess
 from pathlib import Path
 from typing import Dict
@@ -51,6 +53,7 @@ async def download_video(
     max_duration: float = 60.0,
 ) -> bool:
     """Download video with ffmpeg, trimming to max_duration."""
+    cancel.check_active("download_video")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if output_path.exists() and output_path.stat().st_size > 4096:
         return True

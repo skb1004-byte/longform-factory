@@ -326,8 +326,15 @@ async def _cheap_llm(prompt: str) -> str:
     script.py 를 모듈 최상단에서 import 하면 순환 참조가 되므로 함수 안에서 늦게 가져온다.
     """
     from pipeline import script as _sc
-    from config import GEMINI_API_KEY, GROQ_API_KEY, ANTHROPIC_API_KEY
+    from config import (GEMINI_API_KEY, GROQ_API_KEY, ANTHROPIC_API_KEY,
+                        OPENROUTER_API_KEY)
     attempts = []
+    # OpenRouter 가 맨 앞. Gemini 는 무료 한도가 자주 차서 429 를 뱉고,
+    # 그러면 rerank 가 Claude 까지 내려가 소재 한 장마다 느려지고 비싸진다.
+    # 여기 호출은 64토큰짜리라 유료라도 1회 $0.00001 수준이다.
+    if OPENROUTER_API_KEY:
+        attempts.append(("OpenRouter", lambda: _sc._llm_text_openrouter(
+            prompt, "openai/gpt-4o-mini", max_tokens=64)))
     if GEMINI_API_KEY:
         attempts.append(("Gemini", lambda: _sc._llm_text_gemini(prompt, max_tokens=64)))
     if GROQ_API_KEY:

@@ -1131,14 +1131,24 @@ def _build_text_tasks(prompt: str, max_tokens: int = 1500) -> List[tuple[str, An
 
     # 6. OpenRouter (무료 모델)
     if OPENROUTER_API_KEY:
-        tasks.append(("OpenRouter-llama", _llm_text_openrouter(
+        # 예전엔 :free 모델을 썼는데 둘 다 OpenRouter 에서 내려가 404 였다.
+        # 그동안 OpenRouter 는 체인에 있으면서 아무 기여도 못 하고 있었다.
+        # 유료 모델은 스크립트 1편에 $0.001 수준이라 비용이 문제되지 않는다.
+        #
+        # 모델 선정 근거 (2026-09-21 실측, 동일 프롬프트):
+        #   gpt-4o-mini        2.0초 / 229자 / 이모지·머리말 없음   ← 가장 안정
+        #   deepseek-v4-flash  5.5초 / 135자 / 훅 품질 최상
+        #   gemini-flash-lite  2.9초 / 금지한 이모지를 넣음          → 제외
+        #   qwen3.5-flash      thinking 을 본문에 그대로 노출        → 제외
+        #   mistral-small      따옴표로 감싸고 길이 초과             → 제외
+        tasks.append(("OpenRouter-4o-mini", _llm_text_openrouter(
             prompt,
-            "meta-llama/llama-3.3-70b-instruct:free",
+            "openai/gpt-4o-mini",
             max_tokens=max_tokens,
         )))
         tasks.append(("OpenRouter-deepseek", _llm_text_openrouter(
             prompt,
-            "deepseek/deepseek-chat-v3-0324:free",
+            "deepseek/deepseek-v4-flash",
             max_tokens=max_tokens,
         )))
 
@@ -1162,6 +1172,22 @@ def _build_text_tasks(prompt: str, max_tokens: int = 1500) -> List[tuple[str, An
 
 def _scene_splitter_chain(prompt: str, n_scenes: int, max_tokens: int = 2000):
     """씬 분할용 Sequential generator. JSON 파싱 필요 = sequential이 안전."""
+    # OpenRouter 를 맨 앞에 둔다. 아래 무료 프로바이더들은 한도 소진(Groq·Gemini)
+    # 이나 잔액 0(DeepSeek 직결)으로 대부분 429 를 뱉고, 그때마다 씬 분할이
+    # 로컬 분할기로 떨어져 키워드 품질이 나빠졌다.
+    # 실측(2026-09-21): gpt-4o-mini 2.2초·스키마 4/4·코드펜스 없음·영어 키워드 정확.
+    # (mistral 계열은 키워드를 한국어로 뱉어 스톡 검색이 아예 안 되므로 제외)
+    if OPENROUTER_API_KEY:
+        _or_hdr = {"HTTP-Referer": "https://longform.spacek.io",
+                   "X-Title": "LongForm Factory"}
+        yield "OR-4o-mini", _call_oai_scenes(
+            "https://openrouter.ai/api/v1/chat/completions", OPENROUTER_API_KEY,
+            "openai/gpt-4o-mini", prompt, n_scenes,
+            extra_headers=_or_hdr, max_tokens=max_tokens)
+        yield "OR-gemini-lite", _call_oai_scenes(
+            "https://openrouter.ai/api/v1/chat/completions", OPENROUTER_API_KEY,
+            "google/gemini-2.5-flash-lite", prompt, n_scenes,
+            extra_headers=_or_hdr, max_tokens=max_tokens)
     if GROQ_API_KEY:
         yield "Groq-120b",  _call_groq_scenes(prompt, n_scenes, "openai/gpt-oss-120b", max_tokens)
         yield "Groq-20b",   _call_groq_scenes(prompt, n_scenes, "openai/gpt-oss-20b", max_tokens)
